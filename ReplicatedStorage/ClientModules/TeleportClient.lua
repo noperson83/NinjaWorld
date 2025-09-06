@@ -84,7 +84,12 @@ function TeleportClient.bindWorldButtons(gui)
 		else
 			warn("World button not found for: " .. name)
 		end
-	end
+        end
+end
+
+function TeleportClient.init(gui)
+        TeleportClient.bindZoneButtons(gui)
+        TeleportClient.bindWorldButtons(gui)
 end
 
 return TeleportClient
