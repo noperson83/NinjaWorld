@@ -43,64 +43,80 @@ local function teleportToPlace(placeId)
 end
 
 function TeleportClient.bindZoneButtons(gui)
-	local islandSpawns = {
-		Atom = {"ZoneAtom", "AtomSpawnLocation"},
-		Fire = {"ZoneFire", "FireSpawnLocation"},
-		Grow = {"ZoneGrow", "GrowSpawnLocation"},
-		Ice = {"ZoneIce", "IceSpawnLocation"},
-		Light = {"ZoneLight", "LightSpawnLocation"},
-		Metal = {"ZoneMetal", "MetalSpawnLocation"},
-		Water = {"ZoneWater", "WaterSpawnLocation"},
-		Wind = {"ZoneWind", "WindSpawnLocation"},
-		Dojo = {"ZoneStarter", "StarterSpawnLocation"},
-		Starter = {"ZoneStarter", "StarterZoneSpawnLocation"}
-	}
+        local screenGui = (gui and (gui.ScreenGui or gui.gui)) or gui
+        if not screenGui then
+                warn("TeleportClient: ScreenGui missing for zone buttons")
+                return
+        end
 
-	for name, zoneInfo in islandSpawns do
-		local button = gui.ScreenGui.TeleFrame:FindFirstChild(name .. "Button")
-		if button then
-			button.Activated:Connect(function()
-				teleportToIsland(unpack(zoneInfo))
-			end)
-		else
-			warn("Zone button not found for: " .. name)
-		end
-	end
+        local teleFrame = screenGui:FindFirstChild("TeleFrame")
+        if not teleFrame then
+                warn("TeleportClient: TeleFrame not found")
+                return
+        end
+
+        local islandSpawns = {
+                Atom = {"ZoneAtom", "AtomSpawnLocation"},
+                Fire = {"ZoneFire", "FireSpawnLocation"},
+                Grow = {"ZoneGrow", "GrowSpawnLocation"},
+                Ice = {"ZoneIce", "IceSpawnLocation"},
+                Light = {"ZoneLight", "LightSpawnLocation"},
+                Metal = {"ZoneMetal", "MetalSpawnLocation"},
+                Water = {"ZoneWater", "WaterSpawnLocation"},
+                Wind = {"ZoneWind", "WindSpawnLocation"},
+                Dojo = {"ZoneStarter", "StarterSpawnLocation"},
+                Starter = {"ZoneStarter", "StarterZoneSpawnLocation"}
+        }
+
+        for name, zoneInfo in islandSpawns do
+                local button = teleFrame:FindFirstChild(name .. "Button")
+                if button then
+                        button.Activated:Connect(function()
+                                teleportToIsland(unpack(zoneInfo))
+                        end)
+                else
+                        warn("Zone button not found for: " .. name)
+                end
+        end
 end
 
 function TeleportClient.bindWorldButtons(gui)
-	local worldSpawnIds = {
-		Atom = 15915218395,
-		Fire = 16167296427,
-		Water = 15999399322
-	}
+        local screenGui = (gui and (gui.ScreenGui or gui.gui)) or gui
+        if not screenGui then
+                warn("TeleportClient: ScreenGui missing for world buttons")
+                return
+        end
 
-	for name, placeId in worldSpawnIds do
-		local button = gui.ScreenGui.WorldTeleFrame:FindFirstChild(name .. "Button")
-		if button then
-			button.Activated:Connect(function()
-				teleportToPlace(placeId)
-			end)
-		else
-			warn("World button not found for: " .. name)
-		end
-	end
+        local worldFrame = screenGui:FindFirstChild("WorldTeleFrame")
+        if not worldFrame then
+                warn("TeleportClient: WorldTeleFrame not found")
+                return
+        end
+
+        local worldSpawnIds = {
+                Atom = 15915218395,
+                Fire = 16167296427,
+                Water = 15999399322
+        }
+
+        for name, placeId in worldSpawnIds do
+                local button = worldFrame:FindFirstChild(name .. "Button")
+                if button then
+                        button.Activated:Connect(function()
+                                teleportToPlace(placeId)
+                        end)
+                else
+                        warn("World button not found for: " .. name)
+                end
+        end
 end
 
-function TeleportClient.init(_config)
-        local playerGui = player:FindFirstChild("PlayerGui")
-        if not playerGui then
-                warn("TeleportClient: PlayerGui not found for " .. player.Name)
+function TeleportClient.init(gui)
+        if not gui then
+                warn("TeleportClient: gui parameter is required")
                 return
         end
 
-        local teleGui = playerGui:WaitForChild("TeleportGui", 5)
-        if not teleGui then
-                warn("TeleportClient: TeleportGui not found")
-                return
-        end
-
-        local gui = { ScreenGui = teleGui }
         TeleportClient.bindZoneButtons(gui)
         TeleportClient.bindWorldButtons(gui)
 end
