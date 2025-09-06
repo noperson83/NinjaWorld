@@ -18,6 +18,7 @@ GameSettings.levelUpMessage = "You Leveled Up!"
 -- Starting data values
 GameSettings.startUpgrades = 1
 GameSettings.startPoints = 0
+GameSettings.startCoins = 100
 
 GameSettings.pointsName = "Points"
 GameSettings.upgradeName = "Upgrades"
