@@ -87,4 +87,22 @@ function TeleportClient.bindWorldButtons(gui)
 	end
 end
 
+function TeleportClient.init(_config)
+        local playerGui = player:FindFirstChild("PlayerGui")
+        if not playerGui then
+                warn("TeleportClient: PlayerGui not found for " .. player.Name)
+                return
+        end
+
+        local teleGui = playerGui:WaitForChild("TeleportGui", 5)
+        if not teleGui then
+                warn("TeleportClient: TeleportGui not found")
+                return
+        end
+
+        local gui = { ScreenGui = teleGui }
+        TeleportClient.bindZoneButtons(gui)
+        TeleportClient.bindWorldButtons(gui)
+end
+
 return TeleportClient
