@@ -17,6 +17,14 @@ local TeleportClient = require(ReplicatedStorage:WaitForChild("ClientModules"):W
 
 -- Initialize sequence: UI -> currency -> shop -> teleport -> cosmetics
 local ui = BootUI.init(GameSettings)
+
+-- Align the player's camera with the configured start position.
+-- BootUI exposes helpers for this; we use holdStartCam here so the
+-- camera immediately snaps to the startPos and stays there briefly.
+-- Alternatively, developers can swap this for ui.tweenToStart() to
+-- smoothly move the camera instead of snapping.
+ui.holdStartCam(3)
+
 local currency = CurrencyService.new(GameSettings)
 local shop = Shop.new(GameSettings, currency)
 ShopUI.init(GameSettings, shop, ui)

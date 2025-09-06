@@ -32,6 +32,9 @@ function BootUI.init(config)
 
         local camerasFolder = Workspace:WaitForChild("Cameras", 5)
         local startPos = camerasFolder and camerasFolder:FindFirstChild("startPos")
+        if not startPos then
+                warn("BootUI: expected Workspace.Cameras.startPos to exist")
+        end
 
         local gui = Instance.new("ScreenGui")
         gui.ResetOnSpawn = false
