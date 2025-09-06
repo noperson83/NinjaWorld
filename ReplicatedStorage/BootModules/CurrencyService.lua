@@ -7,12 +7,16 @@ function CurrencyService.new(config)
         self.coins = config.startCoins or 0
         self.orbs = config.startOrbs or 0
 
+        self.BalanceChanged = Instance.new("BindableEvent")
+        self.BalanceChanged:Fire(self.coins, self.orbs)
+
         local ReplicatedStorage = game:GetService("ReplicatedStorage")
         self.updateEvent = ReplicatedStorage:FindFirstChild("CurrencyUpdated")
         if self.updateEvent then
                 self.updateEvent.OnClientEvent:Connect(function(data)
                         if data.coins then self.coins = data.coins end
                         if data.orbs then self.orbs = data.orbs end
+                        self.BalanceChanged:Fire(self.coins, self.orbs)
                 end)
         end
 
@@ -28,6 +32,7 @@ function CurrencyService:AddCoins(amount)
         if self.updateEvent then
                 self.updateEvent:FireServer({coins = self.coins})
         end
+        self.BalanceChanged:Fire(self.coins, self.orbs)
 end
 
 function CurrencyService:SpendCoins(amount)
@@ -36,6 +41,7 @@ function CurrencyService:SpendCoins(amount)
         if self.updateEvent then
                 self.updateEvent:FireServer({coins = self.coins})
         end
+        self.BalanceChanged:Fire(self.coins, self.orbs)
         return true
 end
 
