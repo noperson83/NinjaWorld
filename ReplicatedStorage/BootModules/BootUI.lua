@@ -60,6 +60,43 @@ function BootUI.init(config)
         title.BackgroundTransparency = 1
         title.Parent = root
 
+        -- Teleport GUI with zone and world frames
+        local teleportGui = Instance.new("ScreenGui")
+        teleportGui.ResetOnSpawn = false
+        teleportGui.IgnoreGuiInset = true
+        teleportGui.Name = "TeleportGui"
+        teleportGui.Parent = player:WaitForChild("PlayerGui")
+
+        local teleFrame = Instance.new("Frame")
+        teleFrame.Name = "TeleFrame"
+        teleFrame.BackgroundTransparency = 1
+        teleFrame.Size = UDim2.fromScale(1,1)
+        teleFrame.Parent = teleportGui
+
+        local worldFrame = Instance.new("Frame")
+        worldFrame.Name = "WorldTeleFrame"
+        worldFrame.BackgroundTransparency = 1
+        worldFrame.Size = UDim2.fromScale(1,1)
+        worldFrame.Parent = teleportGui
+
+        local zoneNames = {"Atom","Fire","Grow","Ice","Light","Metal","Water","Wind","Dojo","Starter"}
+        for _, name in ipairs(zoneNames) do
+                local button = Instance.new("TextButton")
+                button.Name = name .. "Button"
+                button.Size = UDim2.fromOffset(100,50)
+                button.Text = name
+                button.Parent = teleFrame
+        end
+
+        local worldNames = {"Atom","Fire","Water"}
+        for _, name in ipairs(worldNames) do
+                local button = Instance.new("TextButton")
+                button.Name = name .. "Button"
+                button.Size = UDim2.fromOffset(100,50)
+                button.Text = name
+                button.Parent = worldFrame
+        end
+
         local function applyStartCam()
                 if not startPos then return end
                 cam.CameraType = Enum.CameraType.Scriptable
@@ -91,6 +128,7 @@ function BootUI.init(config)
         return {
                 gui = gui,
                 root = root,
+                teleportGui = teleportGui,
                 holdStartCam = holdStartCam,
                 tweenToStart = tweenToStart
         }
