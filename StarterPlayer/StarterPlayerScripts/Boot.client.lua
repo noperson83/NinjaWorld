@@ -29,5 +29,5 @@ local currency = CurrencyService.new(GameSettings)
 local shop = Shop.new(GameSettings, currency)
 ShopUI.init(GameSettings, shop, ui)
 
-TeleportClient.init(ui)
+TeleportClient.init(ui.teleportGui)
 Cosmetics.init(GameSettings)

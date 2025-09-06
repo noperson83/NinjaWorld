@@ -10,7 +10,6 @@ local AudioPlayer = require(ReplicatedStorage:WaitForChild("ClientModules"):Wait
 local CharacterManager = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("CharacterManager"))
 local CombatController = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("CombatController"))
 local MerchBooth = require(ReplicatedStorage:WaitForChild("MerchBooth"))
-local TeleportClient = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("TeleportClient"))
 local GameSettings = require(ReplicatedStorage:WaitForChild("GameSettings"))
 
 local player = Players.LocalPlayer
@@ -146,10 +145,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 
 	print("? Key pressed but no action mapped:", input.KeyCode.Name)
 end)
-
--- Teleport setup
-TeleportClient.bindZoneButtons(PlayerGui)
-TeleportClient.bindWorldButtons(PlayerGui)
 
 -- Extended Slide behavior (1.5s duration, increased movement)
 CombatController.setSlideDuration(1.5)
