@@ -12,14 +12,8 @@ local Shop = require(BootModules:WaitForChild("Shop"))
 local ShopUI = require(BootModules:WaitForChild("ShopUI"))
 local Cosmetics = require(BootModules:WaitForChild("Cosmetics"))
 
--- Existing TeleportClient module kept in ClientModules
-local successTeleport, TeleportClient = pcall(function()
-        return require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("TeleportClient"))
-end)
-if not successTeleport then
-        warn("TeleportClient failed to load: " .. tostring(TeleportClient))
-        TeleportClient = nil
-end
+-- TeleportClient centralizes teleport button wiring
+local TeleportClient = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("TeleportClient"))
 
 -- Initialize sequence: UI -> currency -> shop -> teleport -> cosmetics
 local ui = BootUI.init(GameSettings)
@@ -35,7 +29,5 @@ local currency = CurrencyService.new(GameSettings)
 local shop = Shop.new(GameSettings, currency)
 ShopUI.init(GameSettings, shop, ui)
 
-if TeleportClient and TeleportClient.init then
-        TeleportClient.init(GameSettings)
-end
+TeleportClient.init(ui)
 Cosmetics.init(GameSettings)
