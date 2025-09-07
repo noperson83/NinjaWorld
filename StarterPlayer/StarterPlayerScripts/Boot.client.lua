@@ -10,7 +10,7 @@ local BootUI = require(BootModules:WaitForChild("BootUI"))
 local CurrencyService = require(BootModules:WaitForChild("CurrencyService"))
 local Shop = require(BootModules:WaitForChild("Shop"))
 local ShopUI = require(BootModules:WaitForChild("ShopUI"))
-local Cosmetics = require(BootModules:WaitForChild("Cosmetics"))
+local Cosmetics = require(ReplicatedStorage.BootModules.Cosmetics)
 
 -- TeleportClient centralizes teleport button wiring
 local TeleportClient = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("TeleportClient"))
