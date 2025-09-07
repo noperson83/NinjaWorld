@@ -232,11 +232,11 @@ function Cosmetics.init(config, root, bootUI)
     picker.ZIndex = 11
     picker.Parent = dojo
 
-    -- Display starter dojo image above personas inside the picker
+    -- Display starter dojo image at the bottom of the picker
     local starterDojoImg = Instance.new("ImageLabel")
     starterDojoImg.Size = UDim2.fromScale(0.7,0.08)
-    starterDojoImg.Position = UDim2.fromScale(0.5,0.08)
-    starterDojoImg.AnchorPoint = Vector2.new(0.5,0.5)
+    starterDojoImg.Position = UDim2.fromScale(0.5,0.92)
+    starterDojoImg.AnchorPoint = Vector2.new(0.5,1)
     starterDojoImg.Image = "rbxassetid://137361385013636"
     starterDojoImg.BackgroundTransparency = 1
     starterDojoImg.ScaleType = Enum.ScaleType.Fit
@@ -261,17 +261,17 @@ function Cosmetics.init(config, root, bootUI)
 
     local line = Instance.new("Frame")
     line.Size = UDim2.new(0.9,0,0,2)
-    line.Position = UDim2.fromScale(0.5,0.38)
+    line.Position = UDim2.fromScale(0.5,0.32)
     line.AnchorPoint = Vector2.new(0.5,0.5)
     line.BackgroundColor3 = Color3.fromRGB(60,60,62)
     line.BorderSizePixel = 0
     line.ZIndex = 11
     line.Parent = picker
 
-    -- Display persona slots directly beneath the dojo logo
+    -- Display persona slots above the dojo image
     slotsFrame = Instance.new("ScrollingFrame")
-    slotsFrame.Size = UDim2.new(0.9,0,0.55,0)
-    slotsFrame.Position = UDim2.fromScale(0.5,0.5)
+    slotsFrame.Size = UDim2.new(0.9,0,0.5,0)
+    slotsFrame.Position = UDim2.fromScale(0.5,0.44)
     slotsFrame.AnchorPoint = Vector2.new(0.5,0.5)
     slotsFrame.BackgroundTransparency = 1
     slotsFrame.BorderSizePixel = 0
