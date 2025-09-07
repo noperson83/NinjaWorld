@@ -375,9 +375,31 @@ capLabel.TextScaled = true
 capLabel.TextColor3 = Color3.fromRGB(230,230,230)
 capLabel.Parent = bpCard
 
+local tabBar = Instance.new("Frame")
+tabBar.Size = UDim2.new(1,-20,0,30)
+tabBar.Position = UDim2.fromOffset(10,96)
+tabBar.BackgroundTransparency = 1
+tabBar.Parent = bpCard
+
+local tabButtons = {}
+local tabNames = {"Main","Weapons","Food","Special"}
+for i,name in ipairs(tabNames) do
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0,80,1,0)
+    btn.Position = UDim2.fromOffset((i-1)*82,0)
+    btn.BackgroundColor3 = Color3.fromRGB(50,50,52)
+    btn.TextColor3 = Color3.new(1,1,1)
+    btn.Font = Enum.Font.Gotham
+    btn.TextScaled = true
+    btn.Text = name
+    btn.AutoButtonColor = true
+    btn.Parent = tabBar
+    tabButtons[name] = btn
+end
+
 local list = Instance.new("ScrollingFrame")
-list.Size = UDim2.new(1,-20,1,-110)
-list.Position = UDim2.fromOffset(10,96)
+list.Size = UDim2.new(1,-20,1,-140)
+list.Position = UDim2.fromOffset(10,126)
 list.CanvasSize = UDim2.new()
 list.ScrollBarThickness = 6
 list.BackgroundTransparency = 1
@@ -421,6 +443,77 @@ local function clearChildren(p)
             c:Destroy()
         end
     end
+end
+
+local function addHeader(text)
+    local h = Instance.new("TextLabel")
+    h.Size = UDim2.new(1,0,0,30)
+    h.BackgroundTransparency = 1
+    h.TextXAlignment = Enum.TextXAlignment.Left
+    h.Font = Enum.Font.GothamSemibold
+    h.TextScaled = true
+    h.TextColor3 = Color3.fromRGB(200,200,200)
+    h.Text = text
+    h.Parent = list
+end
+
+local function addSimpleRow(label, value)
+    local row = Instance.new("Frame")
+    row.Size = UDim2.new(1,0,0,30)
+    row.BackgroundTransparency = 1
+    row.Parent = list
+
+    local name = Instance.new("TextLabel")
+    name.Size = UDim2.new(0.6,-10,1,0)
+    name.Position = UDim2.fromOffset(10,0)
+    name.BackgroundTransparency = 1
+    name.TextXAlignment = Enum.TextXAlignment.Left
+    name.Font = Enum.Font.Gotham
+    name.TextScaled = true
+    name.TextColor3 = Color3.new(1,1,1)
+    name.Text = label
+    name.Parent = row
+
+    local val = Instance.new("TextLabel")
+    val.Size = UDim2.new(0.4,-10,1,0)
+    val.Position = UDim2.new(0.6,0,0,0)
+    val.BackgroundTransparency = 1
+    val.TextXAlignment = Enum.TextXAlignment.Right
+    val.Font = Enum.Font.Gotham
+    val.TextScaled = true
+    val.TextColor3 = Color3.fromRGB(230,230,230)
+    val.Text = tostring(value or 0)
+    val.Parent = row
+end
+
+local function addItemRow(it)
+    local row = Instance.new("Frame")
+    row.Size = UDim2.new(1,0,0,40)
+    row.BackgroundColor3 = Color3.fromRGB(32,34,36)
+    row.BorderSizePixel = 0
+    row.Parent = list
+
+    local name = Instance.new("TextLabel")
+    name.Size = UDim2.new(0.6,-10,1,0)
+    name.Position = UDim2.fromOffset(10,0)
+    name.BackgroundTransparency = 1
+    name.TextXAlignment = Enum.TextXAlignment.Left
+    name.Font = Enum.Font.Gotham
+    name.TextScaled = true
+    name.TextColor3 = Color3.new(1,1,1)
+    name.Text = it.name
+    name.Parent = row
+
+    local qty = Instance.new("TextLabel")
+    qty.Size = UDim2.new(0.4,-10,1,0)
+    qty.Position = UDim2.new(0.6,0,0,0)
+    qty.BackgroundTransparency = 1
+    qty.TextXAlignment = Enum.TextXAlignment.Right
+    qty.Font = Enum.Font.Gotham
+    qty.TextScaled = true
+    qty.TextColor3 = Color3.fromRGB(230,230,230)
+    qty.Text = string.format("%d / %d", it.qty, it.stack)
+    qty.Parent = row
 end
 
 -- Orbitable viewport state
@@ -549,118 +642,86 @@ local function buildCharacterPreview(personaType)
 end
 BootUI.buildCharacterPreview = buildCharacterPreview
 
-local function populateBackpackUI(bp)
+local backpackData
+local currentTab = "Main"
+
+local function updateTabButtonStates()
+    for name,btn in pairs(tabButtons) do
+        btn.BackgroundColor3 = (name == currentTab) and Color3.fromRGB(70,70,72) or Color3.fromRGB(50,50,52)
+    end
+end
+
+local function renderBackpack(tab)
+    if backpackData == nil then return end
+    currentTab = tab or currentTab
+    updateTabButtonStates()
     clearChildren(list)
+    capBarBG.Visible, capBar.Visible, capLabel.Visible = true, true, true
     local used = 0
 
-    local function addHeader(text)
-        local h = Instance.new("TextLabel")
-        h.Size = UDim2.new(1,0,0,30)
-        h.BackgroundTransparency = 1
-        h.TextXAlignment = Enum.TextXAlignment.Left
-        h.Font = Enum.Font.GothamSemibold
-        h.TextScaled = true
-        h.TextColor3 = Color3.fromRGB(200,200,200)
-        h.Text = text
-        h.Parent = list
-    end
-
-    local function addSimpleRow(label, value)
-        local row = Instance.new("Frame")
-        row.Size = UDim2.new(1,0,0,30)
-        row.BackgroundTransparency = 1
-        row.Parent = list
-
-        local name = Instance.new("TextLabel")
-        name.Size = UDim2.new(0.6,-10,1,0)
-        name.Position = UDim2.fromOffset(10,0)
-        name.BackgroundTransparency = 1
-        name.TextXAlignment = Enum.TextXAlignment.Left
-        name.Font = Enum.Font.Gotham
-        name.TextScaled = true
-        name.TextColor3 = Color3.new(1,1,1)
-        name.Text = label
-        name.Parent = row
-
-        local val = Instance.new("TextLabel")
-        val.Size = UDim2.new(0.4,-10,1,0)
-        val.Position = UDim2.new(0.6,0,0,0)
-        val.BackgroundTransparency = 1
-        val.TextXAlignment = Enum.TextXAlignment.Right
-        val.Font = Enum.Font.Gotham
-        val.TextScaled = true
-        val.TextColor3 = Color3.fromRGB(230,230,230)
-        val.Text = tostring(value or 0)
-        val.Parent = row
-    end
-
-    local function addItemRow(it)
-        local row = Instance.new("Frame")
-        row.Size = UDim2.new(1,0,0,40)
-        row.BackgroundColor3 = Color3.fromRGB(32,34,36)
-        row.BorderSizePixel = 0
-        row.Parent = list
-
-        local name = Instance.new("TextLabel")
-        name.Size = UDim2.new(0.6,-10,1,0)
-        name.Position = UDim2.fromOffset(10,0)
-        name.BackgroundTransparency = 1
-        name.TextXAlignment = Enum.TextXAlignment.Left
-        name.Font = Enum.Font.Gotham
-        name.TextScaled = true
-        name.TextColor3 = Color3.new(1,1,1)
-        name.Text = it.name
-        name.Parent = row
-
-        local qty = Instance.new("TextLabel")
-        qty.Size = UDim2.new(0.4,-10,1,0)
-        qty.Position = UDim2.new(0.6,0,0,0)
-        qty.BackgroundTransparency = 1
-        qty.TextXAlignment = Enum.TextXAlignment.Right
-        qty.Font = Enum.Font.Gotham
-        qty.TextScaled = true
-        qty.TextColor3 = Color3.fromRGB(230,230,230)
-        qty.Text = string.format("%d / %d", it.qty, it.stack)
-        qty.Parent = row
-    end
-
-    -- currency section
-    addHeader("Currency")
-    addSimpleRow("Coins", bp.coins or 0)
-
-    -- orbs section
-    local orbTable = bp.orbs or {}
-    local totalOrbs = 0
-    for _, v in pairs(orbTable) do totalOrbs += v end
-    addHeader(string.format("Orbs (%d / 10)", totalOrbs))
-    for element, v in pairs(orbTable) do
-        if v > 0 then
-            addSimpleRow(element, v)
+    if currentTab == "Main" then
+        addHeader("Currency")
+        addSimpleRow("Coins", backpackData.coins or 0)
+        addHeader("Elements")
+        for element, v in pairs(backpackData.orbs or {}) do
+            if v > 0 then addSimpleRow(element, v) end
         end
-    end
+        for _,it in ipairs(backpackData.weapons or {}) do used = used + it.qty end
+        for _,it in ipairs(backpackData.food or {}) do used = used + it.qty end
+        for _,it in ipairs(backpackData.special or {}) do used = used + it.qty end
+        local cap = math.max(backpackData.capacity or 0, used)
+        capBar.Size = UDim2.new(cap>0 and used/cap or 0, 0, 1, 0)
+        capLabel.Text = string.format("Capacity: %d / %d", used, cap)
 
-    -- item sections
-    local sections = {
-        {title = "Weapons", items = bp.weapons},
-        {title = "Food", items = bp.food},
-        {title = "Special", items = bp.special},
-    }
+    elseif currentTab == "Weapons" then
+        addHeader("Weapons")
+        for _,it in ipairs(backpackData.weapons or {}) do
+            used = used + it.qty
+            addItemRow(it)
+        end
+        local cap = backpackData.weaponCapacity or backpackData.capacity or 0
+        capBar.Size = UDim2.new(cap>0 and used/cap or 0, 0, 1, 0)
+        capLabel.Text = string.format("Weapon Capacity: %d / %d", used, cap)
 
-    for _,section in ipairs(sections) do
-        addHeader(section.title)
-        for _,it in ipairs(section.items or {}) do
-            used += it.qty
+    elseif currentTab == "Food" then
+        addHeader("Food")
+        for _,it in ipairs(backpackData.food or {}) do
+            used = used + it.qty
+            addItemRow(it)
+        end
+        local cap = backpackData.foodCapacity or backpackData.capacity or 0
+        capBar.Size = UDim2.new(cap>0 and used/cap or 0, 0, 1, 0)
+        capLabel.Text = string.format("Food Capacity: %d / %d", used, cap)
+
+    elseif currentTab == "Special" then
+        capBarBG.Visible, capBar.Visible, capLabel.Visible = false, false, false
+        local orbTable = backpackData.orbs or {}
+        local totalOrbs = 0
+        for _, v in pairs(orbTable) do totalOrbs = totalOrbs + v end
+        addHeader(string.format("Orbs (%d / 10)", totalOrbs))
+        for element, v in pairs(orbTable) do
+            if v > 0 then addSimpleRow(element, v) end
+        end
+        addHeader("Special")
+        for _,it in ipairs(backpackData.special or {}) do
             addItemRow(it)
         end
     end
 
-    local cap = math.max(bp.capacity or 0, used)
-    capBar.Size = UDim2.new(cap>0 and (used/cap) or 0, 0, 1, 0)
-    capLabel.Text = string.format("Capacity: %d / %d", used, cap)
     local layout = list:FindFirstChildOfClass("UIListLayout")
     list.CanvasSize = UDim2.new(0,0,0, layout and layout.AbsoluteContentSize.Y or 0)
 end
-BootUI.populateBackpackUI = populateBackpackUI
+
+for name,btn in pairs(tabButtons) do
+    btn.MouseButton1Click:Connect(function()
+        renderBackpack(name)
+    end)
+end
+
+function BootUI.populateBackpackUI(bp)
+    backpackData = bp
+    renderBackpack(currentTab)
+end
 
 -- =====================
 btnBack.MouseButton1Click:Connect(function()
