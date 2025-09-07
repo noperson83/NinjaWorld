@@ -346,7 +346,7 @@ function Cosmetics.init(config, root, bootUI)
 
     -- Display persona slots above the dojo image
     slotsContainer = Instance.new("Frame")
-    slotsContainer.Size = UDim2.new(0.9,0,0.5,0)
+    slotsContainer.Size = UDim2.new(0.9,0,0.6,0)
     slotsContainer.Position = UDim2.fromScale(0.5,0.44)
     slotsContainer.AnchorPoint = Vector2.new(0.5,0.5)
     slotsContainer.BackgroundTransparency = 1
@@ -362,16 +362,18 @@ function Cosmetics.init(config, root, bootUI)
     -- create slot 1 (center, larger)
     do
         local frame = Instance.new("Frame")
-        frame.Size = UDim2.fromScale(0.3 * 1.2, 0.36 * 1.2)
-        frame.Position = UDim2.fromScale(0.5,0.5)
-        frame.AnchorPoint = Vector2.new(0.5,0.5)
+        frame.Size = UDim2.fromScale(0.4, 0.6)
+        frame.Position = UDim2.fromScale(0.5, 0.5)
+        frame.AnchorPoint = Vector2.new(0.5, 0.5)
         frame.BackgroundTransparency = 1
         frame.ZIndex = 11
         frame.Parent = slotsContainer
 
         local viewport = Instance.new("ViewportFrame")
-        viewport.Size = UDim2.fromScale(1,1)
+        viewport.Size = UDim2.fromScale(1, 1)
         viewport.BackgroundTransparency = 1
+        viewport.BorderSizePixel = 2
+        viewport.BorderColor3 = Color3.fromRGB(40, 40, 40)
         viewport.ZIndex = 9
         viewport.Parent = frame
 
@@ -409,8 +411,8 @@ function Cosmetics.init(config, root, bootUI)
         label.Parent = frame
 
         local robloxBtn = Instance.new("TextButton")
-        robloxBtn.Size = UDim2.new(0.45,0,0.3,0)
-        robloxBtn.Position = UDim2.new(0.05,0,0.35,0)
+        robloxBtn.Size = UDim2.new(0.45,0,0.25,0)
+        robloxBtn.Position = UDim2.new(0.05,0,0.3,0)
         robloxBtn.Text = "Roblox"
         robloxBtn.Font = Enum.Font.GothamSemibold
         robloxBtn.TextScaled = true
@@ -421,8 +423,8 @@ function Cosmetics.init(config, root, bootUI)
         robloxBtn.Parent = frame
 
         local starterBtn = Instance.new("TextButton")
-        starterBtn.Size = UDim2.new(0.45,0,0.3,0)
-        starterBtn.Position = UDim2.new(0.5,0,0.35,0)
+        starterBtn.Size = UDim2.new(0.45,0,0.25,0)
+        starterBtn.Position = UDim2.new(0.5,0,0.3,0)
         starterBtn.Text = "Starter"
         starterBtn.Font = Enum.Font.GothamSemibold
         starterBtn.TextScaled = true
@@ -433,8 +435,8 @@ function Cosmetics.init(config, root, bootUI)
         starterBtn.Parent = frame
 
         local useBtn = Instance.new("TextButton")
-        useBtn.Size = UDim2.new(0.45,0,0.3,0)
-        useBtn.Position = UDim2.new(0.05,0,0.68,0)
+        useBtn.Size = UDim2.new(0.9,0,0.25,0)
+        useBtn.Position = UDim2.new(0.05,0,0.55,0)
         useBtn.Text = "Use"
         useBtn.Font = Enum.Font.GothamSemibold
         useBtn.TextScaled = true
@@ -445,10 +447,11 @@ function Cosmetics.init(config, root, bootUI)
         useBtn.Parent = frame
 
         local clearBtn = Instance.new("TextButton")
-        clearBtn.Size = UDim2.new(0.45,0,0.3,0)
-        clearBtn.Position = UDim2.new(0.5,0,0.68,0)
+        clearBtn.Size = UDim2.new(0.6,0,0.15,0)
+        clearBtn.AnchorPoint = Vector2.new(0.5,0)
+        clearBtn.Position = UDim2.new(0.5,0,0.82,0)
         clearBtn.Text = "Clear"
-        clearBtn.Font = Enum.Font.GothamSemibold
+        clearBtn.Font = Enum.Font.Gotham
         clearBtn.TextScaled = true
         clearBtn.TextColor3 = Color3.new(1,1,1)
         clearBtn.BackgroundColor3 = Color3.fromRGB(200,80,80)
@@ -472,9 +475,9 @@ function Cosmetics.init(config, root, bootUI)
     -- create slot 2 (left)
     do
         local frame = Instance.new("Frame")
-        frame.Size = UDim2.fromScale(0.3,0.36)
-        frame.Position = UDim2.fromScale(0.2,0.5)
-        frame.AnchorPoint = Vector2.new(0.5,0.5)
+        frame.Size = UDim2.fromScale(0.25, 0.4)
+        frame.Position = UDim2.fromScale(0.15, 0.5)
+        frame.AnchorPoint = Vector2.new(0.5, 0.5)
         frame.BackgroundTransparency = 1
         frame.ZIndex = 11
         frame.Parent = slotsContainer
@@ -519,8 +522,8 @@ function Cosmetics.init(config, root, bootUI)
         label.Parent = frame
 
         local robloxBtn = Instance.new("TextButton")
-        robloxBtn.Size = UDim2.new(0.45,0,0.3,0)
-        robloxBtn.Position = UDim2.new(0.05,0,0.35,0)
+        robloxBtn.Size = UDim2.new(0.45,0,0.25,0)
+        robloxBtn.Position = UDim2.new(0.05,0,0.3,0)
         robloxBtn.Text = "Roblox"
         robloxBtn.Font = Enum.Font.GothamSemibold
         robloxBtn.TextScaled = true
@@ -531,8 +534,8 @@ function Cosmetics.init(config, root, bootUI)
         robloxBtn.Parent = frame
 
         local starterBtn = Instance.new("TextButton")
-        starterBtn.Size = UDim2.new(0.45,0,0.3,0)
-        starterBtn.Position = UDim2.new(0.5,0,0.35,0)
+        starterBtn.Size = UDim2.new(0.45,0,0.25,0)
+        starterBtn.Position = UDim2.new(0.5,0,0.3,0)
         starterBtn.Text = "Starter"
         starterBtn.Font = Enum.Font.GothamSemibold
         starterBtn.TextScaled = true
@@ -543,8 +546,8 @@ function Cosmetics.init(config, root, bootUI)
         starterBtn.Parent = frame
 
         local useBtn = Instance.new("TextButton")
-        useBtn.Size = UDim2.new(0.45,0,0.3,0)
-        useBtn.Position = UDim2.new(0.05,0,0.68,0)
+        useBtn.Size = UDim2.new(0.9,0,0.25,0)
+        useBtn.Position = UDim2.new(0.05,0,0.55,0)
         useBtn.Text = "Use"
         useBtn.Font = Enum.Font.GothamSemibold
         useBtn.TextScaled = true
@@ -555,10 +558,11 @@ function Cosmetics.init(config, root, bootUI)
         useBtn.Parent = frame
 
         local clearBtn = Instance.new("TextButton")
-        clearBtn.Size = UDim2.new(0.45,0,0.3,0)
-        clearBtn.Position = UDim2.new(0.5,0,0.68,0)
+        clearBtn.Size = UDim2.new(0.6,0,0.15,0)
+        clearBtn.AnchorPoint = Vector2.new(0.5,0)
+        clearBtn.Position = UDim2.new(0.5,0,0.82,0)
         clearBtn.Text = "Clear"
-        clearBtn.Font = Enum.Font.GothamSemibold
+        clearBtn.Font = Enum.Font.Gotham
         clearBtn.TextScaled = true
         clearBtn.TextColor3 = Color3.new(1,1,1)
         clearBtn.BackgroundColor3 = Color3.fromRGB(200,80,80)
@@ -582,9 +586,9 @@ function Cosmetics.init(config, root, bootUI)
     -- create slot 3 (right)
     do
         local frame = Instance.new("Frame")
-        frame.Size = UDim2.fromScale(0.3,0.36)
-        frame.Position = UDim2.fromScale(0.8,0.5)
-        frame.AnchorPoint = Vector2.new(0.5,0.5)
+        frame.Size = UDim2.fromScale(0.25, 0.4)
+        frame.Position = UDim2.fromScale(0.85, 0.5)
+        frame.AnchorPoint = Vector2.new(0.5, 0.5)
         frame.BackgroundTransparency = 1
         frame.ZIndex = 11
         frame.Parent = slotsContainer
@@ -629,8 +633,8 @@ function Cosmetics.init(config, root, bootUI)
         label.Parent = frame
 
         local robloxBtn = Instance.new("TextButton")
-        robloxBtn.Size = UDim2.new(0.45,0,0.3,0)
-        robloxBtn.Position = UDim2.new(0.05,0,0.35,0)
+        robloxBtn.Size = UDim2.new(0.45,0,0.25,0)
+        robloxBtn.Position = UDim2.new(0.05,0,0.3,0)
         robloxBtn.Text = "Roblox"
         robloxBtn.Font = Enum.Font.GothamSemibold
         robloxBtn.TextScaled = true
@@ -641,8 +645,8 @@ function Cosmetics.init(config, root, bootUI)
         robloxBtn.Parent = frame
 
         local starterBtn = Instance.new("TextButton")
-        starterBtn.Size = UDim2.new(0.45,0,0.3,0)
-        starterBtn.Position = UDim2.new(0.5,0,0.35,0)
+        starterBtn.Size = UDim2.new(0.45,0,0.25,0)
+        starterBtn.Position = UDim2.new(0.5,0,0.3,0)
         starterBtn.Text = "Starter"
         starterBtn.Font = Enum.Font.GothamSemibold
         starterBtn.TextScaled = true
@@ -653,8 +657,8 @@ function Cosmetics.init(config, root, bootUI)
         starterBtn.Parent = frame
 
         local useBtn = Instance.new("TextButton")
-        useBtn.Size = UDim2.new(0.45,0,0.3,0)
-        useBtn.Position = UDim2.new(0.05,0,0.68,0)
+        useBtn.Size = UDim2.new(0.9,0,0.25,0)
+        useBtn.Position = UDim2.new(0.05,0,0.55,0)
         useBtn.Text = "Use"
         useBtn.Font = Enum.Font.GothamSemibold
         useBtn.TextScaled = true
@@ -665,10 +669,11 @@ function Cosmetics.init(config, root, bootUI)
         useBtn.Parent = frame
 
         local clearBtn = Instance.new("TextButton")
-        clearBtn.Size = UDim2.new(0.45,0,0.3,0)
-        clearBtn.Position = UDim2.new(0.5,0,0.68,0)
+        clearBtn.Size = UDim2.new(0.6,0,0.15,0)
+        clearBtn.AnchorPoint = Vector2.new(0.5,0)
+        clearBtn.Position = UDim2.new(0.5,0,0.82,0)
         clearBtn.Text = "Clear"
-        clearBtn.Font = Enum.Font.GothamSemibold
+        clearBtn.Font = Enum.Font.Gotham
         clearBtn.TextScaled = true
         clearBtn.TextColor3 = Color3.new(1,1,1)
         clearBtn.BackgroundColor3 = Color3.fromRGB(200,80,80)
