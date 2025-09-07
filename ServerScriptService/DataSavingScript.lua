@@ -141,7 +141,7 @@ local function playerAdded(player)
     leaderstats.Name = "leaderstats"
     leaderstats.Parent = player
 
-    local coinsValue = Instance.new("NumberValue")
+    local coinsValue = Instance.new("IntValue")
     coinsValue.Name = "Coins"
     coinsValue.Value = data.currency.Coins
     coinsValue.Parent = leaderstats
@@ -179,7 +179,7 @@ local function playerAdded(player)
         sessionData[player.UserId].kills = kills.Value
     end)
 
-    local leaderLevel = Instance.new("NumberValue")
+    local leaderLevel = Instance.new("IntValue")
     leaderLevel.Name = "Level"
     leaderLevel.Value = levelValue.Value
     leaderLevel.Parent = leaderstats
