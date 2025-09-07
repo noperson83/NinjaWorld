@@ -12,7 +12,7 @@ local dojo
 local slotButtons = {}
 local boot
 local rootUI
-local slotsFrame
+local slotsContainer
 
 local personaCache = {slots = {}, slotCount = 0}
 local currentChoiceType = "Roblox"
@@ -89,13 +89,13 @@ local function highestUsed()
 end
 
 local function updateSlots()
-    local hi = highestUsed()
-    local visible = math.min(hi + 1, personaCache.slotCount)
-    for i = 1, personaCache.slotCount do
+    local hi = math.min(highestUsed(), #slotButtons)
+    local visible = math.min(hi + 1, #slotButtons)
+    for i = 1, #slotButtons do
         local slot = personaCache.slots[i]
         local ui = slotButtons[i]
         if ui then
-            ui.row.Visible = i <= visible
+            ui.frame.Visible = i <= visible
             if i <= visible then
                 local index = i
                 ui.label.Text = slot and ("Slot %d – %s"):format(index, slot.name or slot.type) or ("Slot %d – (empty)"):format(index)
@@ -130,9 +130,6 @@ local function updateSlots()
                 end
             end
         end
-    end
-    if slotsFrame then
-        slotsFrame.CanvasSize = UDim2.new(0,0,0, visible * 40)
     end
 end
 
@@ -269,43 +266,44 @@ function Cosmetics.init(config, root, bootUI)
     line.Parent = picker
 
     -- Display persona slots above the dojo image
-    slotsFrame = Instance.new("ScrollingFrame")
-    slotsFrame.Size = UDim2.new(0.9,0,0.5,0)
-    slotsFrame.Position = UDim2.fromScale(0.5,0.44)
-    slotsFrame.AnchorPoint = Vector2.new(0.5,0.5)
-    slotsFrame.BackgroundTransparency = 1
-    slotsFrame.BorderSizePixel = 0
-    slotsFrame.ScrollBarThickness = 6
-    slotsFrame.ZIndex = 11
-    slotsFrame.Parent = picker
+    slotsContainer = Instance.new("Frame")
+    slotsContainer.Size = UDim2.new(0.9,0,0.5,0)
+    slotsContainer.Position = UDim2.fromScale(0.5,0.44)
+    slotsContainer.AnchorPoint = Vector2.new(0.5,0.5)
+    slotsContainer.BackgroundTransparency = 1
+    slotsContainer.BorderSizePixel = 0
+    slotsContainer.ZIndex = 11
+    slotsContainer.Parent = picker
 
-    -- fetch initial slot data to know how many rows to build
+    -- fetch initial slot data
     personaCache = rf:InvokeServer("get", {}) or personaCache
 
     slotButtons = {}
 
-    local function makeSlot(index)
-        local row = Instance.new("Frame")
-        row.Size = UDim2.new(1,0,0,36)
-        row.Position = UDim2.new(0,0,0,(index-1)*40)
-        row.BackgroundTransparency = 1
-        row.ZIndex = 11
-        row.Parent = slotsFrame
+    -- create slot 1 (center, larger)
+    do
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.fromScale(0.3 * 1.2, 0.36 * 1.2)
+        frame.Position = UDim2.fromScale(0.5,0.5)
+        frame.AnchorPoint = Vector2.new(0.5,0.5)
+        frame.BackgroundTransparency = 1
+        frame.ZIndex = 11
+        frame.Parent = slotsContainer
 
         local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(0.45,0,1,0)
+        label.Size = UDim2.new(1,0,0.3,0)
         label.BackgroundTransparency = 1
-        label.TextXAlignment = Enum.TextXAlignment.Left
-        label.Text = ("Slot %d – (empty)"):format(index)
+        label.TextXAlignment = Enum.TextXAlignment.Center
+        label.Text = "Slot 1"
         label.Font = Enum.Font.Gotham
         label.TextScaled = true
         label.TextColor3 = Color3.fromRGB(220,220,220)
         label.ZIndex = 11
-        label.Parent = row
+        label.Parent = frame
 
         local robloxBtn = Instance.new("TextButton")
-        robloxBtn.Size = UDim2.new(0.24,0,1,0)
-        robloxBtn.Position = UDim2.new(0.47,0,0,0)
+        robloxBtn.Size = UDim2.new(0.45,0,0.3,0)
+        robloxBtn.Position = UDim2.new(0.05,0,0.35,0)
         robloxBtn.Text = "Roblox"
         robloxBtn.Font = Enum.Font.GothamSemibold
         robloxBtn.TextScaled = true
@@ -313,11 +311,11 @@ function Cosmetics.init(config, root, bootUI)
         robloxBtn.BackgroundColor3 = Color3.fromRGB(80,120,200)
         robloxBtn.AutoButtonColor = true
         robloxBtn.ZIndex = 11
-        robloxBtn.Parent = row
+        robloxBtn.Parent = frame
 
         local starterBtn = Instance.new("TextButton")
-        starterBtn.Size = UDim2.new(0.24,0,1,0)
-        starterBtn.Position = UDim2.new(0.74,0,0,0)
+        starterBtn.Size = UDim2.new(0.45,0,0.3,0)
+        starterBtn.Position = UDim2.new(0.5,0,0.35,0)
         starterBtn.Text = "Starter"
         starterBtn.Font = Enum.Font.GothamSemibold
         starterBtn.TextScaled = true
@@ -325,11 +323,11 @@ function Cosmetics.init(config, root, bootUI)
         starterBtn.BackgroundColor3 = Color3.fromRGB(100,100,220)
         starterBtn.AutoButtonColor = true
         starterBtn.ZIndex = 11
-        starterBtn.Parent = row
+        starterBtn.Parent = frame
 
         local useBtn = Instance.new("TextButton")
-        useBtn.Size = UDim2.new(0.24,0,1,0)
-        useBtn.Position = UDim2.new(0.47,0,0,0)
+        useBtn.Size = UDim2.new(0.45,0,0.3,0)
+        useBtn.Position = UDim2.new(0.05,0,0.68,0)
         useBtn.Text = "Use"
         useBtn.Font = Enum.Font.GothamSemibold
         useBtn.TextScaled = true
@@ -337,11 +335,11 @@ function Cosmetics.init(config, root, bootUI)
         useBtn.BackgroundColor3 = Color3.fromRGB(60,180,110)
         useBtn.AutoButtonColor = true
         useBtn.ZIndex = 11
-        useBtn.Parent = row
+        useBtn.Parent = frame
 
         local clearBtn = Instance.new("TextButton")
-        clearBtn.Size = UDim2.new(0.24,0,1,0)
-        clearBtn.Position = UDim2.new(0.74,0,0,0)
+        clearBtn.Size = UDim2.new(0.45,0,0.3,0)
+        clearBtn.Position = UDim2.new(0.5,0,0.68,0)
         clearBtn.Text = "Clear"
         clearBtn.Font = Enum.Font.GothamSemibold
         clearBtn.TextScaled = true
@@ -349,10 +347,10 @@ function Cosmetics.init(config, root, bootUI)
         clearBtn.BackgroundColor3 = Color3.fromRGB(200,80,80)
         clearBtn.AutoButtonColor = true
         clearBtn.ZIndex = 11
-        clearBtn.Parent = row
+        clearBtn.Parent = frame
 
-        slotButtons[index] = {
-            row = row,
+        slotButtons[1] = {
+            frame = frame,
             useBtn = useBtn,
             clearBtn = clearBtn,
             robloxBtn = robloxBtn,
@@ -360,7 +358,164 @@ function Cosmetics.init(config, root, bootUI)
             label = label
         }
     end
-    for i = 1, personaCache.slotCount do makeSlot(i) end
+
+    -- create slot 2 (left)
+    do
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.fromScale(0.3,0.36)
+        frame.Position = UDim2.fromScale(0.2,0.5)
+        frame.AnchorPoint = Vector2.new(0.5,0.5)
+        frame.BackgroundTransparency = 1
+        frame.ZIndex = 11
+        frame.Parent = slotsContainer
+
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(1,0,0.3,0)
+        label.BackgroundTransparency = 1
+        label.TextXAlignment = Enum.TextXAlignment.Center
+        label.Text = "Slot 2"
+        label.Font = Enum.Font.Gotham
+        label.TextScaled = true
+        label.TextColor3 = Color3.fromRGB(220,220,220)
+        label.ZIndex = 11
+        label.Parent = frame
+
+        local robloxBtn = Instance.new("TextButton")
+        robloxBtn.Size = UDim2.new(0.45,0,0.3,0)
+        robloxBtn.Position = UDim2.new(0.05,0,0.35,0)
+        robloxBtn.Text = "Roblox"
+        robloxBtn.Font = Enum.Font.GothamSemibold
+        robloxBtn.TextScaled = true
+        robloxBtn.TextColor3 = Color3.new(1,1,1)
+        robloxBtn.BackgroundColor3 = Color3.fromRGB(80,120,200)
+        robloxBtn.AutoButtonColor = true
+        robloxBtn.ZIndex = 11
+        robloxBtn.Parent = frame
+
+        local starterBtn = Instance.new("TextButton")
+        starterBtn.Size = UDim2.new(0.45,0,0.3,0)
+        starterBtn.Position = UDim2.new(0.5,0,0.35,0)
+        starterBtn.Text = "Starter"
+        starterBtn.Font = Enum.Font.GothamSemibold
+        starterBtn.TextScaled = true
+        starterBtn.TextColor3 = Color3.new(1,1,1)
+        starterBtn.BackgroundColor3 = Color3.fromRGB(100,100,220)
+        starterBtn.AutoButtonColor = true
+        starterBtn.ZIndex = 11
+        starterBtn.Parent = frame
+
+        local useBtn = Instance.new("TextButton")
+        useBtn.Size = UDim2.new(0.45,0,0.3,0)
+        useBtn.Position = UDim2.new(0.05,0,0.68,0)
+        useBtn.Text = "Use"
+        useBtn.Font = Enum.Font.GothamSemibold
+        useBtn.TextScaled = true
+        useBtn.TextColor3 = Color3.new(1,1,1)
+        useBtn.BackgroundColor3 = Color3.fromRGB(60,180,110)
+        useBtn.AutoButtonColor = true
+        useBtn.ZIndex = 11
+        useBtn.Parent = frame
+
+        local clearBtn = Instance.new("TextButton")
+        clearBtn.Size = UDim2.new(0.45,0,0.3,0)
+        clearBtn.Position = UDim2.new(0.5,0,0.68,0)
+        clearBtn.Text = "Clear"
+        clearBtn.Font = Enum.Font.GothamSemibold
+        clearBtn.TextScaled = true
+        clearBtn.TextColor3 = Color3.new(1,1,1)
+        clearBtn.BackgroundColor3 = Color3.fromRGB(200,80,80)
+        clearBtn.AutoButtonColor = true
+        clearBtn.ZIndex = 11
+        clearBtn.Parent = frame
+
+        slotButtons[2] = {
+            frame = frame,
+            useBtn = useBtn,
+            clearBtn = clearBtn,
+            robloxBtn = robloxBtn,
+            starterBtn = starterBtn,
+            label = label
+        }
+    end
+
+    -- create slot 3 (right)
+    do
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.fromScale(0.3,0.36)
+        frame.Position = UDim2.fromScale(0.8,0.5)
+        frame.AnchorPoint = Vector2.new(0.5,0.5)
+        frame.BackgroundTransparency = 1
+        frame.ZIndex = 11
+        frame.Parent = slotsContainer
+
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(1,0,0.3,0)
+        label.BackgroundTransparency = 1
+        label.TextXAlignment = Enum.TextXAlignment.Center
+        label.Text = "Slot 3"
+        label.Font = Enum.Font.Gotham
+        label.TextScaled = true
+        label.TextColor3 = Color3.fromRGB(220,220,220)
+        label.ZIndex = 11
+        label.Parent = frame
+
+        local robloxBtn = Instance.new("TextButton")
+        robloxBtn.Size = UDim2.new(0.45,0,0.3,0)
+        robloxBtn.Position = UDim2.new(0.05,0,0.35,0)
+        robloxBtn.Text = "Roblox"
+        robloxBtn.Font = Enum.Font.GothamSemibold
+        robloxBtn.TextScaled = true
+        robloxBtn.TextColor3 = Color3.new(1,1,1)
+        robloxBtn.BackgroundColor3 = Color3.fromRGB(80,120,200)
+        robloxBtn.AutoButtonColor = true
+        robloxBtn.ZIndex = 11
+        robloxBtn.Parent = frame
+
+        local starterBtn = Instance.new("TextButton")
+        starterBtn.Size = UDim2.new(0.45,0,0.3,0)
+        starterBtn.Position = UDim2.new(0.5,0,0.35,0)
+        starterBtn.Text = "Starter"
+        starterBtn.Font = Enum.Font.GothamSemibold
+        starterBtn.TextScaled = true
+        starterBtn.TextColor3 = Color3.new(1,1,1)
+        starterBtn.BackgroundColor3 = Color3.fromRGB(100,100,220)
+        starterBtn.AutoButtonColor = true
+        starterBtn.ZIndex = 11
+        starterBtn.Parent = frame
+
+        local useBtn = Instance.new("TextButton")
+        useBtn.Size = UDim2.new(0.45,0,0.3,0)
+        useBtn.Position = UDim2.new(0.05,0,0.68,0)
+        useBtn.Text = "Use"
+        useBtn.Font = Enum.Font.GothamSemibold
+        useBtn.TextScaled = true
+        useBtn.TextColor3 = Color3.new(1,1,1)
+        useBtn.BackgroundColor3 = Color3.fromRGB(60,180,110)
+        useBtn.AutoButtonColor = true
+        useBtn.ZIndex = 11
+        useBtn.Parent = frame
+
+        local clearBtn = Instance.new("TextButton")
+        clearBtn.Size = UDim2.new(0.45,0,0.3,0)
+        clearBtn.Position = UDim2.new(0.5,0,0.68,0)
+        clearBtn.Text = "Clear"
+        clearBtn.Font = Enum.Font.GothamSemibold
+        clearBtn.TextScaled = true
+        clearBtn.TextColor3 = Color3.new(1,1,1)
+        clearBtn.BackgroundColor3 = Color3.fromRGB(200,80,80)
+        clearBtn.AutoButtonColor = true
+        clearBtn.ZIndex = 11
+        clearBtn.Parent = frame
+
+        slotButtons[3] = {
+            frame = frame,
+            useBtn = useBtn,
+            clearBtn = clearBtn,
+            robloxBtn = robloxBtn,
+            starterBtn = starterBtn,
+            label = label
+        }
+    end
 
     updateSlots()
 
