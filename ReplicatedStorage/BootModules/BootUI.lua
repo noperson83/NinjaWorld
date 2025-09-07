@@ -18,6 +18,7 @@ local Players           = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService      = game:GetService("TweenService")
 local ContentProvider   = game:GetService("ContentProvider")
+local GuiService        = game:GetService("GuiService")
 local TeleportService   = game:GetService("TeleportService")
 local RunService        = game:GetService("RunService")
 local Workspace         = game:GetService("Workspace")
@@ -27,6 +28,8 @@ local player  = Players.LocalPlayer
 local rf      = ReplicatedStorage:WaitForChild("PersonaServiceRF")
 local cam     = Workspace.CurrentCamera
 local enterRE = ReplicatedStorage:FindFirstChild("EnterDojoRE") -- created by server script
+
+local topInsetY = GuiService:GetGuiInset().Y
 
 -- =====================
 -- Module requires
@@ -279,9 +282,11 @@ loadout.ZIndex = 20
 loadout.Parent = root
 BootUI.loadout = loadout
 
+local baseY = topInsetY + 20
+
 local loadTitle = Instance.new("TextLabel")
 loadTitle.Size = UDim2.new(1,-40,0,60)
-loadTitle.Position = UDim2.new(0.5,0,0,20)
+loadTitle.Position = UDim2.new(0.5,0,0,baseY)
 loadTitle.AnchorPoint = Vector2.new(0.5,0)
 loadTitle.BackgroundTransparency = 0.6
 loadTitle.TextXAlignment = Enum.TextXAlignment.Center
@@ -294,7 +299,7 @@ loadTitle.Parent = loadout
 -- Emote bar (top)
 local emoteBar = Instance.new("Frame")
 emoteBar.Size = UDim2.new(1,-40,0,38)
-emoteBar.Position = UDim2.fromOffset(20,68)
+emoteBar.Position = UDim2.fromOffset(20,baseY + 48)
 emoteBar.BackgroundColor3 = Color3.fromRGB(24,26,28)
 emoteBar.BackgroundTransparency = 0.6
 emoteBar.BorderSizePixel = 0
@@ -320,7 +325,7 @@ end
 local vpCard = Instance.new("Frame")
 vpCard.BackgroundTransparency = 0.6
 vpCard.Size = UDim2.new(0.48,-30,0.62,0)
-vpCard.Position = UDim2.fromOffset(20,112)
+vpCard.Position = UDim2.fromOffset(20,baseY + 92)
 vpCard.BackgroundColor3 = Color3.fromRGB(24,26,28)
 vpCard.BorderSizePixel = 0
 vpCard.Parent = loadout
@@ -334,7 +339,7 @@ viewport.Parent = vpCard
 
 local bpCard = Instance.new("Frame")
 bpCard.Size = UDim2.new(0.48,-30,0.62,0)
-bpCard.Position = UDim2.new(1,-20,0,112)
+bpCard.Position = UDim2.new(1,-20,0,baseY + 92)
 bpCard.AnchorPoint = Vector2.new(1,0)
 bpCard.BackgroundColor3 = Color3.fromRGB(24,26,28)
 bpCard.BackgroundTransparency = 0.6
