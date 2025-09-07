@@ -35,6 +35,7 @@ local Cosmetics       = require(ReplicatedStorage.BootModules.Cosmetics)
 local CurrencyService = require(ReplicatedStorage.BootModules.CurrencyService)
 local Shop            = require(ReplicatedStorage.BootModules.Shop)
 local ShopUI          = require(ReplicatedStorage.BootModules.ShopUI)
+local AbilityUI       = require(ReplicatedStorage.BootModules.AbilityUI)
 local TeleportClient  = require(ReplicatedStorage.ClientModules.TeleportClient)
 
 -- =====================
@@ -165,6 +166,16 @@ BootUI.toggleShop = toggleShop
 if config.showShop then
     toggleShop()
 end
+
+local abilityFrame
+local function toggleAbilities()
+    if not abilityFrame then
+        abilityFrame = AbilityUI.init(config, BootUI)
+    else
+        abilityFrame.Visible = not abilityFrame.Visible
+    end
+end
+BootUI.toggleAbilities = toggleAbilities
 local shopBtn = Instance.new("TextButton")
 shopBtn.Size = UDim2.fromOffset(120,40)
 shopBtn.Position = UDim2.fromOffset(20,20)
@@ -177,6 +188,19 @@ shopBtn.AutoButtonColor = true
 shopBtn.ZIndex = 10
 shopBtn.Parent = root
 shopBtn.Activated:Connect(toggleShop)
+
+local abilityBtn = Instance.new("TextButton")
+abilityBtn.Size = UDim2.fromOffset(120,40)
+abilityBtn.Position = UDim2.fromOffset(150,20)
+abilityBtn.Text = "Abilities"
+abilityBtn.Font = Enum.Font.GothamSemibold
+abilityBtn.TextScaled = true
+abilityBtn.TextColor3 = Color3.new(1,1,1)
+abilityBtn.BackgroundColor3 = Color3.fromRGB(50,120,255)
+abilityBtn.AutoButtonColor = true
+abilityBtn.ZIndex = 10
+abilityBtn.Parent = root
+abilityBtn.Activated:Connect(toggleAbilities)
 TeleportClient.init(root)
 
 -- Intro visuals
