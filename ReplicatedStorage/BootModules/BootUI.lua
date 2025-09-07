@@ -56,11 +56,9 @@ local ASSETS = {
     PaperTex = "rbxassetid://131504699316598",
 }
 
-local StarterBackpack = {
+local StarterBackpack = config.starterBackpack or {
     capacity = 20,
-    items = {
-        {name = "Elemental Orbs", qty = 3, stack = 9},
-    }
+    items = {}
 }
 BootUI.StarterBackpack = StarterBackpack
 
