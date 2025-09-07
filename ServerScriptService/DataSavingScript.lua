@@ -46,6 +46,22 @@ local function deepCopy(tbl)
     return copy
 end
 
+-- Ensure orbs table is a dictionary with a total not exceeding 10
+local function sanitizeOrbs(orbs)
+    orbs = typeof(orbs) == "table" and orbs or {}
+    local total = 0
+    local cleaned = {}
+    for element, count in pairs(orbs) do
+        count = tonumber(count) or 0
+        if count > 0 and total < 10 then
+            local allowed = math.min(count, 10 - total)
+            cleaned[element] = allowed
+            total += allowed
+        end
+    end
+    return cleaned
+end
+
 local function fillMissing(data, defaults)
     for k, v in pairs(defaults) do
         if type(v) == "table" then
@@ -66,6 +82,7 @@ local function loadPlayerData(player)
     if success then
         data = data or deepCopy(DEFAULT_DATA)
         fillMissing(data, DEFAULT_DATA)
+        data.inventory.orbs = sanitizeOrbs(data.inventory.orbs)
         sessionData[player.UserId] = data
         return data
     else
@@ -80,7 +97,13 @@ local function savePlayerData(player)
     if not data then
         return
     end
-    data.inventory = player:GetAttribute("Inventory") or data.inventory
+    local inv = player:GetAttribute("Inventory")
+    if type(inv) == "table" then
+        inv.orbs = sanitizeOrbs(inv.orbs)
+        data.inventory = inv
+    else
+        data.inventory.orbs = sanitizeOrbs(data.inventory.orbs)
+    end
     local success, err = pcall(function()
         DataStore:SetAsync(key, data)
     end)
@@ -104,10 +127,12 @@ local function playerAdded(player)
         return
     end
 
+    data.inventory.orbs = sanitizeOrbs(data.inventory.orbs)
     player:SetAttribute("Inventory", data.inventory)
     player:GetAttributeChangedSignal("Inventory"):Connect(function()
         local inv = player:GetAttribute("Inventory")
         if type(inv) == "table" then
+            inv.orbs = sanitizeOrbs(inv.orbs)
             sessionData[player.UserId].inventory = inv
         end
     end)

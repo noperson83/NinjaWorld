@@ -5,7 +5,7 @@ CurrencyService.__index = CurrencyService
 function CurrencyService.new(config)
     local self = setmetatable({}, CurrencyService)
     self.coins = 0
-    self.orbs = 0
+    self.orbs = {}
 
     self.BalanceChanged = Instance.new("BindableEvent")
     self.BalanceChanged:Fire(self.coins, self.orbs)
@@ -34,6 +34,26 @@ function CurrencyService:AddCoins(amount)
                 self.updateEvent:FireServer({coins = self.coins})
         end
         self.BalanceChanged:Fire(self.coins, self.orbs)
+end
+
+function CurrencyService:GetOrbCount()
+        local total = 0
+        for _, v in pairs(self.orbs) do
+                total += v
+        end
+        return total
+end
+
+function CurrencyService:AddOrb(element)
+        if typeof(element) ~= "string" then return false end
+        if self.orbs[element] then return false end
+        if self:GetOrbCount() >= 10 then return false end
+        self.orbs[element] = 1
+        if self.updateEvent then
+                self.updateEvent:FireServer({addOrb = element})
+        end
+        self.BalanceChanged:Fire(self.coins, self.orbs)
+        return true
 end
 
 function CurrencyService:SpendCoins(amount)

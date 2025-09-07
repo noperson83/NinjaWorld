@@ -63,7 +63,7 @@ local StarterBackpack = config.starterBackpack or {
     food = {},
     special = {},
     coins = 0,
-    orbs = 0,
+    orbs = {},
 }
 BootUI.StarterBackpack = StarterBackpack
 
@@ -618,7 +618,17 @@ local function populateBackpackUI(bp)
     -- currency section
     addHeader("Currency")
     addSimpleRow("Coins", bp.coins or 0)
-    addSimpleRow("Orbs", bp.orbs or 0)
+
+    -- orbs section
+    local orbTable = bp.orbs or {}
+    local totalOrbs = 0
+    for _, v in pairs(orbTable) do totalOrbs += v end
+    addHeader(string.format("Orbs (%d / 10)", totalOrbs))
+    for element, v in pairs(orbTable) do
+        if v > 0 then
+            addSimpleRow(element, v)
+        end
+    end
 
     -- item sections
     local sections = {
