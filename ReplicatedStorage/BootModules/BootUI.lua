@@ -411,7 +411,11 @@ btnEnterMain.Visible = (MAIN_PLACE_ID and MAIN_PLACE_ID > 0)
 -- Helpers (UI logic)
 -- =====================
 local function clearChildren(p)
-    for _,c in ipairs(p:GetChildren()) do c:Destroy() end
+    for _, c in ipairs(p:GetChildren()) do
+        if not c:IsA("UIListLayout") then
+            c:Destroy()
+        end
+    end
 end
 
 -- Orbitable viewport state
