@@ -1,43 +1,105 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local AbilityMetadata = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("AbilityMetadata"))
+
 local ShopUI = {}
 
--- Basic shop interface.
-function ShopUI.init(config, shop, bootUI)
-        local root = bootUI and bootUI.root
-        if not root then return end
+local tabFrames = {}
+local frame
 
-        local frame = Instance.new("Frame")
-        frame.Size = UDim2.fromScale(0.3,0.3)
-        frame.Position = UDim2.fromScale(0.35,0.35)
-        frame.BackgroundColor3 = Color3.fromRGB(40,40,42)
-        frame.Parent = root
+-- Build the shop interface with category tabs.
+function ShopUI.init(config, shop, bootUI, defaultTab)
+    local root = bootUI and bootUI.root
+    if not root then return end
 
-        local cost = 10
+    frame = Instance.new("Frame")
+    frame.Size = UDim2.fromScale(0.4,0.5)
+    frame.Position = UDim2.fromScale(0.3,0.25)
+    frame.BackgroundColor3 = Color3.fromRGB(40,40,42)
+    frame.Parent = root
 
-        local buy = Instance.new("TextButton")
-        buy.Size = UDim2.fromScale(1,0.3)
-        buy.Position = UDim2.fromScale(0,0.7)
-        buy.Text = "Buy Sample Item"
-        buy.Parent = frame
+    local tabBar = Instance.new("Frame")
+    tabBar.Size = UDim2.new(1,0,0,30)
+    tabBar.BackgroundTransparency = 1
+    tabBar.Parent = frame
 
-        local currencyService = shop and shop.currencyService
-        local function updateButton(coins)
-                coins = coins or (currencyService and currencyService:GetBalance() or 0)
-                local canAfford = coins >= cost
-                buy.Active = canAfford
-                buy.AutoButtonColor = canAfford
-                buy.TextTransparency = canAfford and 0 or 0.5
-        end
-        updateButton()
-        if currencyService and currencyService.BalanceChanged then
-                currencyService.BalanceChanged.Event:Connect(function(c)
-                        updateButton(c)
-                end)
-        end
+    local tabLayout = Instance.new("UIListLayout")
+    tabLayout.FillDirection = Enum.FillDirection.Horizontal
+    tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    tabLayout.Parent = tabBar
 
-        buy.Activated:Connect(function()
-                shop:Purchase("Sample", cost)
+    local content = Instance.new("Frame")
+    content.Size = UDim2.new(1,0,1,-30)
+    content.Position = UDim2.new(0,0,0,30)
+    content.BackgroundTransparency = 1
+    content.Parent = frame
+
+    local names = {"Elements","Abilities","Weapons"}
+    local numTabs = #names
+    for _,name in ipairs(names) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1/numTabs,0,1,0)
+        btn.Text = name
+        btn.BackgroundColor3 = Color3.fromRGB(60,60,62)
+        btn.TextColor3 = Color3.new(1,1,1)
+        btn.AutoButtonColor = true
+        btn.Parent = tabBar
+        btn.Activated:Connect(function()
+            ShopUI.setTab(name)
         end)
-        return frame
+
+        local tabFrame = Instance.new("Frame")
+        tabFrame.Size = UDim2.fromScale(1,1)
+        tabFrame.BackgroundTransparency = 1
+        tabFrame.Visible = false
+        tabFrame.Parent = content
+        tabFrames[name] = tabFrame
+    end
+
+    -- Abilities tab
+    local abilitiesFrame = tabFrames["Abilities"]
+    local listLayout = Instance.new("UIListLayout")
+    listLayout.Parent = abilitiesFrame
+    local learnRF = ReplicatedStorage:WaitForChild("LearnAbility")
+    for ability, info in pairs(AbilityMetadata) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1,0,0,40)
+        btn.BackgroundColor3 = Color3.fromRGB(80,80,82)
+        btn.TextColor3 = Color3.new(1,1,1)
+        btn.Text = ability .. " (" .. info.cost .. " Coins)"
+        btn.Parent = abilitiesFrame
+        btn.Activated:Connect(function()
+            if shop:Purchase(ability, info.cost) then
+                learnRF:InvokeServer(ability)
+            end
+        end)
+    end
+
+    -- Placeholder tabs
+    local elementsLabel = Instance.new("TextLabel")
+    elementsLabel.Size = UDim2.new(1,0,1,0)
+    elementsLabel.BackgroundTransparency = 1
+    elementsLabel.Text = "Elements coming soon"
+    elementsLabel.TextColor3 = Color3.new(1,1,1)
+    elementsLabel.Parent = tabFrames["Elements"]
+
+    local weaponsLabel = Instance.new("TextLabel")
+    weaponsLabel.Size = UDim2.new(1,0,1,0)
+    weaponsLabel.BackgroundTransparency = 1
+    weaponsLabel.Text = "Weapons coming soon"
+    weaponsLabel.TextColor3 = Color3.new(1,1,1)
+    weaponsLabel.Parent = tabFrames["Weapons"]
+
+    function ShopUI.setTab(tabName)
+        for name, f in pairs(tabFrames) do
+            f.Visible = (name == tabName)
+        end
+    end
+
+    frame.SetTab = ShopUI.setTab
+    ShopUI.setTab(defaultTab or names[1])
+
+    return frame
 end
 
 return ShopUI
+
