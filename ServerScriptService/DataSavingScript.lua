@@ -33,11 +33,19 @@ local DEFAULT_DATA = {
         Atom = 0,
     },
     unlockedAbilities = {},
-    -- realms the player has unlocked; defaults to starter areas
+    -- realms the player has unlocked; start with all locked
     unlockedRealms = {
-        StarterDojo = true,
-        SecretVillage = true,
-        Atoms = true,
+        StarterDojo = false,
+        SecretVillage = false,
+        Water = false,
+        Fire = false,
+        Wind = false,
+        Growth = false,
+        Ice = false,
+        Light = false,
+        Metal = false,
+        Strength = false,
+        Atoms = false,
     },
     inventory = {
         coins = 0,
