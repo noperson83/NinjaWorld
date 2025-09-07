@@ -18,6 +18,26 @@ local personaCache = {slots = {}, slotCount = 0}
 local currentChoiceType = "Roblox"
 local chosenSlot
 
+local levelValue
+
+local function getLevel()
+    if levelValue and levelValue.Value then
+        return levelValue.Value
+    end
+    local attr = player:GetAttribute("Level")
+    return typeof(attr) == "number" and attr or 0
+end
+
+local function updateLevelLabels()
+    for i, ui in pairs(slotButtons) do
+        if ui and ui.levelLabel then
+            local slot = personaCache.slots[i]
+            local lvl = slot and slot.level or getLevel()
+            ui.levelLabel.Text = ("Level %d"):format(lvl)
+        end
+    end
+end
+
 local function showConfirm(text, onYes)
     local cover = Instance.new("Frame")
     cover.Size = UDim2.fromScale(1,1)
@@ -169,6 +189,7 @@ local function updateSlots()
             end
         end
     end
+    updateLevelLabels()
 end
 
 refreshSlots = function()
@@ -238,6 +259,26 @@ end
 function Cosmetics.init(config, root, bootUI)
     boot = bootUI
     rootUI = root
+
+    local stats = player:FindFirstChild("Stats")
+    if stats then
+        levelValue = stats:FindFirstChild("Level")
+        if levelValue then
+            levelValue:GetPropertyChangedSignal("Value"):Connect(updateLevelLabels)
+            updateLevelLabels()
+        end
+    else
+        player.ChildAdded:Connect(function(child)
+            if child.Name == "Stats" then
+                levelValue = child:FindFirstChild("Level")
+                if levelValue then
+                    levelValue:GetPropertyChangedSignal("Value"):Connect(updateLevelLabels)
+                    updateLevelLabels()
+                end
+            end
+        end)
+    end
+    player:GetAttributeChangedSignal("Level"):Connect(updateLevelLabels)
 
     dojo = Instance.new("Frame")
     dojo.Size = UDim2.fromScale(1,1)
@@ -342,6 +383,20 @@ function Cosmetics.init(config, root, bootUI)
         placeholder.ZIndex = 10
         placeholder.Parent = frame
 
+        local levelLabel = Instance.new("TextLabel")
+        levelLabel.Name = "LevelLabel"
+        levelLabel.Size = UDim2.new(1,0,0.15,0)
+        levelLabel.Position = UDim2.new(0.5,0,0,0)
+        levelLabel.AnchorPoint = Vector2.new(0.5,1)
+        levelLabel.BackgroundTransparency = 1
+        levelLabel.TextXAlignment = Enum.TextXAlignment.Center
+        levelLabel.Text = ""
+        levelLabel.Font = Enum.Font.Gotham
+        levelLabel.TextScaled = true
+        levelLabel.TextColor3 = Color3.fromRGB(220,220,220)
+        levelLabel.ZIndex = 11
+        levelLabel.Parent = frame
+
         local label = Instance.new("TextLabel")
         label.Size = UDim2.new(1,0,0.3,0)
         label.BackgroundTransparency = 1
@@ -409,7 +464,8 @@ function Cosmetics.init(config, root, bootUI)
             clearBtn = clearBtn,
             robloxBtn = robloxBtn,
             starterBtn = starterBtn,
-            label = label
+            label = label,
+            levelLabel = levelLabel
         }
     end
 
@@ -436,6 +492,20 @@ function Cosmetics.init(config, root, bootUI)
         placeholder.ScaleType = Enum.ScaleType.Fit
         placeholder.ZIndex = 10
         placeholder.Parent = frame
+
+        local levelLabel = Instance.new("TextLabel")
+        levelLabel.Name = "LevelLabel"
+        levelLabel.Size = UDim2.new(1,0,0.15,0)
+        levelLabel.Position = UDim2.new(0.5,0,0,0)
+        levelLabel.AnchorPoint = Vector2.new(0.5,1)
+        levelLabel.BackgroundTransparency = 1
+        levelLabel.TextXAlignment = Enum.TextXAlignment.Center
+        levelLabel.Text = ""
+        levelLabel.Font = Enum.Font.Gotham
+        levelLabel.TextScaled = true
+        levelLabel.TextColor3 = Color3.fromRGB(220,220,220)
+        levelLabel.ZIndex = 11
+        levelLabel.Parent = frame
 
         local label = Instance.new("TextLabel")
         label.Size = UDim2.new(1,0,0.3,0)
@@ -504,7 +574,8 @@ function Cosmetics.init(config, root, bootUI)
             clearBtn = clearBtn,
             robloxBtn = robloxBtn,
             starterBtn = starterBtn,
-            label = label
+            label = label,
+            levelLabel = levelLabel
         }
     end
 
@@ -531,6 +602,20 @@ function Cosmetics.init(config, root, bootUI)
         placeholder.ScaleType = Enum.ScaleType.Fit
         placeholder.ZIndex = 10
         placeholder.Parent = frame
+
+        local levelLabel = Instance.new("TextLabel")
+        levelLabel.Name = "LevelLabel"
+        levelLabel.Size = UDim2.new(1,0,0.15,0)
+        levelLabel.Position = UDim2.new(0.5,0,0,0)
+        levelLabel.AnchorPoint = Vector2.new(0.5,1)
+        levelLabel.BackgroundTransparency = 1
+        levelLabel.TextXAlignment = Enum.TextXAlignment.Center
+        levelLabel.Text = ""
+        levelLabel.Font = Enum.Font.Gotham
+        levelLabel.TextScaled = true
+        levelLabel.TextColor3 = Color3.fromRGB(220,220,220)
+        levelLabel.ZIndex = 11
+        levelLabel.Parent = frame
 
         local label = Instance.new("TextLabel")
         label.Size = UDim2.new(1,0,0.3,0)
@@ -599,7 +684,8 @@ function Cosmetics.init(config, root, bootUI)
             clearBtn = clearBtn,
             robloxBtn = robloxBtn,
             starterBtn = starterBtn,
-            label = label
+            label = label,
+            levelLabel = levelLabel
         }
     end
 
