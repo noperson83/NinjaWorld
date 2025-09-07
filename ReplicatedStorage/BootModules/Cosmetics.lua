@@ -127,7 +127,6 @@ local function showDojoPicker()
     if boot then
         if boot.loadout then boot.loadout.Visible = false end
         if boot.shopBtn then boot.shopBtn.Visible = false end
-        if boot.abilityBtn then boot.abilityBtn.Visible = false end
     end
 end
 
@@ -135,7 +134,6 @@ local function showLoadout(personaType)
     if dojo then dojo.Visible = false end
     if boot then
         if boot.shopBtn then boot.shopBtn.Visible = true end
-        if boot.abilityBtn then boot.abilityBtn.Visible = true end
         if boot.loadout then
             boot.loadout.Visible = true
             if boot.buildCharacterPreview then boot.buildCharacterPreview(personaType) end

@@ -162,11 +162,18 @@ root.Parent = ui
 
 BootUI.root = root
 Cosmetics.init(config, root, BootUI)
-local function toggleShop()
+local function toggleShop(defaultTab)
     if not BootUI.shopFrame then
-        BootUI.shopFrame = ShopUI.init(config, shop, BootUI)
+        BootUI.shopFrame = ShopUI.init(config, shop, BootUI, defaultTab)
     else
         BootUI.shopFrame.Visible = not BootUI.shopFrame.Visible
+    end
+    if BootUI.shopFrame and BootUI.shopFrame.Visible and defaultTab then
+        if ShopUI.setTab then
+            ShopUI.setTab(defaultTab)
+        elseif BootUI.shopFrame.SetTab then
+            BootUI.shopFrame:SetTab(defaultTab)
+        end
     end
 end
 BootUI.toggleShop = toggleShop
@@ -185,7 +192,8 @@ end
 BootUI.toggleAbilities = toggleAbilities
 local shopBtn = Instance.new("TextButton")
 shopBtn.Size = UDim2.fromOffset(120,40)
-shopBtn.Position = UDim2.fromOffset(20,20)
+shopBtn.AnchorPoint = Vector2.new(1,1)
+shopBtn.Position = UDim2.new(1,-20,1,-20)
 shopBtn.Text = "Shop"
 shopBtn.Font = Enum.Font.GothamSemibold
 shopBtn.TextScaled = true
@@ -196,22 +204,9 @@ shopBtn.ZIndex = 10
 shopBtn.Parent = root
 shopBtn.Visible = false
 BootUI.shopBtn = shopBtn
-shopBtn.Activated:Connect(toggleShop)
-
-local abilityBtn = Instance.new("TextButton")
-abilityBtn.Size = UDim2.fromOffset(120,40)
-abilityBtn.Position = UDim2.fromOffset(150,20)
-abilityBtn.Text = "Abilities"
-abilityBtn.Font = Enum.Font.GothamSemibold
-abilityBtn.TextScaled = true
-abilityBtn.TextColor3 = Color3.new(1,1,1)
-abilityBtn.BackgroundColor3 = Color3.fromRGB(50,120,255)
-abilityBtn.AutoButtonColor = true
-abilityBtn.ZIndex = 10
-abilityBtn.Parent = root
-abilityBtn.Visible = false
-BootUI.abilityBtn = abilityBtn
-abilityBtn.Activated:Connect(toggleAbilities)
+shopBtn.Activated:Connect(function()
+    toggleShop()
+end)
 TeleportClient.init(root)
 
 -- Intro visuals
