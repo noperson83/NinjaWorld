@@ -1,6 +1,8 @@
 local BootUI = {}
 
-function BootUI.start()
+function BootUI.start(config)
+    config = config or {}
+    BootUI.config = config
 -- Ninja World EXP 3000
 -- Boot.client.lua – v7.4
 -- Changes from v7.3:
@@ -24,6 +26,23 @@ local player  = Players.LocalPlayer
 local rf      = ReplicatedStorage:WaitForChild("PersonaServiceRF")
 local cam     = Workspace.CurrentCamera
 local enterRE = ReplicatedStorage:FindFirstChild("EnterDojoRE") -- created by server script
+
+-- =====================
+-- Module requires
+-- =====================
+local Cosmetics       = require(ReplicatedStorage.BootModules.Cosmetics)
+local CurrencyService = require(ReplicatedStorage.BootModules.CurrencyService)
+local Shop            = require(ReplicatedStorage.BootModules.Shop)
+local ShopUI          = require(ReplicatedStorage.BootModules.ShopUI)
+local TeleportClient  = require(ReplicatedStorage.ClientModules.TeleportClient)
+
+-- =====================
+-- Module instances
+-- =====================
+local currencyService = CurrencyService.new(config)
+local shop            = Shop.new(config, currencyService)
+BootUI.currencyService = currencyService
+BootUI.shop = shop
 
 -- =====================
 -- Config
@@ -131,6 +150,11 @@ local root = Instance.new("Frame")
 root.Size = UDim2.fromScale(1,1)
 root.BackgroundTransparency = 1
 root.Parent = ui
+
+BootUI.root = root
+Cosmetics.init(config)
+ShopUI.init(config, shop, BootUI)
+TeleportClient.init(root)
 
 -- Intro visuals
 local paperBG = Instance.new("ImageLabel")
