@@ -191,6 +191,8 @@ shopBtn.BackgroundColor3 = Color3.fromRGB(50,120,255)
 shopBtn.AutoButtonColor = true
 shopBtn.ZIndex = 10
 shopBtn.Parent = root
+shopBtn.Visible = false
+BootUI.shopBtn = shopBtn
 shopBtn.Activated:Connect(toggleShop)
 
 local abilityBtn = Instance.new("TextButton")
@@ -204,6 +206,8 @@ abilityBtn.BackgroundColor3 = Color3.fromRGB(50,120,255)
 abilityBtn.AutoButtonColor = true
 abilityBtn.ZIndex = 10
 abilityBtn.Parent = root
+abilityBtn.Visible = false
+BootUI.abilityBtn = abilityBtn
 abilityBtn.Activated:Connect(toggleAbilities)
 TeleportClient.init(root)
 
@@ -277,9 +281,10 @@ BootUI.loadout = loadout
 
 local loadTitle = Instance.new("TextLabel")
 loadTitle.Size = UDim2.new(1,-40,0,60)
-loadTitle.Position = UDim2.fromOffset(20,20)
+loadTitle.Position = UDim2.new(0.5,0,0,20)
+loadTitle.AnchorPoint = Vector2.new(0.5,0)
 loadTitle.BackgroundTransparency = 0.6
-loadTitle.TextXAlignment = Enum.TextXAlignment.Left
+loadTitle.TextXAlignment = Enum.TextXAlignment.Center
 loadTitle.Text = "Loadout"
 loadTitle.Font = Enum.Font.GothamBold
 loadTitle.TextScaled = true

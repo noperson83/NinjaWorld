@@ -36,28 +36,36 @@ end
 
 local function showDojoPicker()
     if dojo then dojo.Visible = true end
-    if boot and boot.loadout then boot.loadout.Visible = false end
+    if boot then
+        if boot.loadout then boot.loadout.Visible = false end
+        if boot.shopBtn then boot.shopBtn.Visible = false end
+        if boot.abilityBtn then boot.abilityBtn.Visible = false end
+    end
 end
 
 local function showLoadout(personaType)
     if dojo then dojo.Visible = false end
-    if boot and boot.loadout then
-        boot.loadout.Visible = true
-        if boot.buildCharacterPreview then boot.buildCharacterPreview(personaType) end
-        if boot.populateBackpackUI then
-            local saved = player:GetAttribute("Inventory")
-            if saved then
-                boot.populateBackpackUI(saved)
-            elseif boot.StarterBackpack then
-                boot.populateBackpackUI(boot.StarterBackpack)
-                local conn
-                conn = player:GetAttributeChangedSignal("Inventory"):Connect(function()
-                    local inv = player:GetAttribute("Inventory")
-                    if inv then
-                        boot.populateBackpackUI(inv)
-                        conn:Disconnect()
-                    end
-                end)
+    if boot then
+        if boot.shopBtn then boot.shopBtn.Visible = true end
+        if boot.abilityBtn then boot.abilityBtn.Visible = true end
+        if boot.loadout then
+            boot.loadout.Visible = true
+            if boot.buildCharacterPreview then boot.buildCharacterPreview(personaType) end
+            if boot.populateBackpackUI then
+                local saved = player:GetAttribute("Inventory")
+                if saved then
+                    boot.populateBackpackUI(saved)
+                elseif boot.StarterBackpack then
+                    boot.populateBackpackUI(boot.StarterBackpack)
+                    local conn
+                    conn = player:GetAttributeChangedSignal("Inventory"):Connect(function()
+                        local inv = player:GetAttribute("Inventory")
+                        if inv then
+                            boot.populateBackpackUI(inv)
+                            conn:Disconnect()
+                        end
+                    end)
+                end
             end
         end
     end
