@@ -141,26 +141,13 @@ local function playerAdded(player)
     leaderstats.Name = "leaderstats"
     leaderstats.Parent = player
 
-    -- leaderboard stats from elements and currency
-    for stat, default in pairs(DEFAULT_DATA.elements) do
-        local value = Instance.new("NumberValue")
-        value.Name = stat
-        value.Value = data.elements[stat]
-        value.Parent = leaderstats
-        value:GetPropertyChangedSignal("Value"):Connect(function()
-            sessionData[player.UserId].elements[stat] = value.Value
-        end)
-    end
-
-    for stat, default in pairs(DEFAULT_DATA.currency) do
-        local value = Instance.new("NumberValue")
-        value.Name = stat
-        value.Value = data.currency[stat]
-        value.Parent = leaderstats
-        value:GetPropertyChangedSignal("Value"):Connect(function()
-            sessionData[player.UserId].currency[stat] = value.Value
-        end)
-    end
+    local coinsValue = Instance.new("NumberValue")
+    coinsValue.Name = "Coins"
+    coinsValue.Value = data.currency.Coins
+    coinsValue.Parent = leaderstats
+    coinsValue:GetPropertyChangedSignal("Value"):Connect(function()
+        sessionData[player.UserId].currency.Coins = coinsValue.Value
+    end)
 
     local checkpoint = Instance.new("IntValue")
     checkpoint.Name = "Checkpoint"
@@ -175,9 +162,6 @@ local function playerAdded(player)
     levelValue.Name = "Level"
     levelValue.Value = data.level
     levelValue.Parent = statsFolder
-    levelValue:GetPropertyChangedSignal("Value"):Connect(function()
-        sessionData[player.UserId].level = levelValue.Value
-    end)
 
     local experienceValue = Instance.new("IntValue")
     experienceValue.Name = "Experience"
@@ -193,6 +177,25 @@ local function playerAdded(player)
     kills.Parent = statsFolder
     kills:GetPropertyChangedSignal("Value"):Connect(function()
         sessionData[player.UserId].kills = kills.Value
+    end)
+
+    local leaderLevel = Instance.new("NumberValue")
+    leaderLevel.Name = "Level"
+    leaderLevel.Value = levelValue.Value
+    leaderLevel.Parent = leaderstats
+
+    leaderLevel:GetPropertyChangedSignal("Value"):Connect(function()
+        if leaderLevel.Value ~= levelValue.Value then
+            levelValue.Value = leaderLevel.Value
+        end
+        sessionData[player.UserId].level = leaderLevel.Value
+    end)
+
+    levelValue:GetPropertyChangedSignal("Value"):Connect(function()
+        sessionData[player.UserId].level = levelValue.Value
+        if leaderLevel.Value ~= levelValue.Value then
+            leaderLevel.Value = levelValue.Value
+        end
     end)
 
     local abilitiesFolder = Instance.new("Folder")
