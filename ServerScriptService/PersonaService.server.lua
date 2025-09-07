@@ -118,15 +118,22 @@ rf.OnServerInvoke = function(player, action, data)
 		local ok = safeSet(key, personas)
 		return {ok=ok, slots = personas}
 
-	elseif action == "use" then
-		local s = data and tonumber(data.slot)
+        elseif action == "use" then
+                local s = data and tonumber(data.slot)
                 if not (s and s >= 1 and s <= MAX_SLOTS) then return {ok=false, err="bad slot"} end
-		local p = personas[s]
-		if not p then return {ok=false, err="empty slot"} end
+                local p = personas[s]
+                if not p then return {ok=false, err="empty slot"} end
 
-		player:SetAttribute("PersonaType", p.type)
-		return {ok=true, persona=p}
-	end
+                player:SetAttribute("PersonaType", p.type)
+                return {ok=true, persona=p}
+
+        elseif action == "clear" then
+                local s = data and tonumber(data.slot)
+                if not (s and s >= 1 and s <= MAX_SLOTS) then return {ok=false, err="bad slot"} end
+                personas[s] = nil
+                local ok = safeSet(key, personas)
+                return {ok=ok, slots=personas}
+        end
 
 	return {ok=false, err="unknown action"}
 end
