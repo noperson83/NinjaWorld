@@ -96,17 +96,26 @@ end)
 --  "use",  data = {slot=int}  (sets player attribute and returns the chosen persona or nil)
 rf.OnServerInvoke = function(player, action, data)
         local key = playerKey(player.UserId)
-        local personas = safeGet(key) or {}
-        local currentCount = 0
-        for i = 1, MAX_SLOTS do
-                if personas[i] ~= nil then
-                        currentCount = i
+
+        -- DataStore arrays lose entries beyond the first nil index. Store as a dictionary
+        -- with string keys and rebuild a numeric array locally to preserve holes.
+        local raw = safeGet(key) or {}
+        local personas = {}
+        for k, v in pairs(raw) do
+                local idx = tonumber(k)
+                if idx and idx >= 1 and idx <= MAX_SLOTS then
+                        personas[idx] = v
                 end
         end
-        if currentCount < MAX_SLOTS then
-                for i = currentCount + 1, MAX_SLOTS do personas[i] = nil end
-                -- persist expanded slot table for migration when slot count increases
-                safeSet(key, personas)
+
+        local function persist()
+                local toSave = {}
+                for i = 1, MAX_SLOTS do
+                        if personas[i] ~= nil then
+                                toSave[tostring(i)] = personas[i]
+                        end
+                end
+                safeSet(key, toSave)
         end
 
         if action == "get" then
@@ -119,9 +128,9 @@ rf.OnServerInvoke = function(player, action, data)
                 if not (s and s >= 1 and s <= MAX_SLOTS) then return {ok=false, err="bad slot"} end
 		if t ~= "Roblox" and t ~= "Ninja" then return {ok=false, err="bad type"} end
 
-		personas[s] = { type = t, name = (#n > 0 and n) or (t == "Ninja" and "Starter Ninja" or "My Avatar") }
-		local ok = safeSet(key, personas)
-		return {ok=ok, slots = personas}
+                personas[s] = { type = t, name = (#n > 0 and n) or (t == "Ninja" and "Starter Ninja" or "My Avatar") }
+                persist()
+                return {ok=true, slots = personas}
 
         elseif action == "use" then
                 local s = data and tonumber(data.slot)
@@ -136,8 +145,8 @@ rf.OnServerInvoke = function(player, action, data)
                 local s = data and tonumber(data.slot)
                 if not (s and s >= 1 and s <= MAX_SLOTS) then return {ok=false, err="bad slot"} end
                 personas[s] = nil
-                local ok = safeSet(key, personas)
-                return {ok=ok, slots=personas}
+                persist()
+                return {ok=true, slots=personas}
         end
 
 	return {ok=false, err="unknown action"}
