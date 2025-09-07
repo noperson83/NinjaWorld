@@ -362,16 +362,18 @@ function Cosmetics.init(config, root, bootUI)
     -- create slot 1 (center, larger)
     do
         local frame = Instance.new("Frame")
-        frame.Size = UDim2.fromScale(0.3 * 1.2, 0.36 * 1.2)
-        frame.Position = UDim2.fromScale(0.5,0.5)
-        frame.AnchorPoint = Vector2.new(0.5,0.5)
+        frame.Size = UDim2.fromScale(0.4, 0.48)
+        frame.Position = UDim2.fromScale(0.5, 0.5)
+        frame.AnchorPoint = Vector2.new(0.5, 0.5)
         frame.BackgroundTransparency = 1
         frame.ZIndex = 11
         frame.Parent = slotsContainer
 
         local viewport = Instance.new("ViewportFrame")
-        viewport.Size = UDim2.fromScale(1,1)
+        viewport.Size = UDim2.fromScale(1, 1)
         viewport.BackgroundTransparency = 1
+        viewport.BorderSizePixel = 2
+        viewport.BorderColor3 = Color3.fromRGB(40, 40, 40)
         viewport.ZIndex = 9
         viewport.Parent = frame
 
@@ -472,9 +474,9 @@ function Cosmetics.init(config, root, bootUI)
     -- create slot 2 (left)
     do
         local frame = Instance.new("Frame")
-        frame.Size = UDim2.fromScale(0.3,0.36)
-        frame.Position = UDim2.fromScale(0.2,0.5)
-        frame.AnchorPoint = Vector2.new(0.5,0.5)
+        frame.Size = UDim2.fromScale(0.25, 0.3)
+        frame.Position = UDim2.fromScale(0.15, 0.5)
+        frame.AnchorPoint = Vector2.new(0.5, 0.5)
         frame.BackgroundTransparency = 1
         frame.ZIndex = 11
         frame.Parent = slotsContainer
@@ -582,9 +584,9 @@ function Cosmetics.init(config, root, bootUI)
     -- create slot 3 (right)
     do
         local frame = Instance.new("Frame")
-        frame.Size = UDim2.fromScale(0.3,0.36)
-        frame.Position = UDim2.fromScale(0.8,0.5)
-        frame.AnchorPoint = Vector2.new(0.5,0.5)
+        frame.Size = UDim2.fromScale(0.25, 0.3)
+        frame.Position = UDim2.fromScale(0.85, 0.5)
+        frame.AnchorPoint = Vector2.new(0.5, 0.5)
         frame.BackgroundTransparency = 1
         frame.ZIndex = 11
         frame.Parent = slotsContainer
