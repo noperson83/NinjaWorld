@@ -422,7 +422,7 @@ local btnEnterRealm = makeAction("Enter Realm", true)
 -- scrolling list of realm buttons between Back and Enter
 local realmScroll = Instance.new("ScrollingFrame")
 realmScroll.Size = UDim2.new(1,-500,1,0)
-realmScroll.Position = UDim2.fromOffset(250,0)
+realmScroll.Position = UDim2.fromOffset(250,-100)
 realmScroll.BackgroundTransparency = 1
 realmScroll.ScrollBarThickness = 6
 realmScroll.CanvasSize = UDim2.new()
