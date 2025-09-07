@@ -21,7 +21,7 @@ GameSettings.startPoints = 0
 GameSettings.startCoins = 100
 
 -- Maximum number of persona slots available to each player
-GameSettings.maxSlots = 9
+GameSettings.maxSlots = 4
 
 GameSettings.pointsName = "Points"
 GameSettings.upgradeName = "Upgrades"
@@ -69,3 +69,4 @@ GameSettings.codes = {
 -- ================================================================================
 
 return GameSettings
+
