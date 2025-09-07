@@ -193,11 +193,12 @@ function Cosmetics.init(config, root, bootUI)
     dojoTitle.AnchorPoint = Vector2.new(0.5,0.5)
     dojoTitle.Image = "rbxassetid://137361385013636"
     dojoTitle.BackgroundTransparency = 1
+    dojoTitle.ScaleType = Enum.ScaleType.Fit
     dojoTitle.ZIndex = 11
     dojoTitle.Parent = dojo
 
     local picker = Instance.new("Frame")
-    picker.Size = UDim2.fromScale(0.6,0.55)
+    picker.Size = UDim2.fromScale(0.8,0.7)
     picker.Position = UDim2.fromScale(0.5,0.55)
     picker.AnchorPoint = Vector2.new(0.5,0.5)
     picker.BackgroundColor3 = Color3.fromRGB(24,26,28)
@@ -222,18 +223,9 @@ function Cosmetics.init(config, root, bootUI)
         return b
     end
 
-    local title = Instance.new("ImageLabel")
-    title.Size = UDim2.new(0.9,0,0,40)
-    title.Position = UDim2.fromScale(0.5,0.1)
-    title.AnchorPoint = Vector2.new(0.5,0.5)
-    title.Image = "rbxassetid://137361385013636"
-    title.BackgroundTransparency = 1
-    title.ZIndex = 11
-    title.Parent = picker
-
     local line = Instance.new("Frame")
     line.Size = UDim2.new(0.9,0,0,2)
-    line.Position = UDim2.fromScale(0.5,0.52)
+    line.Position = UDim2.fromScale(0.5,0.38)
     line.AnchorPoint = Vector2.new(0.5,0.5)
     line.BackgroundColor3 = Color3.fromRGB(60,60,62)
     line.BorderSizePixel = 0
@@ -242,7 +234,7 @@ function Cosmetics.init(config, root, bootUI)
 
     local slotsTitle = Instance.new("TextLabel")
     slotsTitle.Size = UDim2.new(0.9,0,0,32)
-    slotsTitle.Position = UDim2.fromScale(0.5,0.58)
+    slotsTitle.Position = UDim2.fromScale(0.5,0.45)
     slotsTitle.AnchorPoint = Vector2.new(0.5,0.5)
     slotsTitle.Text = "Persona Slots"
     slotsTitle.Font = Enum.Font.GothamSemibold
@@ -253,8 +245,8 @@ function Cosmetics.init(config, root, bootUI)
     slotsTitle.Parent = picker
 
     local slotsFrame = Instance.new("ScrollingFrame")
-    slotsFrame.Size = UDim2.new(0.9,0,0.28,0)
-    slotsFrame.Position = UDim2.fromScale(0.5,0.78)
+    slotsFrame.Size = UDim2.new(0.9,0,0.55,0)
+    slotsFrame.Position = UDim2.fromScale(0.5,0.75)
     slotsFrame.AnchorPoint = Vector2.new(0.5,0.5)
     slotsFrame.BackgroundTransparency = 1
     slotsFrame.BorderSizePixel = 0
