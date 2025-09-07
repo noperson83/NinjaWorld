@@ -1,6 +1,12 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local MerchBooth = require(ReplicatedStorage:WaitForChild("MerchBooth"))
+local merchModule = ReplicatedStorage:FindFirstChild("MerchBooth")
+if not merchModule then
+    warn("MerchBooth module not found")
+    return
+end
+
+local MerchBooth = require(merchModule)
 
 local items = {
 	125630227934002,  -- MetalMagic

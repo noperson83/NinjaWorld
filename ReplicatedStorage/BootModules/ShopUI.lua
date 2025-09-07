@@ -101,8 +101,22 @@ function ShopUI.init(config, shop, bootUI, defaultTab)
         end
     end
 
-    frame.SetTab = ShopUI.setTab
     ShopUI.setTab(defaultTab or names[1])
+
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Size = UDim2.fromOffset(24,24)
+    closeBtn.AnchorPoint = Vector2.new(1,0)
+    closeBtn.Position = UDim2.new(1,-4,0,4)
+    closeBtn.Text = "X"
+    closeBtn.Font = Enum.Font.GothamBold
+    closeBtn.TextScaled = true
+    closeBtn.TextColor3 = Color3.new(1,1,1)
+    closeBtn.BackgroundColor3 = Color3.fromRGB(200,60,60)
+    closeBtn.ZIndex = 2
+    closeBtn.Parent = frame
+    closeBtn.Activated:Connect(function()
+        frame.Visible = false
+    end)
 
     return frame
 end

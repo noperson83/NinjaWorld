@@ -169,8 +169,6 @@ local function toggleShop(defaultTab)
     if BootUI.shopFrame and BootUI.shopFrame.Visible and defaultTab then
         if ShopUI.setTab then
             ShopUI.setTab(defaultTab)
-        elseif BootUI.shopFrame.SetTab then
-            BootUI.shopFrame:SetTab(defaultTab)
         end
     end
 end
