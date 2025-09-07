@@ -234,7 +234,8 @@ function Cosmetics.init(config, root, bootUI)
 
     local slotsTitle = Instance.new("TextLabel")
     slotsTitle.Size = UDim2.new(0.9,0,0,32)
-    slotsTitle.Position = UDim2.fromScale(0.5,0.45)
+    -- Lift persona slot title to reduce empty space below the dojo title
+    slotsTitle.Position = UDim2.fromScale(0.5,0.3)
     slotsTitle.AnchorPoint = Vector2.new(0.5,0.5)
     slotsTitle.Text = "Persona Slots"
     slotsTitle.Font = Enum.Font.GothamSemibold
@@ -246,7 +247,8 @@ function Cosmetics.init(config, root, bootUI)
 
     local slotsFrame = Instance.new("ScrollingFrame")
     slotsFrame.Size = UDim2.new(0.9,0,0.55,0)
-    slotsFrame.Position = UDim2.fromScale(0.5,0.75)
+    -- Move persona slots upward to better utilize vertical space
+    slotsFrame.Position = UDim2.fromScale(0.5,0.6)
     slotsFrame.AnchorPoint = Vector2.new(0.5,0.5)
     slotsFrame.BackgroundTransparency = 1
     slotsFrame.BorderSizePixel = 0
