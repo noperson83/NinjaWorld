@@ -68,7 +68,7 @@ function TeleportClient.bindZoneButtons(gui)
                 Starter = {"ZoneStarter", "StarterZoneSpawnLocation"}
         }
 
-        for name, zoneInfo in islandSpawns do
+        for name, zoneInfo in pairs(islandSpawns) do
                 local button = teleFrame:FindFirstChild(name .. "Button")
                 if button then
                         button.Activated:Connect(function()
@@ -99,7 +99,7 @@ function TeleportClient.bindWorldButtons(gui)
                 Water = 15999399322
         }
 
-        for name, placeId in worldSpawnIds do
+        for name, placeId in pairs(worldSpawnIds) do
                 local button = worldFrame:FindFirstChild(name .. "Button")
                 if button then
                         button.Activated:Connect(function()
