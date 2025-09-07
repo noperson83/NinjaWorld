@@ -1,16 +1,18 @@
+
 -- Ninja World EXP 3000
--- PersonaService.server.lua — v2
+-- PersonaService.server.lua â€” v2
 -- Purpose: Data + persona selection via RemoteFunction (no spawning here).
 -- Works side-by-side with Init.server.lua (which controls WHEN/HOW we spawn).
 -- v2 adds robust Ninja look resolution:
---   • Prefers ReplicatedStorage/HumanoidDescriptions/Ninja (HumanoidDescription)
---   • Falls back to ServerStorage/HumanoidDescription(s)/Ninja (a MODEL).
+--   â€¢ Prefers ReplicatedStorage/HumanoidDescriptions/Ninja (HumanoidDescription)
+--   â€¢ Falls back to ServerStorage/HumanoidDescription(s)/Ninja (a MODEL).
 --     In that case we read Humanoid:GetAppliedDescription() from the model.
 
 local Players            = game:GetService("Players")
 local ReplicatedStorage  = game:GetService("ReplicatedStorage")
 local DataStoreService   = game:GetService("DataStoreService")
 local ServerStorage      = game:GetService("ServerStorage")
+local GameSettings       = require(ReplicatedStorage:WaitForChild("GameSettings"))
 
 -- === Remotes ===
 local rf = ReplicatedStorage:FindFirstChild("PersonaServiceRF")
@@ -26,7 +28,7 @@ local STORE = DataStoreService:GetDataStore("NW_Personas_v1")
 
 -- Simple persona schema for v1:
 -- personas = { [1] = {type="Roblox", name="My Avatar"}, [2] = {type="Ninja", name="Starter Ninja"}, [3] = nil }
-local DEFAULT_SLOTS = 3
+local MAX_SLOTS = GameSettings.maxSlots or 3
 
 local function safeGet(key)
 	local ok, data = pcall(function() return STORE:GetAsync(key) end)
@@ -89,26 +91,27 @@ Players.PlayerAdded:Connect(function(player)
 	end)
 end)
 
--- Remote API
--- actions:
---  "get" -> returns {slots=[1..n], defaultSlotsCount}
+--  "get" -> returns {slots=[1..n], slotCount}
 --  "save", data = {slot=int, type="Roblox"|"Ninja", name=string}
 --  "use",  data = {slot=int}  (sets player attribute and returns the chosen persona or nil)
 rf.OnServerInvoke = function(player, action, data)
-	local key = playerKey(player.UserId)
-	local personas = safeGet(key) or {}
-	if #personas < DEFAULT_SLOTS then
-		for i = #personas + 1, DEFAULT_SLOTS do personas[i] = nil end
-	end
+        local key = playerKey(player.UserId)
+        local personas = safeGet(key) or {}
+        local currentCount = #personas
+        if currentCount < MAX_SLOTS then
+                for i = currentCount + 1, MAX_SLOTS do personas[i] = nil end
+                -- persist expanded slot table for migration when slot count increases
+                safeSet(key, personas)
+        end
 
-	if action == "get" then
-		return { slots = personas, defaultSlotsCount = DEFAULT_SLOTS }
+        if action == "get" then
+                return { slots = personas, slotCount = MAX_SLOTS }
 
 	elseif action == "save" then
 		local s = data and tonumber(data.slot)
 		local t = data and tostring(data.type or "")
 		local n = data and tostring(data.name or "")
-		if not (s and s >= 1 and s <= DEFAULT_SLOTS) then return {ok=false, err="bad slot"} end
+                if not (s and s >= 1 and s <= MAX_SLOTS) then return {ok=false, err="bad slot"} end
 		if t ~= "Roblox" and t ~= "Ninja" then return {ok=false, err="bad type"} end
 
 		personas[s] = { type = t, name = (#n > 0 and n) or (t == "Ninja" and "Starter Ninja" or "My Avatar") }
@@ -117,7 +120,7 @@ rf.OnServerInvoke = function(player, action, data)
 
 	elseif action == "use" then
 		local s = data and tonumber(data.slot)
-		if not (s and s >= 1 and s <= DEFAULT_SLOTS) then return {ok=false, err="bad slot"} end
+                if not (s and s >= 1 and s <= MAX_SLOTS) then return {ok=false, err="bad slot"} end
 		local p = personas[s]
 		if not p then return {ok=false, err="empty slot"} end
 

@@ -13,20 +13,24 @@ local btnUseNinja
 local slotButtons = {}
 local boot
 
-local personaCache = {slots = {}, defaultSlotsCount = 3}
+local personaCache = {slots = {}, slotCount = 0}
 local currentChoiceType = "Roblox"
 local chosenSlot
 
-local function refreshSlots()
-    local data = rf:InvokeServer("get", {})
-    personaCache = data or personaCache
-    for i = 1, personaCache.defaultSlotsCount do
+local function updateSlotLabels()
+    for i = 1, personaCache.slotCount do
         local slot = personaCache.slots[i]
         local ui = slotButtons[i]
         if ui then
             ui.label.Text = slot and ("Slot %d – %s"):format(i, slot.name or slot.type) or ("Slot %d – (empty)"):format(i)
         end
     end
+end
+
+local function refreshSlots()
+    local data = rf:InvokeServer("get", {})
+    personaCache = data or personaCache
+    updateSlotLabels()
 end
 
 local function showDojoPicker()
@@ -154,6 +158,9 @@ function Cosmetics.init(config, root, bootUI)
     slotsFrame.ZIndex = 11
     slotsFrame.Parent = picker
 
+    -- fetch initial slot data to know how many rows to build
+    personaCache = rf:InvokeServer("get", {}) or personaCache
+
     slotButtons = {}
     local function makeSlot(index)
         local row = Instance.new("Frame")
@@ -200,7 +207,9 @@ function Cosmetics.init(config, root, bootUI)
 
         slotButtons[index] = {useBtn = useBtn, saveBtn = saveBtn, label = label}
     end
-    for i = 1,3 do makeSlot(i) end
+    for i = 1, personaCache.slotCount do makeSlot(i) end
+
+    updateSlotLabels()
 
     btnUseRoblox.MouseButton1Click:Connect(function()
         currentChoiceType = "Roblox"
