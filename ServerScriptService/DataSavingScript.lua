@@ -36,6 +36,7 @@ local DEFAULT_DATA = {
     unlockedRealms = {
         StarterDojo = true,
         SecretVillage = true,
+        Atoms = true,
     },
     inventory = {
         coins = 0,
