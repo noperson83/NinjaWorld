@@ -8,8 +8,6 @@ local rf = ReplicatedStorage:WaitForChild("PersonaServiceRF")
 local player = Players.LocalPlayer
 
 local dojo
-local btnUseRoblox
-local btnUseNinja
 local slotButtons = {}
 local boot
 local rootUI
@@ -18,17 +16,107 @@ local personaCache = {slots = {}, slotCount = 0}
 local currentChoiceType = "Roblox"
 local chosenSlot
 
+local function showConfirm(text, onYes)
+    local cover = Instance.new("Frame")
+    cover.Size = UDim2.fromScale(1,1)
+    cover.BackgroundColor3 = Color3.new(0,0,0)
+    cover.BackgroundTransparency = 0.4
+    cover.ZIndex = 200
+    cover.Parent = rootUI
+
+    local box = Instance.new("Frame")
+    box.Size = UDim2.fromScale(0.3,0.2)
+    box.Position = UDim2.fromScale(0.5,0.5)
+    box.AnchorPoint = Vector2.new(0.5,0.5)
+    box.BackgroundColor3 = Color3.fromRGB(24,26,28)
+    box.ZIndex = 201
+    box.Parent = cover
+
+    local msg = Instance.new("TextLabel")
+    msg.Size = UDim2.new(1,0,0.5,0)
+    msg.BackgroundTransparency = 1
+    msg.Text = text
+    msg.Font = Enum.Font.Gotham
+    msg.TextScaled = true
+    msg.TextColor3 = Color3.new(1,1,1)
+    msg.ZIndex = 202
+    msg.Parent = box
+
+    local yes = Instance.new("TextButton")
+    yes.Size = UDim2.new(0.4,0,0.3,0)
+    yes.Position = UDim2.new(0.1,0,0.6,0)
+    yes.Text = "Yes"
+    yes.Font = Enum.Font.GothamSemibold
+    yes.TextScaled = true
+    yes.TextColor3 = Color3.new(1,1,1)
+    yes.BackgroundColor3 = Color3.fromRGB(60,180,110)
+    yes.ZIndex = 202
+    yes.Parent = box
+
+    local no = Instance.new("TextButton")
+    no.Size = UDim2.new(0.4,0,0.3,0)
+    no.Position = UDim2.new(0.5,0,0.6,0)
+    no.Text = "No"
+    no.Font = Enum.Font.GothamSemibold
+    no.TextScaled = true
+    no.TextColor3 = Color3.new(1,1,1)
+    no.BackgroundColor3 = Color3.fromRGB(220,100,100)
+    no.ZIndex = 202
+    no.Parent = box
+
+    local function close()
+        cover:Destroy()
+    end
+    yes.MouseButton1Click:Connect(function()
+        close()
+        if onYes then onYes() end
+    end)
+    no.MouseButton1Click:Connect(close)
+end
+
+local refreshSlots
+
 local function updateSlotLabels()
     for i = 1, personaCache.slotCount do
         local slot = personaCache.slots[i]
         local ui = slotButtons[i]
         if ui then
-            ui.label.Text = slot and ("Slot %d – %s"):format(i, slot.name or slot.type) or ("Slot %d – (empty)"):format(i)
+            local index = i
+            ui.label.Text = slot and ("Slot %d – %s"):format(index, slot.name or slot.type) or ("Slot %d – (empty)"):format(index)
+            if slot then
+                ui.useBtn.Visible = true
+                ui.clearBtn.Visible = true
+                ui.robloxBtn.Visible = false
+                ui.starterBtn.Visible = false
+                if not ui.clearConn then
+                    ui.clearConn = ui.clearBtn.MouseButton1Click:Connect(function()
+                        showConfirm(("Clear slot %d?"):format(index), function()
+                            local res = rf:InvokeServer("clear", {slot = index})
+                            if res and res.ok then
+                                personaCache = res
+                                if chosenSlot == index then chosenSlot = nil end
+                                refreshSlots()
+                            else
+                                warn("Clear failed:", res and res.err)
+                            end
+                        end)
+                    end)
+                end
+            else
+                ui.useBtn.Visible = false
+                ui.clearBtn.Visible = false
+                ui.robloxBtn.Visible = true
+                ui.starterBtn.Visible = true
+                if ui.clearConn then
+                    ui.clearConn:Disconnect()
+                    ui.clearConn = nil
+                end
+            end
         end
     end
 end
 
-local function refreshSlots()
+refreshSlots = function()
     local data = rf:InvokeServer("get", {})
     personaCache = data or personaCache
     updateSlotLabels()
@@ -149,9 +237,6 @@ function Cosmetics.init(config, root, bootUI)
     title.ZIndex = 11
     title.Parent = picker
 
-    btnUseRoblox = makeButton("Use Roblox Avatar", 0.30)
-    btnUseNinja  = makeButton("Use Starter Ninja", 0.42)
-
     local line = Instance.new("Frame")
     line.Size = UDim2.new(0.9,0,0,2)
     line.Position = UDim2.fromScale(0.5,0.52)
@@ -186,64 +271,6 @@ function Cosmetics.init(config, root, bootUI)
 
     slotButtons = {}
 
-    local function showConfirm(text, onYes)
-        local cover = Instance.new("Frame")
-        cover.Size = UDim2.fromScale(1,1)
-        cover.BackgroundColor3 = Color3.new(0,0,0)
-        cover.BackgroundTransparency = 0.4
-        cover.ZIndex = 200
-        cover.Parent = rootUI
-
-        local box = Instance.new("Frame")
-        box.Size = UDim2.fromScale(0.3,0.2)
-        box.Position = UDim2.fromScale(0.5,0.5)
-        box.AnchorPoint = Vector2.new(0.5,0.5)
-        box.BackgroundColor3 = Color3.fromRGB(24,26,28)
-        box.ZIndex = 201
-        box.Parent = cover
-
-        local msg = Instance.new("TextLabel")
-        msg.Size = UDim2.new(1,0,0.5,0)
-        msg.BackgroundTransparency = 1
-        msg.Text = text
-        msg.Font = Enum.Font.Gotham
-        msg.TextScaled = true
-        msg.TextColor3 = Color3.new(1,1,1)
-        msg.ZIndex = 202
-        msg.Parent = box
-
-        local yes = Instance.new("TextButton")
-        yes.Size = UDim2.new(0.4,0,0.3,0)
-        yes.Position = UDim2.new(0.1,0,0.6,0)
-        yes.Text = "Yes"
-        yes.Font = Enum.Font.GothamSemibold
-        yes.TextScaled = true
-        yes.TextColor3 = Color3.new(1,1,1)
-        yes.BackgroundColor3 = Color3.fromRGB(60,180,110)
-        yes.ZIndex = 202
-        yes.Parent = box
-
-        local no = Instance.new("TextButton")
-        no.Size = UDim2.new(0.4,0,0.3,0)
-        no.Position = UDim2.new(0.5,0,0.6,0)
-        no.Text = "No"
-        no.Font = Enum.Font.GothamSemibold
-        no.TextScaled = true
-        no.TextColor3 = Color3.new(1,1,1)
-        no.BackgroundColor3 = Color3.fromRGB(220,100,100)
-        no.ZIndex = 202
-        no.Parent = box
-
-        local function close()
-            cover:Destroy()
-        end
-        yes.MouseButton1Click:Connect(function()
-            close()
-            if onYes then onYes() end
-        end)
-        no.MouseButton1Click:Connect(close)
-    end
-
     local function makeSlot(index)
         local row = Instance.new("Frame")
         row.Size = UDim2.new(1,0,0,36)
@@ -263,8 +290,32 @@ function Cosmetics.init(config, root, bootUI)
         label.ZIndex = 11
         label.Parent = row
 
+        local robloxBtn = Instance.new("TextButton")
+        robloxBtn.Size = UDim2.new(0.24,0,1,0)
+        robloxBtn.Position = UDim2.new(0.47,0,0,0)
+        robloxBtn.Text = "Roblox"
+        robloxBtn.Font = Enum.Font.GothamSemibold
+        robloxBtn.TextScaled = true
+        robloxBtn.TextColor3 = Color3.new(1,1,1)
+        robloxBtn.BackgroundColor3 = Color3.fromRGB(80,120,200)
+        robloxBtn.AutoButtonColor = true
+        robloxBtn.ZIndex = 11
+        robloxBtn.Parent = row
+
+        local starterBtn = Instance.new("TextButton")
+        starterBtn.Size = UDim2.new(0.24,0,1,0)
+        starterBtn.Position = UDim2.new(0.74,0,0,0)
+        starterBtn.Text = "Starter"
+        starterBtn.Font = Enum.Font.GothamSemibold
+        starterBtn.TextScaled = true
+        starterBtn.TextColor3 = Color3.new(1,1,1)
+        starterBtn.BackgroundColor3 = Color3.fromRGB(100,100,220)
+        starterBtn.AutoButtonColor = true
+        starterBtn.ZIndex = 11
+        starterBtn.Parent = row
+
         local useBtn = Instance.new("TextButton")
-        useBtn.Size = UDim2.new(0.16,0,1,0)
+        useBtn.Size = UDim2.new(0.24,0,1,0)
         useBtn.Position = UDim2.new(0.47,0,0,0)
         useBtn.Text = "Use"
         useBtn.Font = Enum.Font.GothamSemibold
@@ -275,21 +326,9 @@ function Cosmetics.init(config, root, bootUI)
         useBtn.ZIndex = 11
         useBtn.Parent = row
 
-        local saveBtn = Instance.new("TextButton")
-        saveBtn.Size = UDim2.new(0.16,0,1,0)
-        saveBtn.Position = UDim2.new(0.64,0,0,0)
-        saveBtn.Text = "Overwrite"
-        saveBtn.Font = Enum.Font.GothamSemibold
-        saveBtn.TextScaled = true
-        saveBtn.TextColor3 = Color3.new(1,1,1)
-        saveBtn.BackgroundColor3 = Color3.fromRGB(100,100,220)
-        saveBtn.AutoButtonColor = true
-        saveBtn.ZIndex = 11
-        saveBtn.Parent = row
-
         local clearBtn = Instance.new("TextButton")
-        clearBtn.Size = UDim2.new(0.16,0,1,0)
-        clearBtn.Position = UDim2.new(0.81,0,0,0)
+        clearBtn.Size = UDim2.new(0.24,0,1,0)
+        clearBtn.Position = UDim2.new(0.74,0,0,0)
         clearBtn.Text = "Clear"
         clearBtn.Font = Enum.Font.GothamSemibold
         clearBtn.TextScaled = true
@@ -299,46 +338,63 @@ function Cosmetics.init(config, root, bootUI)
         clearBtn.ZIndex = 11
         clearBtn.Parent = row
 
-        slotButtons[index] = {useBtn = useBtn, saveBtn = saveBtn, clearBtn = clearBtn, label = label}
+        slotButtons[index] = {
+            useBtn = useBtn,
+            clearBtn = clearBtn,
+            robloxBtn = robloxBtn,
+            starterBtn = starterBtn,
+            label = label
+        }
     end
     for i = 1, personaCache.slotCount do makeSlot(i) end
 
     updateSlotLabels()
 
-    btnUseRoblox.MouseButton1Click:Connect(function()
-        currentChoiceType = "Roblox"
-        btnUseRoblox.BackgroundColor3 = Color3.fromRGB(80,180,120)
-        btnUseNinja.BackgroundColor3  = Color3.fromRGB(50,120,255)
-    end)
-    btnUseNinja.MouseButton1Click:Connect(function()
-        currentChoiceType = "Ninja"
-        btnUseNinja.BackgroundColor3  = Color3.fromRGB(80,180,120)
-        btnUseRoblox.BackgroundColor3 = Color3.fromRGB(50,120,255)
-    end)
-
     for i,row in pairs(slotButtons) do
+        local index = i
         row.useBtn.MouseButton1Click:Connect(function()
-            local result = rf:InvokeServer("use", {slot = i})
+            local result = rf:InvokeServer("use", {slot = index})
             if not (result and result.ok) then warn("Use slot failed:", result and result.err) return end
-            chosenSlot = i
+            chosenSlot = index
+            currentChoiceType = result.persona and result.persona.type or currentChoiceType
             if boot and boot.tweenToEnd then boot.tweenToEnd() end
             showLoadout(result.persona and result.persona.type or currentChoiceType)
         end)
-        row.saveBtn.MouseButton1Click:Connect(function()
-            local res = rf:InvokeServer("save", {slot = i, type = currentChoiceType, name = currentChoiceType == "Ninja" and "Starter Ninja" or "My Avatar"})
-            if res and res.ok then personaCache = res; refreshSlots() else warn("Save failed:", res and res.err) end
-        end)
-        row.clearBtn.MouseButton1Click:Connect(function()
-            showConfirm(("Clear slot %d?"):format(i), function()
-                local res = rf:InvokeServer("clear", {slot = i})
-                if res and res.ok then
-                    personaCache = res
-                    if chosenSlot == i then chosenSlot = nil end
-                    refreshSlots()
+        row.robloxBtn.MouseButton1Click:Connect(function()
+            local res = rf:InvokeServer("save", {slot = index, type = "Roblox"})
+            if res and res.ok then
+                personaCache = res
+                refreshSlots()
+                local useRes = rf:InvokeServer("use", {slot = index})
+                if useRes and useRes.ok then
+                    chosenSlot = index
+                    currentChoiceType = "Roblox"
+                    if boot and boot.tweenToEnd then boot.tweenToEnd() end
+                    showLoadout("Roblox")
                 else
-                    warn("Clear failed:", res and res.err)
+                    warn("Use slot failed:", useRes and useRes.err)
                 end
-            end)
+            else
+                warn("Save failed:", res and res.err)
+            end
+        end)
+        row.starterBtn.MouseButton1Click:Connect(function()
+            local res = rf:InvokeServer("save", {slot = index, type = "Ninja"})
+            if res and res.ok then
+                personaCache = res
+                refreshSlots()
+                local useRes = rf:InvokeServer("use", {slot = index})
+                if useRes and useRes.ok then
+                    chosenSlot = index
+                    currentChoiceType = "Ninja"
+                    if boot and boot.tweenToEnd then boot.tweenToEnd() end
+                    showLoadout("Ninja")
+                else
+                    warn("Use slot failed:", useRes and useRes.err)
+                end
+            else
+                warn("Save failed:", res and res.err)
+            end
         end)
     end
 end
