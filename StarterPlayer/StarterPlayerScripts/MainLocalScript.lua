@@ -9,7 +9,8 @@ local Abilities = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitFo
 local AudioPlayer = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("AudioPlayer"))
 local CharacterManager = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("CharacterManager"))
 local CombatController = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("CombatController"))
-local MerchBooth = require(ReplicatedStorage:WaitForChild("MerchBooth"))
+local merchModule = ReplicatedStorage:FindFirstChild("MerchBooth")
+local MerchBooth = merchModule and require(merchModule)
 local GameSettings = require(ReplicatedStorage:WaitForChild("GameSettings"))
 
 local player = Players.LocalPlayer
@@ -19,11 +20,14 @@ local PlayerGui = player:WaitForChild("PlayerGui")
 CharacterManager.setup(player)
 CombatController.initAnimations()
 
--- Merch Booth setup
-MerchBooth.toggleCatalogButton(true)
-MerchBooth.configure({
-	disableCharacterMovement = true
-})
+if MerchBooth then
+        MerchBooth.toggleCatalogButton(true)
+        MerchBooth.configure({
+                disableCharacterMovement = true
+        })
+else
+        warn("MerchBooth module missing")
+end
 
 --local ts = game:GetService("TweenService")
 --local currentCamera = game.Workspace.CurrentCamera
@@ -59,22 +63,23 @@ player.CharacterAdded:Connect(onCharacterAdded)
 
 -- Merch touch region
 local function setupRegion(region: BasePart)
-	region.Touched:Connect(function(otherPart)
-		local character = Players.LocalPlayer.Character
-		if character and otherPart == character.PrimaryPart then
-			MerchBooth.openMerchBooth()
-		end
-	end)
-	region.TouchEnded:Connect(function(otherPart)
-		local character = Players.LocalPlayer.Character
-		if character and otherPart == character.PrimaryPart then
-			MerchBooth.closeMerchBooth()
-		end
-	end)
+        if not MerchBooth then return end
+        region.Touched:Connect(function(otherPart)
+                local character = Players.LocalPlayer.Character
+                if character and otherPart == character.PrimaryPart then
+                        MerchBooth.openMerchBooth()
+                end
+        end)
+        region.TouchEnded:Connect(function(otherPart)
+                local character = Players.LocalPlayer.Character
+                if character and otherPart == character.PrimaryPart then
+                        MerchBooth.closeMerchBooth()
+                end
+        end)
 end
 
 for _, region in CollectionService:GetTagged("ShopRegion") do
-	setupRegion(region)
+        setupRegion(region)
 end
 CollectionService:GetInstanceAddedSignal("ShopRegion"):Connect(setupRegion)
 

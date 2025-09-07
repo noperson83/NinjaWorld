@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local DataStoreService = game:GetService("DataStoreService")
+local HttpService = game:GetService("HttpService")
 
 -- single datastore for all player data
 local DataStore = DataStoreService:GetDataStore("PlayerData")
@@ -48,6 +49,12 @@ local DEFAULT_DATA = {
 }
 
 local sessionData = {}
+
+local function decodeInventory(value)
+    if typeof(value) ~= "string" then return nil end
+    local ok, data = pcall(HttpService.JSONDecode, HttpService, value)
+    return ok and data or nil
+end
 
 local function deepCopy(tbl)
     local copy = {}
@@ -115,8 +122,8 @@ local function savePlayerData(player)
     if not data then
         return
     end
-    local inv = player:GetAttribute("Inventory")
-    if type(inv) == "table" then
+    local inv = decodeInventory(player:GetAttribute("Inventory"))
+    if inv then
         inv.orbs = sanitizeOrbs(inv.orbs)
         data.inventory = inv
     else
@@ -146,10 +153,10 @@ local function playerAdded(player)
     end
 
     data.inventory.orbs = sanitizeOrbs(data.inventory.orbs)
-    player:SetAttribute("Inventory", data.inventory)
+    player:SetAttribute("Inventory", HttpService:JSONEncode(data.inventory))
     player:GetAttributeChangedSignal("Inventory"):Connect(function()
-        local inv = player:GetAttribute("Inventory")
-        if type(inv) == "table" then
+        local inv = decodeInventory(player:GetAttribute("Inventory"))
+        if inv then
             inv.orbs = sanitizeOrbs(inv.orbs)
             sessionData[player.UserId].inventory = inv
         end

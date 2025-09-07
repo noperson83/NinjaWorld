@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HttpService = game:GetService("HttpService")
 
 local updateEvent = ReplicatedStorage:FindFirstChild("CurrencyUpdated")
 if not updateEvent then
@@ -34,11 +35,15 @@ local function addOrb(player, element)
     if getOrbCount(balance.orbs) >= MAX_ORBS then return end
     balance.orbs[element] = 1
 
-    local inv = player:GetAttribute("Inventory")
-    if type(inv) ~= "table" then inv = {} end
+    local invStr = player:GetAttribute("Inventory")
+    local inv = {}
+    if typeof(invStr) == "string" then
+        local ok, data = pcall(HttpService.JSONDecode, HttpService, invStr)
+        if ok then inv = data end
+    end
     inv.orbs = inv.orbs or {}
     inv.orbs[element] = 1
-    player:SetAttribute("Inventory", inv)
+    player:SetAttribute("Inventory", HttpService:JSONEncode(inv))
 
     sendBalance(player)
 end
@@ -46,10 +51,13 @@ end
 Players.PlayerAdded:Connect(function(player)
     balances[player.UserId] = {coins = 0, orbs = {}}
     player:GetAttributeChangedSignal("Inventory"):Connect(function()
-        local inv = player:GetAttribute("Inventory")
-        if type(inv) == "table" and type(inv.orbs) == "table" then
-            balances[player.UserId].orbs = inv.orbs
-            sendBalance(player)
+        local invStr = player:GetAttribute("Inventory")
+        if typeof(invStr) == "string" then
+            local ok, inv = pcall(HttpService.JSONDecode, HttpService, invStr)
+            if ok and type(inv.orbs) == "table" then
+                balances[player.UserId].orbs = inv.orbs
+                sendBalance(player)
+            end
         end
     end)
 end)

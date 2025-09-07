@@ -3,6 +3,7 @@ local Cosmetics = {}
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
 
 local rf = ReplicatedStorage:WaitForChild("PersonaServiceRF")
 local player = Players.LocalPlayer
@@ -139,16 +140,22 @@ local function showLoadout(personaType)
             if boot.buildCharacterPreview then boot.buildCharacterPreview(personaType) end
             if boot.populateBackpackUI then
                 local saved = player:GetAttribute("Inventory")
-                if saved then
-                    boot.populateBackpackUI(saved)
+                if typeof(saved) == "string" then
+                    local ok, data = pcall(HttpService.JSONDecode, HttpService, saved)
+                    if ok then
+                        boot.populateBackpackUI(data)
+                    end
                 elseif boot.StarterBackpack then
                     boot.populateBackpackUI(boot.StarterBackpack)
                     local conn
                     conn = player:GetAttributeChangedSignal("Inventory"):Connect(function()
                         local inv = player:GetAttribute("Inventory")
-                        if inv then
-                            boot.populateBackpackUI(inv)
-                            conn:Disconnect()
+                        if typeof(inv) == "string" then
+                            local ok, data = pcall(HttpService.JSONDecode, HttpService, inv)
+                            if ok then
+                                boot.populateBackpackUI(data)
+                                conn:Disconnect()
+                            end
                         end
                     end)
                 end
