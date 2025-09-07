@@ -43,13 +43,12 @@ local function teleportToPlace(placeId)
 end
 
 function TeleportClient.bindZoneButtons(gui)
-        local screenGui = (gui and (gui.ScreenGui or gui.gui)) or gui
-        if not screenGui then
-                warn("TeleportClient: ScreenGui missing for zone buttons")
+        if not gui then
+                warn("TeleportClient: gui parameter missing for zone buttons")
                 return
         end
 
-        local teleFrame = screenGui:FindFirstChild("TeleFrame")
+        local teleFrame = gui:FindFirstChild("TeleFrame", true)
         if not teleFrame then
                 warn("TeleportClient: TeleFrame not found")
                 return
@@ -81,13 +80,12 @@ function TeleportClient.bindZoneButtons(gui)
 end
 
 function TeleportClient.bindWorldButtons(gui)
-        local screenGui = (gui and (gui.ScreenGui or gui.gui)) or gui
-        if not screenGui then
-                warn("TeleportClient: ScreenGui missing for world buttons")
+        if not gui then
+                warn("TeleportClient: gui parameter missing for world buttons")
                 return
         end
 
-        local worldFrame = screenGui:FindFirstChild("WorldTeleFrame")
+        local worldFrame = gui:FindFirstChild("WorldTeleFrame", true)
         if not worldFrame then
                 warn("TeleportClient: WorldTeleFrame not found")
                 return
