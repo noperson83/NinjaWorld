@@ -7,7 +7,14 @@ function Cosmetics.init(config)
         local Players = game:GetService("Players")
         local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+        -- Ensure a client exists before proceeding. Using Run in Studio will not
+        -- populate Players.LocalPlayer, so bail out early in that case.
         local player = Players.LocalPlayer
+        if not player then
+                warn("[Cosmetics] LocalPlayer is missing; use Play or Play Here in Studio.")
+                return
+        end
+
         local playerGui = player:WaitForChild("PlayerGui")
         local enterDojo = ReplicatedStorage:WaitForChild("EnterDojoRE")
 
@@ -66,16 +73,23 @@ function Cosmetics.init(config)
 
         confirmButton.MouseButton1Click:Connect(function()
                 gui.Enabled = false
-                enterDojo:FireServer({type = chosenPersona})
 
-                -- Wait for the server to spawn our character before clearing intro UI
-                local introGui = playerGui:FindFirstChild("IntroGui")
-                local conn
-                conn = player.CharacterAdded:Connect(function()
-                        if conn then conn:Disconnect() end
-                        if introGui then introGui.Enabled = false introGui:Destroy() end
-                        gui:Destroy()
-                end)
+                -- Only fire the RemoteEvent if a LocalPlayer exists. This
+                -- prevents errors when the game is run without a client.
+                if Players.LocalPlayer then
+                        enterDojo:FireServer({type = chosenPersona})
+
+                        -- Wait for the server to spawn our character before clearing intro UI
+                        local introGui = playerGui:FindFirstChild("IntroGui")
+                        local conn
+                        conn = player.CharacterAdded:Connect(function()
+                                if conn then conn:Disconnect() end
+                                if introGui then introGui.Enabled = false introGui:Destroy() end
+                                gui:Destroy()
+                        end)
+                else
+                        warn("[Cosmetics] Cannot enter dojo; LocalPlayer is nil.")
+                end
         end)
 
         print("Cosmetics module initialized for", config.gameName)
