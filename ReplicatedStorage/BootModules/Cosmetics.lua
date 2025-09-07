@@ -188,7 +188,7 @@ function Cosmetics.init(config, root, bootUI)
     dojo.Parent = root
 
     local dojoTitle = Instance.new("ImageLabel")
-    dojoTitle.Size = UDim2.fromOffset(700,80)
+    dojoTitle.Size = UDim2.fromOffset(700,240)
     dojoTitle.Position = UDim2.fromScale(0.5,0.1)
     dojoTitle.AnchorPoint = Vector2.new(0.5,0.5)
     -- Use BootUI logo where starter dojo image was
