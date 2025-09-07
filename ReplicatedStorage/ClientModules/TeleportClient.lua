@@ -112,20 +112,56 @@ function TeleportClient.bindWorldButtons(gui)
                 return
         end
 
-        for name, placeId in pairs(TeleportClient.worldSpawnIds) do
-                local button = worldFrame:FindFirstChild(name .. "Button")
-                if button then
-                        if placeId and placeId > 0 then
-                                button.Activated:Connect(function()
-                                        teleportToPlace(placeId)
-                                end)
-                        else
-                                warn("TeleportClient: missing asset id for realm " .. name)
-                        end
-                else
-                        warn("World button not found for: " .. name)
-                end
-        end
+       local enterButton = worldFrame:FindFirstChild("EnterRealmButton")
+       if not enterButton then
+               warn("TeleportClient: EnterRealmButton not found")
+               return
+       end
+
+       local worldButtons = {}
+       local selectedRealm = nil
+
+       local function selectRealm(name, button)
+               selectedRealm = name
+               for _, b in pairs(worldButtons) do
+                       b.BackgroundColor3 = Color3.fromRGB(50,120,255)
+               end
+               button.BackgroundColor3 = Color3.fromRGB(80,160,255)
+               enterButton.Text = "Enter " .. name
+               enterButton.Active = true
+               enterButton.AutoButtonColor = true
+       end
+
+       enterButton.Active = false
+       enterButton.AutoButtonColor = false
+
+       for name, placeId in pairs(TeleportClient.worldSpawnIds) do
+               local button = worldFrame:FindFirstChild(name .. "Button")
+               if button then
+                       if placeId and placeId > 0 then
+                               worldButtons[name] = button
+                               button.AutoButtonColor = false
+                               button.BackgroundColor3 = Color3.fromRGB(50,120,255)
+                               button.Activated:Connect(function()
+                                       selectRealm(name, button)
+                               end)
+                       else
+                               warn("TeleportClient: missing asset id for realm " .. name)
+                       end
+               else
+                       warn("World button not found for: " .. name)
+               end
+       end
+
+       enterButton.Activated:Connect(function()
+               if not selectedRealm then return end
+               local placeId = TeleportClient.worldSpawnIds[selectedRealm]
+               if placeId and placeId > 0 then
+                       teleportToPlace(placeId)
+               else
+                       warn("TeleportClient: missing asset id for realm " .. tostring(selectedRealm))
+               end
+       end)
 end
 
 function TeleportClient.init(gui)
