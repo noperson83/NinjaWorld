@@ -12,6 +12,7 @@ local btnUseRoblox
 local btnUseNinja
 local slotButtons = {}
 local boot
+local rootUI
 
 local personaCache = {slots = {}, slotCount = 0}
 local currentChoiceType = "Roblox"
@@ -68,6 +69,7 @@ end
 
 function Cosmetics.init(config, root, bootUI)
     boot = bootUI
+    rootUI = root
 
     dojo = Instance.new("Frame")
     dojo.Size = UDim2.fromScale(1,1)
@@ -162,6 +164,65 @@ function Cosmetics.init(config, root, bootUI)
     personaCache = rf:InvokeServer("get", {}) or personaCache
 
     slotButtons = {}
+
+    local function showConfirm(text, onYes)
+        local cover = Instance.new("Frame")
+        cover.Size = UDim2.fromScale(1,1)
+        cover.BackgroundColor3 = Color3.new(0,0,0)
+        cover.BackgroundTransparency = 0.4
+        cover.ZIndex = 200
+        cover.Parent = rootUI
+
+        local box = Instance.new("Frame")
+        box.Size = UDim2.fromScale(0.3,0.2)
+        box.Position = UDim2.fromScale(0.5,0.5)
+        box.AnchorPoint = Vector2.new(0.5,0.5)
+        box.BackgroundColor3 = Color3.fromRGB(24,26,28)
+        box.ZIndex = 201
+        box.Parent = cover
+
+        local msg = Instance.new("TextLabel")
+        msg.Size = UDim2.new(1,0,0.5,0)
+        msg.BackgroundTransparency = 1
+        msg.Text = text
+        msg.Font = Enum.Font.Gotham
+        msg.TextScaled = true
+        msg.TextColor3 = Color3.new(1,1,1)
+        msg.ZIndex = 202
+        msg.Parent = box
+
+        local yes = Instance.new("TextButton")
+        yes.Size = UDim2.new(0.4,0,0.3,0)
+        yes.Position = UDim2.new(0.1,0,0.6,0)
+        yes.Text = "Yes"
+        yes.Font = Enum.Font.GothamSemibold
+        yes.TextScaled = true
+        yes.TextColor3 = Color3.new(1,1,1)
+        yes.BackgroundColor3 = Color3.fromRGB(60,180,110)
+        yes.ZIndex = 202
+        yes.Parent = box
+
+        local no = Instance.new("TextButton")
+        no.Size = UDim2.new(0.4,0,0.3,0)
+        no.Position = UDim2.new(0.5,0,0.6,0)
+        no.Text = "No"
+        no.Font = Enum.Font.GothamSemibold
+        no.TextScaled = true
+        no.TextColor3 = Color3.new(1,1,1)
+        no.BackgroundColor3 = Color3.fromRGB(220,100,100)
+        no.ZIndex = 202
+        no.Parent = box
+
+        local function close()
+            cover:Destroy()
+        end
+        yes.MouseButton1Click:Connect(function()
+            close()
+            if onYes then onYes() end
+        end)
+        no.MouseButton1Click:Connect(close)
+    end
+
     local function makeSlot(index)
         local row = Instance.new("Frame")
         row.Size = UDim2.new(1,0,0,36)
@@ -182,8 +243,8 @@ function Cosmetics.init(config, root, bootUI)
         label.Parent = row
 
         local useBtn = Instance.new("TextButton")
-        useBtn.Size = UDim2.new(0.22,0,1,0)
-        useBtn.Position = UDim2.new(0.48,0,0,0)
+        useBtn.Size = UDim2.new(0.16,0,1,0)
+        useBtn.Position = UDim2.new(0.47,0,0,0)
         useBtn.Text = "Use"
         useBtn.Font = Enum.Font.GothamSemibold
         useBtn.TextScaled = true
@@ -194,8 +255,8 @@ function Cosmetics.init(config, root, bootUI)
         useBtn.Parent = row
 
         local saveBtn = Instance.new("TextButton")
-        saveBtn.Size = UDim2.new(0.22,0,1,0)
-        saveBtn.Position = UDim2.new(0.74,0,0,0)
+        saveBtn.Size = UDim2.new(0.16,0,1,0)
+        saveBtn.Position = UDim2.new(0.64,0,0,0)
         saveBtn.Text = "Overwrite"
         saveBtn.Font = Enum.Font.GothamSemibold
         saveBtn.TextScaled = true
@@ -205,7 +266,19 @@ function Cosmetics.init(config, root, bootUI)
         saveBtn.ZIndex = 11
         saveBtn.Parent = row
 
-        slotButtons[index] = {useBtn = useBtn, saveBtn = saveBtn, label = label}
+        local clearBtn = Instance.new("TextButton")
+        clearBtn.Size = UDim2.new(0.16,0,1,0)
+        clearBtn.Position = UDim2.new(0.81,0,0,0)
+        clearBtn.Text = "Clear"
+        clearBtn.Font = Enum.Font.GothamSemibold
+        clearBtn.TextScaled = true
+        clearBtn.TextColor3 = Color3.new(1,1,1)
+        clearBtn.BackgroundColor3 = Color3.fromRGB(200,80,80)
+        clearBtn.AutoButtonColor = true
+        clearBtn.ZIndex = 11
+        clearBtn.Parent = row
+
+        slotButtons[index] = {useBtn = useBtn, saveBtn = saveBtn, clearBtn = clearBtn, label = label}
     end
     for i = 1, personaCache.slotCount do makeSlot(i) end
 
@@ -233,6 +306,18 @@ function Cosmetics.init(config, root, bootUI)
         row.saveBtn.MouseButton1Click:Connect(function()
             local res = rf:InvokeServer("save", {slot = i, type = currentChoiceType, name = currentChoiceType == "Ninja" and "Starter Ninja" or "My Avatar"})
             if res and res.ok then personaCache = res; refreshSlots() else warn("Save failed:", res and res.err) end
+        end)
+        row.clearBtn.MouseButton1Click:Connect(function()
+            showConfirm(("Clear slot %d?"):format(i), function()
+                local res = rf:InvokeServer("clear", {slot = i})
+                if res and res.ok then
+                    personaCache = res
+                    if chosenSlot == i then chosenSlot = nil end
+                    refreshSlots()
+                else
+                    warn("Clear failed:", res and res.err)
+                end
+            end)
         end)
     end
 end
