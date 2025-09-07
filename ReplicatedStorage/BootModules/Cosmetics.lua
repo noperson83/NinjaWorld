@@ -88,6 +88,21 @@ local function highestUsed()
     return hi
 end
 
+local function getDescription(personaType)
+    local desc
+    if personaType == "Ninja" then
+        local hdFolder = ReplicatedStorage:FindFirstChild("HumanoidDescriptions")
+        local hd = hdFolder and hdFolder:FindFirstChild("Ninja")
+        if hd then desc = hd:Clone() end
+    else
+        local ok, hd = pcall(function()
+            return Players:GetHumanoidDescriptionFromUserId(player.UserId)
+        end)
+        if ok then desc = hd end
+    end
+    return desc
+end
+
 local function updateSlots()
     local hi = math.min(highestUsed(), #slotButtons)
     local visible = math.min(hi + 1, #slotButtons)
@@ -95,6 +110,13 @@ local function updateSlots()
         local slot = personaCache.slots[i]
         local ui = slotButtons[i]
         if ui then
+            if ui.viewport then
+                ui.viewport:ClearAllChildren()
+                ui.viewport.CurrentCamera = nil
+            end
+            if ui.placeholder then
+                ui.placeholder.Visible = false
+            end
             ui.frame.Visible = i <= visible
             if i <= visible then
                 local index = i
@@ -104,6 +126,21 @@ local function updateSlots()
                     ui.clearBtn.Visible = true
                     ui.robloxBtn.Visible = false
                     ui.starterBtn.Visible = false
+                    if ui.placeholder then ui.placeholder.Visible = false end
+                    if ui.viewport then
+                        local desc = getDescription(slot.type)
+                        if desc then
+                            local world = Instance.new("WorldModel")
+                            world.Parent = ui.viewport
+                            local model = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
+                            model:PivotTo(CFrame.new(0,0,0) * CFrame.Angles(0, math.pi, 0))
+                            model.Parent = world
+                            local cam = Instance.new("Camera")
+                            cam.CFrame = CFrame.new(Vector3.new(0,2,6), Vector3.new(0,2,0))
+                            cam.Parent = ui.viewport
+                            ui.viewport.CurrentCamera = cam
+                        end
+                    end
                     if not ui.clearConn then
                         ui.clearConn = ui.clearBtn.MouseButton1Click:Connect(function()
                             showConfirm(("Clear slot %d?"):format(index), function()
@@ -127,6 +164,7 @@ local function updateSlots()
                         ui.clearConn:Disconnect()
                         ui.clearConn = nil
                     end
+                    if ui.placeholder then ui.placeholder.Visible = true end
                 end
             end
         end
@@ -290,6 +328,20 @@ function Cosmetics.init(config, root, bootUI)
         frame.ZIndex = 11
         frame.Parent = slotsContainer
 
+        local viewport = Instance.new("ViewportFrame")
+        viewport.Size = UDim2.fromScale(1,1)
+        viewport.BackgroundTransparency = 1
+        viewport.ZIndex = 9
+        viewport.Parent = frame
+
+        local placeholder = Instance.new("ImageLabel")
+        placeholder.Size = UDim2.fromScale(1,1)
+        placeholder.BackgroundTransparency = 1
+        placeholder.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
+        placeholder.ScaleType = Enum.ScaleType.Fit
+        placeholder.ZIndex = 10
+        placeholder.Parent = frame
+
         local label = Instance.new("TextLabel")
         label.Size = UDim2.new(1,0,0.3,0)
         label.BackgroundTransparency = 1
@@ -351,6 +403,8 @@ function Cosmetics.init(config, root, bootUI)
 
         slotButtons[1] = {
             frame = frame,
+            viewport = viewport,
+            placeholder = placeholder,
             useBtn = useBtn,
             clearBtn = clearBtn,
             robloxBtn = robloxBtn,
@@ -368,6 +422,20 @@ function Cosmetics.init(config, root, bootUI)
         frame.BackgroundTransparency = 1
         frame.ZIndex = 11
         frame.Parent = slotsContainer
+
+        local viewport = Instance.new("ViewportFrame")
+        viewport.Size = UDim2.fromScale(1,1)
+        viewport.BackgroundTransparency = 1
+        viewport.ZIndex = 9
+        viewport.Parent = frame
+
+        local placeholder = Instance.new("ImageLabel")
+        placeholder.Size = UDim2.fromScale(1,1)
+        placeholder.BackgroundTransparency = 1
+        placeholder.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
+        placeholder.ScaleType = Enum.ScaleType.Fit
+        placeholder.ZIndex = 10
+        placeholder.Parent = frame
 
         local label = Instance.new("TextLabel")
         label.Size = UDim2.new(1,0,0.3,0)
@@ -430,6 +498,8 @@ function Cosmetics.init(config, root, bootUI)
 
         slotButtons[2] = {
             frame = frame,
+            viewport = viewport,
+            placeholder = placeholder,
             useBtn = useBtn,
             clearBtn = clearBtn,
             robloxBtn = robloxBtn,
@@ -447,6 +517,20 @@ function Cosmetics.init(config, root, bootUI)
         frame.BackgroundTransparency = 1
         frame.ZIndex = 11
         frame.Parent = slotsContainer
+
+        local viewport = Instance.new("ViewportFrame")
+        viewport.Size = UDim2.fromScale(1,1)
+        viewport.BackgroundTransparency = 1
+        viewport.ZIndex = 9
+        viewport.Parent = frame
+
+        local placeholder = Instance.new("ImageLabel")
+        placeholder.Size = UDim2.fromScale(1,1)
+        placeholder.BackgroundTransparency = 1
+        placeholder.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
+        placeholder.ScaleType = Enum.ScaleType.Fit
+        placeholder.ZIndex = 10
+        placeholder.Parent = frame
 
         local label = Instance.new("TextLabel")
         label.Size = UDim2.new(1,0,0.3,0)
@@ -509,6 +593,8 @@ function Cosmetics.init(config, root, bootUI)
 
         slotButtons[3] = {
             frame = frame,
+            viewport = viewport,
+            placeholder = placeholder,
             useBtn = useBtn,
             clearBtn = clearBtn,
             robloxBtn = robloxBtn,
