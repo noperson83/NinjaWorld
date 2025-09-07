@@ -60,11 +60,68 @@ function BootUI.init(config)
         title.BackgroundTransparency = 1
         title.Parent = root
 
+        -- Loading screen shown initially
+        local loading = Instance.new("TextLabel")
+        loading.Size = UDim2.fromScale(1,1)
+        loading.BackgroundColor3 = Color3.new(0,0,0)
+        loading.TextColor3 = Color3.new(1,1,1)
+        loading.Text = "Loading..."
+        loading.TextScaled = true
+        loading.Parent = root
+
+        -- Persona selection UI, hidden until selectPersona is called
+        local personaFrame = Instance.new("Frame")
+        personaFrame.Size = UDim2.fromScale(1,1)
+        personaFrame.BackgroundTransparency = 1
+        personaFrame.Visible = false
+        personaFrame.Parent = root
+
+        local choiceA = Instance.new("TextButton")
+        choiceA.Name = "PersonaA"
+        choiceA.Size = UDim2.fromOffset(200,50)
+        choiceA.Position = UDim2.fromScale(0.3,0.5)
+        choiceA.AnchorPoint = Vector2.new(0.5,0.5)
+        choiceA.Text = "Persona A"
+        choiceA.Parent = personaFrame
+
+        local choiceB = Instance.new("TextButton")
+        choiceB.Name = "PersonaB"
+        choiceB.Size = UDim2.fromOffset(200,50)
+        choiceB.Position = UDim2.fromScale(0.7,0.5)
+        choiceB.AnchorPoint = Vector2.new(0.5,0.5)
+        choiceB.Text = "Persona B"
+        choiceB.Parent = personaFrame
+
+        local useButton = Instance.new("TextButton")
+        useButton.Size = UDim2.fromOffset(200,50)
+        useButton.Position = UDim2.fromScale(0.5,0.8)
+        useButton.AnchorPoint = Vector2.new(0.5,0.5)
+        useButton.Text = "Use"
+        useButton.Visible = false
+        useButton.Parent = personaFrame
+
+        -- Profile UI that appears after the camera moves
+        local profileFrame = Instance.new("Frame")
+        profileFrame.Size = UDim2.fromScale(0.4,0.4)
+        profileFrame.Position = UDim2.fromScale(0.5,0.5)
+        profileFrame.AnchorPoint = Vector2.new(0.5,0.5)
+        profileFrame.BackgroundColor3 = Color3.fromRGB(40,40,42)
+        profileFrame.Visible = false
+        profileFrame.Parent = root
+
+        local profileLabel = Instance.new("TextLabel")
+        profileLabel.Size = UDim2.fromScale(1,1)
+        profileLabel.BackgroundTransparency = 1
+        profileLabel.TextColor3 = Color3.fromRGB(230,230,230)
+        profileLabel.TextScaled = true
+        profileLabel.Parent = profileFrame
+
         -- Teleport GUI with zone and world frames
         local teleportGui = Instance.new("ScreenGui")
         teleportGui.ResetOnSpawn = false
         teleportGui.IgnoreGuiInset = true
         teleportGui.Name = "TeleportGui"
+        teleportGui.Enabled = false
         teleportGui.Parent = player:WaitForChild("PlayerGui")
 
         local teleFrame = Instance.new("Frame")
@@ -125,12 +182,41 @@ function BootUI.init(config)
                 TweenService:Create(cam, TweenInfo.new(1.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = cf, FieldOfView = fov}):Play()
         end
 
+        local function selectPersona()
+                loading.Visible = false
+                personaFrame.Visible = true
+                local selected
+                choiceA.Activated:Connect(function()
+                        selected = "PersonaA"
+                        useButton.Visible = true
+                end)
+                choiceB.Activated:Connect(function()
+                        selected = "PersonaB"
+                        useButton.Visible = true
+                end)
+                local event = Instance.new("BindableEvent")
+                useButton.Activated:Connect(function()
+                        if selected then
+                                personaFrame.Visible = false
+                                event:Fire(selected)
+                        end
+                end)
+                return event.Event:Wait()
+        end
+
+        local function showProfile(persona)
+                profileLabel.Text = "Profile: " .. tostring(persona)
+                profileFrame.Visible = true
+        end
+
         return {
                 gui = gui,
                 root = root,
                 teleportGui = teleportGui,
                 holdStartCam = holdStartCam,
-                tweenToStart = tweenToStart
+                tweenToStart = tweenToStart,
+                selectPersona = selectPersona,
+                showProfile = showProfile
         }
 end
 

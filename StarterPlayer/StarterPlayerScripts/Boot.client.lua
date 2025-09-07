@@ -9,25 +9,23 @@ local GameSettings = require(ReplicatedStorage:WaitForChild("GameSettings"))
 local BootUI = require(BootModules:WaitForChild("BootUI"))
 local CurrencyService = require(BootModules:WaitForChild("CurrencyService"))
 local Shop = require(BootModules:WaitForChild("Shop"))
-local ShopUI = require(BootModules:WaitForChild("ShopUI"))
 local Cosmetics = require(ReplicatedStorage.BootModules.Cosmetics)
 
 -- TeleportClient centralizes teleport button wiring
 local TeleportClient = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("TeleportClient"))
 
--- Initialize sequence: UI -> currency -> shop -> teleport -> cosmetics
+-- Initialize UI and run the intro flow
 local ui = BootUI.init(GameSettings)
-
--- Align the player's camera with the configured start position.
--- BootUI exposes helpers for this; we use holdStartCam here so the
--- camera immediately snaps to the startPos and stays there briefly.
--- Alternatively, developers can swap this for ui.tweenToStart() to
--- smoothly move the camera instead of snapping.
 ui.holdStartCam(3)
 
+local persona = ui.selectPersona()
+ui.tweenToStart()
+ui.showProfile(persona)
+
+-- Services that can initialize after the intro sequence
 local currency = CurrencyService.new(GameSettings)
 local shop = Shop.new(GameSettings, currency)
-ShopUI.init(GameSettings, shop, ui)
 
+ui.teleportGui.Enabled = true
 TeleportClient.init(ui.teleportGui)
 Cosmetics.init(GameSettings)
