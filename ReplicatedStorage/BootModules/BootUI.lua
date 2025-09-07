@@ -282,7 +282,7 @@ loadTitle.Parent = loadout
 -- Emote bar (top)
 local emoteBar = Instance.new("Frame")
 emoteBar.Size = UDim2.new(1,-40,0,38)
-emoteBar.Position = UDim2.fromOffset(20,baseY + 48)
+emoteBar.Position = UDim2.fromOffset(20,baseY + 60)
 emoteBar.BackgroundColor3 = Color3.fromRGB(24,26,28)
 emoteBar.BackgroundTransparency = 0.6
 emoteBar.BorderSizePixel = 0
