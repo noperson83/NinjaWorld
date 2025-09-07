@@ -6,6 +6,11 @@ local DataStoreService = game:GetService("DataStoreService")
 local DataStore = DataStoreService:GetDataStore("PlayerData")
 
 -- default schema for player saves
+local REALM_LIST = {
+    "StarterDojo","SecretVillage","Water","Fire","Wind","Growth",
+    "Ice","Light","Metal","Strength","Atoms"
+}
+
 local DEFAULT_DATA = {
     level = 1,
     experience = 0,
@@ -27,6 +32,11 @@ local DEFAULT_DATA = {
         Atom = 0,
     },
     unlockedAbilities = {},
+    -- realms the player has unlocked; defaults to starter areas
+    unlockedRealms = {
+        StarterDojo = true,
+        SecretVillage = true,
+    },
     inventory = {
         coins = 0,
         orbs = {},
@@ -82,6 +92,13 @@ local function loadPlayerData(player)
     if success then
         data = data or deepCopy(DEFAULT_DATA)
         fillMissing(data, DEFAULT_DATA)
+        -- ensure all realm flags exist
+        data.unlockedRealms = type(data.unlockedRealms) == "table" and data.unlockedRealms or {}
+        for _, realm in ipairs(REALM_LIST) do
+            if data.unlockedRealms[realm] == nil then
+                data.unlockedRealms[realm] = DEFAULT_DATA.unlockedRealms[realm] or false
+            end
+        end
         data.inventory.orbs = sanitizeOrbs(data.inventory.orbs)
         sessionData[player.UserId] = data
         return data
@@ -213,6 +230,28 @@ local function playerAdded(player)
             if not table.find(abilities, child.Name) then
                 table.insert(abilities, child.Name)
             end
+        end
+    end)
+
+    -- folder replicating which realms the player has unlocked
+    local realmsFolder = Instance.new("Folder")
+    realmsFolder.Name = "Realms"
+    realmsFolder.Parent = player
+    for _, realm in ipairs(REALM_LIST) do
+        local flag = Instance.new("BoolValue")
+        flag.Name = realm
+        flag.Value = data.unlockedRealms[realm] or false
+        flag.Parent = realmsFolder
+        flag:GetPropertyChangedSignal("Value"):Connect(function()
+            sessionData[player.UserId].unlockedRealms[realm] = flag.Value
+        end)
+    end
+    realmsFolder.ChildAdded:Connect(function(child)
+        if child:IsA("BoolValue") then
+            sessionData[player.UserId].unlockedRealms[child.Name] = child.Value
+            child:GetPropertyChangedSignal("Value"):Connect(function()
+                sessionData[player.UserId].unlockedRealms[child.Name] = child.Value
+            end)
         end
     end)
 
