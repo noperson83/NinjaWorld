@@ -59,7 +59,11 @@ local ASSETS = {
 
 local StarterBackpack = config.starterBackpack or {
     capacity = 20,
-    items = {}
+    weapons = {},
+    food = {},
+    special = {},
+    coins = 0,
+    orbs = 0,
 }
 BootUI.StarterBackpack = StarterBackpack
 
@@ -539,8 +543,49 @@ BootUI.buildCharacterPreview = buildCharacterPreview
 local function populateBackpackUI(bp)
     clearChildren(list)
     local used = 0
-    for _,it in ipairs(bp.items or {}) do
-        used += it.qty
+
+    local function addHeader(text)
+        local h = Instance.new("TextLabel")
+        h.Size = UDim2.new(1,0,0,30)
+        h.BackgroundTransparency = 1
+        h.TextXAlignment = Enum.TextXAlignment.Left
+        h.Font = Enum.Font.GothamSemibold
+        h.TextScaled = true
+        h.TextColor3 = Color3.fromRGB(200,200,200)
+        h.Text = text
+        h.Parent = list
+    end
+
+    local function addSimpleRow(label, value)
+        local row = Instance.new("Frame")
+        row.Size = UDim2.new(1,0,0,30)
+        row.BackgroundTransparency = 1
+        row.Parent = list
+
+        local name = Instance.new("TextLabel")
+        name.Size = UDim2.new(0.6,-10,1,0)
+        name.Position = UDim2.fromOffset(10,0)
+        name.BackgroundTransparency = 1
+        name.TextXAlignment = Enum.TextXAlignment.Left
+        name.Font = Enum.Font.Gotham
+        name.TextScaled = true
+        name.TextColor3 = Color3.new(1,1,1)
+        name.Text = label
+        name.Parent = row
+
+        local val = Instance.new("TextLabel")
+        val.Size = UDim2.new(0.4,-10,1,0)
+        val.Position = UDim2.new(0.6,0,0,0)
+        val.BackgroundTransparency = 1
+        val.TextXAlignment = Enum.TextXAlignment.Right
+        val.Font = Enum.Font.Gotham
+        val.TextScaled = true
+        val.TextColor3 = Color3.fromRGB(230,230,230)
+        val.Text = tostring(value or 0)
+        val.Parent = row
+    end
+
+    local function addItemRow(it)
         local row = Instance.new("Frame")
         row.Size = UDim2.new(1,0,0,40)
         row.BackgroundColor3 = Color3.fromRGB(32,34,36)
@@ -569,6 +614,27 @@ local function populateBackpackUI(bp)
         qty.Text = string.format("%d / %d", it.qty, it.stack)
         qty.Parent = row
     end
+
+    -- currency section
+    addHeader("Currency")
+    addSimpleRow("Coins", bp.coins or 0)
+    addSimpleRow("Orbs", bp.orbs or 0)
+
+    -- item sections
+    local sections = {
+        {title = "Weapons", items = bp.weapons},
+        {title = "Food", items = bp.food},
+        {title = "Special", items = bp.special},
+    }
+
+    for _,section in ipairs(sections) do
+        addHeader(section.title)
+        for _,it in ipairs(section.items or {}) do
+            used += it.qty
+            addItemRow(it)
+        end
+    end
+
     local cap = math.max(bp.capacity or 0, used)
     capBar.Size = UDim2.new(cap>0 and (used/cap) or 0, 0, 1, 0)
     capLabel.Text = string.format("Capacity: %d / %d", used, cap)
