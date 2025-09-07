@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local CharacterManager = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("CharacterManager"))
+local Abilities = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("Abilities"))
 
 local CombatController = {}
 
@@ -57,46 +58,10 @@ end
 
 function CombatController.perform(actionName)
 	print("Performing action:", actionName)
-	if actionName == "Rain" then
-		local offset = Vector3.new(0, 12, 0)
-		local caster = CharacterManager.character
-		local humanoidRoot = CharacterManager.humanoidRoot
-		local rainTemplate = ReplicatedStorage:WaitForChild("Elements"):WaitForChild("WaterElem"):FindFirstChild("WaterRain")
-		if not rainTemplate then warn("?? Missing WaterRain template") return end
-		local target = nil
-		for i = 1, math.random(3, 5) do
-			task.delay(i * 0.1, function()
-				local sideOffset = Vector3.new(math.random(-6, 6), 0, math.random(-6, 6))
-				local rainInstance = rainTemplate:Clone()
-				rainInstance.Anchored = true
-				rainInstance.CFrame = (target and target:FindFirstChild("Head") and CFrame.new(target.Head.Position + offset + sideOffset))
-					or (humanoidRoot.CFrame + humanoidRoot.CFrame.LookVector * 6 + offset + sideOffset)
-				rainInstance.Parent = workspace
-				local cloud = rainInstance:Clone()
-				cloud.Name = "RainCloud"
-				cloud.Size = Vector3.new(math.random(4, 8), math.random(4, 8), math.random(4, 8))
-				cloud.Position = rainInstance.Position + Vector3.new(0, 4, 0)
-				cloud.Anchored = true
-				cloud.CanCollide = false
-				cloud.Transparency = 0.4
-				cloud.Material = Enum.Material.ForceField
-				cloud.Color = Color3.fromRGB(200, 200, 200)
-				cloud.Parent = workspace
-				local runConn
-				runConn = game:GetService("RunService").RenderStepped:Connect(function()
-					if target and target:FindFirstChild("Head") then
-						rainInstance.Position = target.Head.Position + offset
-					end
-				end)
-				task.delay(5, function()
-					rainInstance:Destroy()
-					cloud:Destroy()
-					if runConn then runConn:Disconnect() end
-				end)
-			end)
-		end
-		return
-	end
+        if actionName == "Rain" then
+                Abilities.Rain()
+                return
+        end
 	if actionName == "Crouch" then
 		local track = animationTracks["Crch"]
 		if track then
