@@ -1,10 +1,41 @@
 -- Abilities Module
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local CharacterManager = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("CharacterManager"))
+local AbilityMetadata = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("AbilityMetadata"))
 
 local Abilities = {}
+local unlocked = {}
+Abilities.unlocked = unlocked
+
+local player = Players.LocalPlayer
+local abilitiesFolder = player:WaitForChild("Abilities", 5)
+if abilitiesFolder then
+        for _, child in ipairs(abilitiesFolder:GetChildren()) do
+                if child:IsA("BoolValue") and child.Value then
+                        unlocked[child.Name] = true
+                end
+        end
+        abilitiesFolder.ChildAdded:Connect(function(child)
+                if child:IsA("BoolValue") and child.Value then
+                        unlocked[child.Name] = true
+                end
+        end)
+end
+
+function Abilities.isUnlocked(name)
+        return unlocked[name]
+end
+
+local function ensureUnlocked(name)
+        if not unlocked[name] then
+                warn("Ability " .. name .. " is locked")
+                return false
+        end
+        return true
+end
 
 -- FX templates
 local function createOrb()
@@ -35,7 +66,8 @@ local function createOrb()
 end
 
 function Abilities.Toss()
-	local animator = CharacterManager.animator
+        if not ensureUnlocked("Toss") then return end
+        local animator = CharacterManager.animator
 	if not animator then return end
 
 	local tossAnimation = Instance.new("Animation")
@@ -53,9 +85,10 @@ function Abilities.Toss()
 end
 
 function Abilities.Star()
-	local animator = CharacterManager.animator
+        if not ensureUnlocked("Star") then return end
+        local animator = CharacterManager.animator
 	if not animator or not CharacterManager.starModel then
-		warn("?? Star ability failed – missing animator or starModel")
+		warn("?? Star ability failed Â– missing animator or starModel")
 		return
 	end
 
@@ -83,7 +116,8 @@ function Abilities.Star()
 end
 
 function Abilities.Rain()
-	local offset = Vector3.new(0, 12, 0)
+        if not ensureUnlocked("Rain") then return end
+        local offset = Vector3.new(0, 12, 0)
 	local caster = CharacterManager.character
 	local humanoidRoot = CharacterManager.humanoidRoot
 	local rainTemplate = ReplicatedStorage:WaitForChild("Elements"):WaitForChild("WaterElem"):FindFirstChild("WaterRain")
@@ -126,7 +160,13 @@ function Abilities.Rain()
 	end
 end
 
-function Abilities.Dragon() warn("?? Dragon not implemented yet") end
-function Abilities.Beast() warn("?? Beast not implemented yet") end
+function Abilities.Dragon()
+        if not ensureUnlocked("Dragon") then return end
+        warn("?? Dragon not implemented yet")
+end
+function Abilities.Beast()
+        if not ensureUnlocked("Beast") then return end
+        warn("?? Beast not implemented yet")
+end
 
 return Abilities

@@ -57,13 +57,18 @@ function CombatController.getTracks()
 end
 
 function CombatController.perform(actionName)
-	print("Performing action:", actionName)
-        if actionName == "Rain" then
-                Abilities.Rain()
+        print("Performing action:", actionName)
+        local abilityFunc = Abilities[actionName]
+        if type(abilityFunc) == "function" then
+                if Abilities.isUnlocked(actionName) then
+                        abilityFunc()
+                else
+                        warn("Ability " .. actionName .. " is locked")
+                end
                 return
         end
-	if actionName == "Crouch" then
-		local track = animationTracks["Crch"]
+        if actionName == "Crouch" then
+                local track = animationTracks["Crch"]
 		if track then
 			if CharacterManager.isCrouching then
 				track:AdjustSpeed(1)
