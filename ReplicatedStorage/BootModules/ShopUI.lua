@@ -47,18 +47,24 @@ function ShopUI.init(config, shop, bootUI, defaultTab)
             ShopUI.setTab(name)
         end)
 
-        local tabFrame = Instance.new("Frame")
+        local tabFrame = Instance.new("ScrollingFrame")
         tabFrame.Size = UDim2.fromScale(1,1)
         tabFrame.BackgroundTransparency = 1
         tabFrame.Visible = false
+        tabFrame.ScrollBarThickness = 6
+        tabFrame.CanvasSize = UDim2.new(0,0,0,0)
         tabFrame.Parent = content
         tabFrames[name] = tabFrame
+
+        local layout = Instance.new("UIListLayout")
+        layout.Parent = tabFrame
+        layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            tabFrame.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y)
+        end)
     end
 
     -- Abilities tab
     local abilitiesFrame = tabFrames["Abilities"]
-    local listLayout = Instance.new("UIListLayout")
-    listLayout.Parent = abilitiesFrame
     local learnRF = ReplicatedStorage:WaitForChild("LearnAbility")
     for ability, info in pairs(AbilityMetadata) do
         local btn = Instance.new("TextButton")
@@ -76,14 +82,14 @@ function ShopUI.init(config, shop, bootUI, defaultTab)
 
     -- Placeholder tabs
     local elementsLabel = Instance.new("TextLabel")
-    elementsLabel.Size = UDim2.new(1,0,1,0)
+    elementsLabel.Size = UDim2.new(1,0,0,40)
     elementsLabel.BackgroundTransparency = 1
     elementsLabel.Text = "Elements coming soon"
     elementsLabel.TextColor3 = Color3.new(1,1,1)
     elementsLabel.Parent = tabFrames["Elements"]
 
     local weaponsLabel = Instance.new("TextLabel")
-    weaponsLabel.Size = UDim2.new(1,0,1,0)
+    weaponsLabel.Size = UDim2.new(1,0,0,40)
     weaponsLabel.BackgroundTransparency = 1
     weaponsLabel.Text = "Weapons coming soon"
     weaponsLabel.TextColor3 = Color3.new(1,1,1)
