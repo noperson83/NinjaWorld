@@ -1,98 +1,232 @@
 local Cosmetics = {}
 
--- Creates a very small persona selection GUI and handles spawning once a
--- choice is made.  The intro GUI comes from BootUI.init and is hidden after
--- the server spawns our character.
-function Cosmetics.init(config)
-        local Players = game:GetService("Players")
-        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
-        -- Ensure a client exists before proceeding. Using Run in Studio will not
-        -- populate Players.LocalPlayer, so bail out early in that case.
-        local player = Players.LocalPlayer
-        if not player then
-                warn("[Cosmetics] LocalPlayer is missing; use Play or Play Here in Studio.")
-                return
+local rf = ReplicatedStorage:WaitForChild("PersonaServiceRF")
+local player = Players.LocalPlayer
+
+local dojo
+local btnUseRoblox
+local btnUseNinja
+local slotButtons = {}
+local boot
+
+local personaCache = {slots = {}, defaultSlotsCount = 3}
+local currentChoiceType = "Roblox"
+local chosenSlot
+
+local function refreshSlots()
+    local data = rf:InvokeServer("get", {})
+    personaCache = data or personaCache
+    for i = 1, personaCache.defaultSlotsCount do
+        local slot = personaCache.slots[i]
+        local ui = slotButtons[i]
+        if ui then
+            ui.label.Text = slot and ("Slot %d – %s"):format(i, slot.name or slot.type) or ("Slot %d – (empty)"):format(i)
         end
+    end
+end
 
-        local playerGui = player:WaitForChild("PlayerGui")
-        local enterDojo = ReplicatedStorage:WaitForChild("EnterDojoRE")
+local function showDojoPicker()
+    if dojo then dojo.Visible = true end
+    if boot and boot.loadout then boot.loadout.Visible = false end
+end
 
-        -- Simple GUI container
-        local gui = Instance.new("ScreenGui")
-        gui.Name = "PersonaGui"
-        gui.ResetOnSpawn = false
-        gui.IgnoreGuiInset = true
-        gui.DisplayOrder = 110
-        gui.Parent = playerGui
-
-        local root = Instance.new("Frame")
-        root.Size = UDim2.fromScale(1,1)
-        root.BackgroundTransparency = 1
-        root.Parent = gui
-
-        -- Buttons for persona selection
-        local ninjaButton = Instance.new("TextButton")
-        ninjaButton.Size = UDim2.fromOffset(200,50)
-        ninjaButton.Position = UDim2.fromScale(0.5,0.45)
-        ninjaButton.AnchorPoint = Vector2.new(0.5,0.5)
-        ninjaButton.Text = "Ninja"
-        ninjaButton.Parent = root
-
-        local robloxButton = Instance.new("TextButton")
-        robloxButton.Size = UDim2.fromOffset(200,50)
-        robloxButton.Position = UDim2.fromScale(0.5,0.55)
-        robloxButton.AnchorPoint = Vector2.new(0.5,0.5)
-        robloxButton.Text = "Roblox"
-        robloxButton.Parent = root
-
-        local confirmButton = Instance.new("TextButton")
-        confirmButton.Size = UDim2.fromOffset(200,50)
-        confirmButton.Position = UDim2.fromScale(0.5,0.7)
-        confirmButton.AnchorPoint = Vector2.new(0.5,0.5)
-        confirmButton.Text = "Enter Dojo"
-        confirmButton.Parent = root
-
-        local chosenPersona = "Roblox"
-        local function updateSelection()
-                ninjaButton.BackgroundColor3 = (chosenPersona == "Ninja") and Color3.fromRGB(0,170,0) or Color3.fromRGB(255,255,255)
-                robloxButton.BackgroundColor3 = (chosenPersona == "Roblox") and Color3.fromRGB(0,170,0) or Color3.fromRGB(255,255,255)
+local function showLoadout(personaType)
+    if dojo then dojo.Visible = false end
+    if boot and boot.loadout then
+        boot.loadout.Visible = true
+        if boot.buildCharacterPreview then boot.buildCharacterPreview(personaType) end
+        if boot.populateBackpackUI and boot.StarterBackpack then
+            boot.populateBackpackUI(boot.StarterBackpack)
         end
+    end
+end
 
-        ninjaButton.MouseButton1Click:Connect(function()
-                chosenPersona = "Ninja"
-                updateSelection()
+function Cosmetics.getSelectedPersona()
+    local personaType = currentChoiceType
+    if chosenSlot and personaCache and personaCache.slots then
+        local slot = personaCache.slots[chosenSlot]
+        if slot and slot.type then personaType = slot.type end
+    end
+    return personaType, chosenSlot
+end
+
+function Cosmetics.refreshSlots()
+    refreshSlots()
+end
+
+function Cosmetics.showDojoPicker()
+    showDojoPicker()
+end
+
+function Cosmetics.init(config, root, bootUI)
+    boot = bootUI
+
+    dojo = Instance.new("Frame")
+    dojo.Size = UDim2.fromScale(1,1)
+    dojo.BackgroundTransparency = 1
+    dojo.Visible = false
+    dojo.ZIndex = 10
+    dojo.Parent = root
+
+    local dojoTitle = Instance.new("TextLabel")
+    dojoTitle.Size = UDim2.fromOffset(700,80)
+    dojoTitle.Position = UDim2.fromScale(0.5,0.1)
+    dojoTitle.AnchorPoint = Vector2.new(0.5,0.5)
+    dojoTitle.Text = "Starter Dojo"
+    dojoTitle.Font = Enum.Font.GothamBold
+    dojoTitle.TextScaled = true
+    dojoTitle.TextColor3 = Color3.fromRGB(255,200,120)
+    dojoTitle.BackgroundTransparency = 1
+    dojoTitle.ZIndex = 11
+    dojoTitle.Parent = dojo
+
+    local picker = Instance.new("Frame")
+    picker.Size = UDim2.fromScale(0.6,0.55)
+    picker.Position = UDim2.fromScale(0.5,0.55)
+    picker.AnchorPoint = Vector2.new(0.5,0.5)
+    picker.BackgroundColor3 = Color3.fromRGB(24,26,28)
+    picker.BackgroundTransparency = 0.6
+    picker.BorderSizePixel = 0
+    picker.ZIndex = 11
+    picker.Parent = dojo
+
+    local function makeButton(text, y)
+        local b = Instance.new("TextButton")
+        b.Size = UDim2.new(0.9, 0, 0, 56)
+        b.Position = UDim2.fromScale(0.5, y)
+        b.AnchorPoint = Vector2.new(0.5,0.5)
+        b.Text = text
+        b.Font = Enum.Font.GothamSemibold
+        b.TextScaled = true
+        b.TextColor3 = Color3.new(1,1,1)
+        b.BackgroundColor3 = Color3.fromRGB(50,120,255)
+        b.AutoButtonColor = true
+        b.ZIndex = 11
+        b.Parent = picker
+        return b
+    end
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(0.9,0,0,40)
+    title.Position = UDim2.fromScale(0.5,0.1)
+    title.AnchorPoint = Vector2.new(0.5,0.5)
+    title.Text = "Choose Your Character"
+    title.Font = Enum.Font.GothamBold
+    title.TextScaled = true
+    title.TextColor3 = Color3.new(1,1,1)
+    title.BackgroundTransparency = 1
+    title.ZIndex = 11
+    title.Parent = picker
+
+    btnUseRoblox = makeButton("Use Roblox Avatar", 0.30)
+    btnUseNinja  = makeButton("Use Starter Ninja", 0.42)
+
+    local line = Instance.new("Frame")
+    line.Size = UDim2.new(0.9,0,0,2)
+    line.Position = UDim2.fromScale(0.5,0.52)
+    line.AnchorPoint = Vector2.new(0.5,0.5)
+    line.BackgroundColor3 = Color3.fromRGB(60,60,62)
+    line.BorderSizePixel = 0
+    line.ZIndex = 11
+    line.Parent = picker
+
+    local slotsTitle = Instance.new("TextLabel")
+    slotsTitle.Size = UDim2.new(0.9,0,0,32)
+    slotsTitle.Position = UDim2.fromScale(0.5,0.58)
+    slotsTitle.AnchorPoint = Vector2.new(0.5,0.5)
+    slotsTitle.Text = "Persona Slots"
+    slotsTitle.Font = Enum.Font.GothamSemibold
+    slotsTitle.TextScaled = true
+    slotsTitle.TextColor3 = Color3.fromRGB(230,230,230)
+    slotsTitle.BackgroundTransparency = 1
+    slotsTitle.ZIndex = 11
+    slotsTitle.Parent = picker
+
+    local slotsFrame = Instance.new("Frame")
+    slotsFrame.Size = UDim2.new(0.9,0,0.28,0)
+    slotsFrame.Position = UDim2.fromScale(0.5,0.78)
+    slotsFrame.AnchorPoint = Vector2.new(0.5,0.5)
+    slotsFrame.BackgroundTransparency = 1
+    slotsFrame.ZIndex = 11
+    slotsFrame.Parent = picker
+
+    slotButtons = {}
+    local function makeSlot(index)
+        local row = Instance.new("Frame")
+        row.Size = UDim2.new(1,0,0,36)
+        row.Position = UDim2.new(0,0,0,(index-1)*40)
+        row.BackgroundTransparency = 1
+        row.ZIndex = 11
+        row.Parent = slotsFrame
+
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(0.45,0,1,0)
+        label.BackgroundTransparency = 1
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.Text = ("Slot %d – (empty)"):format(index)
+        label.Font = Enum.Font.Gotham
+        label.TextScaled = true
+        label.TextColor3 = Color3.fromRGB(220,220,220)
+        label.ZIndex = 11
+        label.Parent = row
+
+        local useBtn = Instance.new("TextButton")
+        useBtn.Size = UDim2.new(0.22,0,1,0)
+        useBtn.Position = UDim2.new(0.48,0,0,0)
+        useBtn.Text = "Use"
+        useBtn.Font = Enum.Font.GothamSemibold
+        useBtn.TextScaled = true
+        useBtn.TextColor3 = Color3.new(1,1,1)
+        useBtn.BackgroundColor3 = Color3.fromRGB(60,180,110)
+        useBtn.AutoButtonColor = true
+        useBtn.ZIndex = 11
+        useBtn.Parent = row
+
+        local saveBtn = Instance.new("TextButton")
+        saveBtn.Size = UDim2.new(0.22,0,1,0)
+        saveBtn.Position = UDim2.new(0.74,0,0,0)
+        saveBtn.Text = "Overwrite"
+        saveBtn.Font = Enum.Font.GothamSemibold
+        saveBtn.TextScaled = true
+        saveBtn.TextColor3 = Color3.new(1,1,1)
+        saveBtn.BackgroundColor3 = Color3.fromRGB(100,100,220)
+        saveBtn.AutoButtonColor = true
+        saveBtn.ZIndex = 11
+        saveBtn.Parent = row
+
+        slotButtons[index] = {useBtn = useBtn, saveBtn = saveBtn, label = label}
+    end
+    for i = 1,3 do makeSlot(i) end
+
+    btnUseRoblox.MouseButton1Click:Connect(function()
+        currentChoiceType = "Roblox"
+        btnUseRoblox.BackgroundColor3 = Color3.fromRGB(80,180,120)
+        btnUseNinja.BackgroundColor3  = Color3.fromRGB(50,120,255)
+    end)
+    btnUseNinja.MouseButton1Click:Connect(function()
+        currentChoiceType = "Ninja"
+        btnUseNinja.BackgroundColor3  = Color3.fromRGB(80,180,120)
+        btnUseRoblox.BackgroundColor3 = Color3.fromRGB(50,120,255)
+    end)
+
+    for i,row in pairs(slotButtons) do
+        row.useBtn.MouseButton1Click:Connect(function()
+            local result = rf:InvokeServer("use", {slot = i})
+            if not (result and result.ok) then warn("Use slot failed:", result and result.err) return end
+            chosenSlot = i
+            if boot and boot.tweenToEnd then boot.tweenToEnd() end
+            showLoadout(result.persona and result.persona.type or currentChoiceType)
         end)
-
-        robloxButton.MouseButton1Click:Connect(function()
-                chosenPersona = "Roblox"
-                updateSelection()
+        row.saveBtn.MouseButton1Click:Connect(function()
+            local res = rf:InvokeServer("save", {slot = i, type = currentChoiceType, name = currentChoiceType == "Ninja" and "Starter Ninja" or "My Avatar"})
+            if res and res.ok then personaCache = res; refreshSlots() else warn("Save failed:", res and res.err) end
         end)
-
-        updateSelection()
-
-        confirmButton.MouseButton1Click:Connect(function()
-                gui.Enabled = false
-
-                -- Only fire the RemoteEvent if a LocalPlayer exists. This
-                -- prevents errors when the game is run without a client.
-                if Players.LocalPlayer then
-                        enterDojo:FireServer({type = chosenPersona})
-
-                        -- Wait for the server to spawn our character before clearing intro UI
-                        local introGui = playerGui:FindFirstChild("IntroGui")
-                        local conn
-                        conn = player.CharacterAdded:Connect(function()
-                                if conn then conn:Disconnect() end
-                                if introGui then introGui.Enabled = false introGui:Destroy() end
-                                gui:Destroy()
-                        end)
-                else
-                        warn("[Cosmetics] Cannot enter dojo; LocalPlayer is nil.")
-                end
-        end)
-
-        print("Cosmetics module initialized for", config.gameName)
+    end
 end
 
 return Cosmetics
+
