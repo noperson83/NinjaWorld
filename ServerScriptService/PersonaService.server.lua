@@ -97,7 +97,12 @@ end)
 rf.OnServerInvoke = function(player, action, data)
         local key = playerKey(player.UserId)
         local personas = safeGet(key) or {}
-        local currentCount = #personas
+        local currentCount = 0
+        for i = 1, MAX_SLOTS do
+                if personas[i] ~= nil then
+                        currentCount = i
+                end
+        end
         if currentCount < MAX_SLOTS then
                 for i = currentCount + 1, MAX_SLOTS do personas[i] = nil end
                 -- persist expanded slot table for migration when slot count increases
