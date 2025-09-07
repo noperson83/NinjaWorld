@@ -12,7 +12,7 @@ local TeleportClient = {}
 -- table is exposed so other modules (eg, BootUI) can look up the asset
 -- id for a realm when teleporting.
 TeleportClient.worldSpawnIds = {
-        SecretVillage = 0,        -- TODO: update when place is available
+        SecretVillage = 15719226587,        -- TODO: update when place is available
         Water         = 15999399322,
         Fire          = 16167296427,
         Wind          = 0,        -- TODO: update when place is available
@@ -98,6 +98,7 @@ function TeleportClient.bindZoneButtons(gui)
                 end
         end
 end
+
 
 function TeleportClient.bindWorldButtons(gui)
         if not gui then
