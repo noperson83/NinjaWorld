@@ -210,7 +210,7 @@ function Cosmetics.init(config, root, bootUI)
 
     -- Display starter dojo image above personas inside the picker
     local starterDojoImg = Instance.new("ImageLabel")
-    starterDojoImg.Size = UDim2.fromOffset(700,80)
+    starterDojoImg.Size = UDim2.fromOffset(700,240)
     starterDojoImg.Position = UDim2.fromScale(0.5,0.08)
     starterDojoImg.AnchorPoint = Vector2.new(0.5,0.5)
     starterDojoImg.Image = "rbxassetid://137361385013636"
