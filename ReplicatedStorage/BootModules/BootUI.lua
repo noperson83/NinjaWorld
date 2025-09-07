@@ -750,18 +750,16 @@ local function renderBackpack(tab)
     local used = 0
 
     if currentTab == "Main" then
+        capBarBG.Visible, capBar.Visible, capLabel.Visible = false, false, false
         addHeader("Currency")
         addSimpleRow("Coins", backpackData.coins or 0)
-        addHeader("Elements")
-        for element, v in pairs(backpackData.orbs or {}) do
+        local orbTable = backpackData.orbs or {}
+        local totalOrbs = 0
+        for _, v in pairs(orbTable) do totalOrbs = totalOrbs + v end
+        addHeader(string.format("Elements (%d)", totalOrbs))
+        for element, v in pairs(orbTable) do
             if v > 0 then addSimpleRow(element, v) end
         end
-        for _,it in ipairs(backpackData.weapons or {}) do used = used + it.qty end
-        for _,it in ipairs(backpackData.food or {}) do used = used + it.qty end
-        for _,it in ipairs(backpackData.special or {}) do used = used + it.qty end
-        local cap = math.max(backpackData.capacity or 0, used)
-        capBar.Size = UDim2.new(cap>0 and used/cap or 0, 0, 1, 0)
-        capLabel.Text = string.format("Capacity: %d / %d", used, cap)
 
     elseif currentTab == "Weapons" then
         addHeader("Weapons")
