@@ -191,7 +191,8 @@ function Cosmetics.init(config, root, bootUI)
     dojoTitle.Size = UDim2.fromOffset(700,80)
     dojoTitle.Position = UDim2.fromScale(0.5,0.1)
     dojoTitle.AnchorPoint = Vector2.new(0.5,0.5)
-    dojoTitle.Image = "rbxassetid://137361385013636"
+    -- Use BootUI logo where starter dojo image was
+    dojoTitle.Image = "rbxassetid://138217463115431"
     dojoTitle.BackgroundTransparency = 1
     dojoTitle.ScaleType = Enum.ScaleType.Fit
     dojoTitle.ZIndex = 11
@@ -206,6 +207,17 @@ function Cosmetics.init(config, root, bootUI)
     picker.BorderSizePixel = 0
     picker.ZIndex = 11
     picker.Parent = dojo
+
+    -- Display starter dojo image above personas inside the picker
+    local starterDojoImg = Instance.new("ImageLabel")
+    starterDojoImg.Size = UDim2.fromOffset(700,80)
+    starterDojoImg.Position = UDim2.fromScale(0.5,0.08)
+    starterDojoImg.AnchorPoint = Vector2.new(0.5,0.5)
+    starterDojoImg.Image = "rbxassetid://137361385013636"
+    starterDojoImg.BackgroundTransparency = 1
+    starterDojoImg.ScaleType = Enum.ScaleType.Fit
+    starterDojoImg.ZIndex = 12
+    starterDojoImg.Parent = picker
 
     local function makeButton(text, y)
         local b = Instance.new("TextButton")
