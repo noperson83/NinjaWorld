@@ -27,6 +27,13 @@ local DEFAULT_DATA = {
         Atom = 0,
     },
     unlockedAbilities = {},
+    inventory = {
+        coins = 0,
+        orbs = {},
+        weapons = {},
+        food = {},
+        special = {},
+    },
 }
 
 local sessionData = {}
@@ -73,6 +80,7 @@ local function savePlayerData(player)
     if not data then
         return
     end
+    data.inventory = player:GetAttribute("Inventory") or data.inventory
     local success, err = pcall(function()
         DataStore:SetAsync(key, data)
     end)
@@ -95,6 +103,14 @@ local function playerAdded(player)
         player:Kick("Couldn't load your data, rejoin")
         return
     end
+
+    player:SetAttribute("Inventory", data.inventory)
+    player:GetAttributeChangedSignal("Inventory"):Connect(function()
+        local inv = player:GetAttribute("Inventory")
+        if type(inv) == "table" then
+            sessionData[player.UserId].inventory = inv
+        end
+    end)
 
     local leaderstats = Instance.new("Folder")
     leaderstats.Name = "leaderstats"
