@@ -51,7 +51,6 @@ BootUI.shop = shop
 -- =====================
 -- Config
 -- =====================
-local MAIN_PLACE_ID  = 15999399322            -- >0 shows teleport button
 local CAM_TWEEN_TIME = 1.6
 
 local ASSETS = {
@@ -418,10 +417,114 @@ local function makeAction(text, rightAlign)
 end
 
 local btnBack       = makeAction("Back", false)
-local btnEnterDojo  = makeAction("Enter This Dojo", true)
-local btnEnterMain  = makeAction("Enter Main Realm", true)
-btnEnterMain.Position = UDim2.new(1,-250-260,0,0)
-btnEnterMain.Visible = (MAIN_PLACE_ID and MAIN_PLACE_ID > 0)
+local btnEnterRealm = makeAction("Enter Realm", true)
+
+-- scrolling list of realm buttons between Back and Enter
+local realmScroll = Instance.new("ScrollingFrame")
+realmScroll.Size = UDim2.new(1,-500,1,0)
+realmScroll.Position = UDim2.fromOffset(250,0)
+realmScroll.BackgroundTransparency = 1
+realmScroll.ScrollBarThickness = 6
+realmScroll.CanvasSize = UDim2.new()
+realmScroll.Parent = btnRow
+local realmLayout = Instance.new("UIListLayout", realmScroll)
+realmLayout.FillDirection = Enum.FillDirection.Horizontal
+realmLayout.Padding = UDim.new(0,6)
+realmLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    realmScroll.CanvasSize = UDim2.new(0, realmLayout.AbsoluteContentSize.X, 0, 0)
+end)
+
+local realmButtons = {}
+local selectedRealm = nil
+local realmInfo = {
+    {key = "StarterDojo",   name = "Starter Dojo"},
+    {key = "SecretVillage", name = "Secret Village of Elementara"},
+    {key = "Water",         name = "Water"},
+    {key = "Fire",          name = "Fire"},
+    {key = "Wind",          name = "Wind"},
+    {key = "Growth",        name = "Growth"},
+    {key = "Ice",           name = "Ice"},
+    {key = "Light",         name = "Light"},
+    {key = "Metal",         name = "Metal"},
+    {key = "Strength",      name = "Strength"},
+    {key = "Atoms",         name = "Atoms"},
+}
+
+local realmDisplayLookup = {}
+for _,info in ipairs(realmInfo) do realmDisplayLookup[info.key] = info.name end
+
+local realmsFolder = player:FindFirstChild("Realms") or player:WaitForChild("Realms",5)
+
+local function updateRealmButton(key)
+    local btn = realmButtons[key]
+    if not btn then return end
+    local unlocked = false
+    if realmsFolder then
+        local flag = realmsFolder:FindFirstChild(key)
+        unlocked = flag and flag.Value
+    end
+    btn.Active = unlocked
+    btn.AutoButtonColor = unlocked
+    btn.BackgroundColor3 = unlocked and Color3.fromRGB(50,120,255) or Color3.fromRGB(80,80,80)
+    btn.TextColor3 = unlocked and Color3.new(1,1,1) or Color3.fromRGB(170,170,170)
+end
+
+local function setSelected(key)
+    selectedRealm = key
+    for k, b in pairs(realmButtons) do
+        if k == key then
+            b.BackgroundColor3 = Color3.fromRGB(80,160,255)
+        else
+            updateRealmButton(k)
+        end
+    end
+    local hasPlace = (key == "StarterDojo") or (TeleportClient.WorldPlaceIds[key] and TeleportClient.WorldPlaceIds[key] > 0)
+    btnEnterRealm.Active = hasPlace
+    btnEnterRealm.AutoButtonColor = hasPlace
+    btnEnterRealm.BackgroundColor3 = hasPlace and Color3.fromRGB(50,120,255) or Color3.fromRGB(80,80,80)
+    btnEnterRealm.Text = "Enter " .. (realmDisplayLookup[key] or "Realm")
+end
+
+for _, info in ipairs(realmInfo) do
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0,160,1,0)
+    btn.Text = info.name
+    btn.Font = Enum.Font.Gotham
+    btn.TextScaled = true
+    btn.BackgroundColor3 = Color3.fromRGB(80,80,80)
+    btn.TextColor3 = Color3.fromRGB(170,170,170)
+    btn.AutoButtonColor = false
+    btn.Parent = realmScroll
+    realmButtons[info.key] = btn
+    btn.Activated:Connect(function()
+        if not btn.Active then return end
+        setSelected(info.key)
+    end)
+    if realmsFolder then
+        local flag = realmsFolder:FindFirstChild(info.key)
+        if flag then
+            flag:GetPropertyChangedSignal("Value"):Connect(function()
+                updateRealmButton(info.key)
+            end)
+        end
+    end
+    updateRealmButton(info.key)
+end
+
+btnEnterRealm.Active = false
+btnEnterRealm.AutoButtonColor = false
+
+if realmsFolder then
+    realmsFolder.ChildAdded:Connect(function(child)
+        local btn = realmButtons[child.Name]
+        if btn then
+            child:GetPropertyChangedSignal("Value"):Connect(function()
+                updateRealmButton(child.Name)
+            end)
+            updateRealmButton(child.Name)
+        end
+    end)
+end
 
 -- =====================
 -- Helpers (UI logic)
@@ -719,36 +822,43 @@ btnBack.MouseButton1Click:Connect(function()
     Cosmetics.showDojoPicker()
 end)
 
-btnEnterDojo.MouseButton1Click:Connect(function()
-    TweenService:Create(fade, TweenInfo.new(0.25), {BackgroundTransparency = 0}):Play()
-    task.wait(0.28)
+btnEnterRealm.MouseButton1Click:Connect(function()
+    if not selectedRealm then return end
+    if selectedRealm == "StarterDojo" then
+        TweenService:Create(fade, TweenInfo.new(0.25), {BackgroundTransparency = 0}):Play()
+        task.wait(0.28)
 
-    local personaType, chosenSlot = Cosmetics.getSelectedPersona()
-    if enterRE then
-        enterRE:FireServer({ type = personaType, slot = chosenSlot })
+        local personaType, chosenSlot = Cosmetics.getSelectedPersona()
+        if enterRE then
+            enterRE:FireServer({ type = personaType, slot = chosenSlot })
+        else
+            warn("EnterDojoRE missing on server")
+        end
+
+        -- wait for character and hand camera back to gameplay
+        task.wait(0.2)
+        local char = player.Character or player.CharacterAdded:Wait()
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        cam.CameraType = Enum.CameraType.Custom
+        if hum then cam.CameraSubject = hum end
+
+        restoreUIBlur()
+        TweenService:Create(fade, TweenInfo.new(0.35), {BackgroundTransparency = 1}):Play()
+        task.delay(0.4, function() if ui and ui.Parent then ui:Destroy() end end)
     else
-        warn("EnterDojoRE missing on server")
+        local placeId = TeleportClient.WorldPlaceIds[selectedRealm]
+        if not (placeId and placeId > 0) then
+            warn("No place id for realm: " .. tostring(selectedRealm))
+            return
+        end
+        TweenService:Create(fade, TweenInfo.new(0.25), {BackgroundTransparency = 0}):Play()
+        task.wait(0.28)
+        local _, chosenSlot = Cosmetics.getSelectedPersona()
+        local ok, err = pcall(function()
+            TeleportService:Teleport(placeId, player, {slot = chosenSlot})
+        end)
+        if not ok then warn("Teleport failed:", err) end
     end
-
-    -- wait for character and hand camera back to gameplay
-    task.wait(0.2)
-    local char = player.Character or player.CharacterAdded:Wait()
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    cam.CameraType = Enum.CameraType.Custom
-    if hum then cam.CameraSubject = hum end
-
-    restoreUIBlur()
-    TweenService:Create(fade, TweenInfo.new(0.35), {BackgroundTransparency = 1}):Play()
-    task.delay(0.4, function() if ui and ui.Parent then ui:Destroy() end end)
-end)
-
-btnEnterMain.MouseButton1Click:Connect(function()
-    if not (MAIN_PLACE_ID and MAIN_PLACE_ID > 0) then return end
-    TweenService:Create(fade, TweenInfo.new(0.25), {BackgroundTransparency = 0}):Play()
-    task.wait(0.28)
-    local _, chosenSlot = Cosmetics.getSelectedPersona()
-    local ok, err = pcall(function() TeleportService:Teleport(MAIN_PLACE_ID, player, {slot = chosenSlot}) end)
-    if not ok then warn("Teleport failed:", err) end
 end)
 
 -- Hook emote buttons once (after UI exists)

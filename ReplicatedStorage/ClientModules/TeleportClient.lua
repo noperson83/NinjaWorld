@@ -7,6 +7,22 @@ local player = Players.LocalPlayer
 
 local TeleportClient = {}
 
+-- Place ids for the various realms in the experience.  Ids of ``0``
+-- indicate a realm that does not yet have a destination place.  This
+-- table is exposed so other modules (eg, BootUI) can look up the asset
+-- id for a realm when teleporting.
+TeleportClient.WorldPlaceIds = {
+        Water    = 15999399322,
+        Fire     = 16167296427,
+        Strength = 89974873129107,
+        Atoms    = 15915218395,
+        Wind     = 0,     -- TODO: update when place is available
+        Growth   = 0,     -- TODO: update when place is available
+        Ice      = 0,     -- TODO: update when place is available
+        Light    = 0,     -- TODO: update when place is available
+        Metal    = 0,     -- TODO: update when place is available
+}
+
 local debounce = false
 local function resetDebounceAfter(seconds)
 	task.delay(seconds, function()
@@ -91,13 +107,8 @@ function TeleportClient.bindWorldButtons(gui)
                 return
         end
 
-        local worldSpawnIds = {
-                Atom = 15915218395,
-                Fire = 16167296427,
-                Water = 15999399322
-        }
-
-        for name, placeId in pairs(worldSpawnIds) do
+        for name, placeId in pairs(TeleportClient.WorldPlaceIds) do
+                if placeId and placeId > 0 then
                 local button = worldFrame:FindFirstChild(name .. "Button")
                 if button then
                         button.Activated:Connect(function()
@@ -105,6 +116,7 @@ function TeleportClient.bindWorldButtons(gui)
                         end)
                 else
                         warn("World button not found for: " .. name)
+                end
                 end
         end
 end
