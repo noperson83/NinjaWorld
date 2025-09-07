@@ -187,14 +187,11 @@ function Cosmetics.init(config, root, bootUI)
     dojo.ZIndex = 10
     dojo.Parent = root
 
-    local dojoTitle = Instance.new("TextLabel")
+    local dojoTitle = Instance.new("ImageLabel")
     dojoTitle.Size = UDim2.fromOffset(700,80)
     dojoTitle.Position = UDim2.fromScale(0.5,0.1)
     dojoTitle.AnchorPoint = Vector2.new(0.5,0.5)
-    dojoTitle.Text = "Starter Dojo"
-    dojoTitle.Font = Enum.Font.GothamBold
-    dojoTitle.TextScaled = true
-    dojoTitle.TextColor3 = Color3.fromRGB(255,200,120)
+    dojoTitle.Image = "rbxassetid://137361385013636"
     dojoTitle.BackgroundTransparency = 1
     dojoTitle.ZIndex = 11
     dojoTitle.Parent = dojo
@@ -225,14 +222,11 @@ function Cosmetics.init(config, root, bootUI)
         return b
     end
 
-    local title = Instance.new("TextLabel")
+    local title = Instance.new("ImageLabel")
     title.Size = UDim2.new(0.9,0,0,40)
     title.Position = UDim2.fromScale(0.5,0.1)
     title.AnchorPoint = Vector2.new(0.5,0.5)
-    title.Text = "Choose Your Character"
-    title.Font = Enum.Font.GothamBold
-    title.TextScaled = true
-    title.TextColor3 = Color3.new(1,1,1)
+    title.Image = "rbxassetid://137361385013636"
     title.BackgroundTransparency = 1
     title.ZIndex = 11
     title.Parent = picker
@@ -258,11 +252,13 @@ function Cosmetics.init(config, root, bootUI)
     slotsTitle.ZIndex = 11
     slotsTitle.Parent = picker
 
-    local slotsFrame = Instance.new("Frame")
+    local slotsFrame = Instance.new("ScrollingFrame")
     slotsFrame.Size = UDim2.new(0.9,0,0.28,0)
     slotsFrame.Position = UDim2.fromScale(0.5,0.78)
     slotsFrame.AnchorPoint = Vector2.new(0.5,0.5)
     slotsFrame.BackgroundTransparency = 1
+    slotsFrame.BorderSizePixel = 0
+    slotsFrame.ScrollBarThickness = 6
     slotsFrame.ZIndex = 11
     slotsFrame.Parent = picker
 
@@ -347,6 +343,7 @@ function Cosmetics.init(config, root, bootUI)
         }
     end
     for i = 1, personaCache.slotCount do makeSlot(i) end
+    slotsFrame.CanvasSize = UDim2.new(0,0,0, personaCache.slotCount * 40)
 
     updateSlotLabels()
 
