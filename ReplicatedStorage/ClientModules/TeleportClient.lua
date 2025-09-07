@@ -11,17 +11,21 @@ local TeleportClient = {}
 -- indicate a realm that does not yet have a destination place.  This
 -- table is exposed so other modules (eg, BootUI) can look up the asset
 -- id for a realm when teleporting.
-TeleportClient.WorldPlaceIds = {
-        Water    = 15999399322,
-        Fire     = 16167296427,
-        Strength = 89974873129107,
-        Atoms    = 15915218395,
-        Wind     = 0,     -- TODO: update when place is available
-        Growth   = 0,     -- TODO: update when place is available
-        Ice      = 0,     -- TODO: update when place is available
-        Light    = 0,     -- TODO: update when place is available
-        Metal    = 0,     -- TODO: update when place is available
+TeleportClient.worldSpawnIds = {
+        SecretVillage = 0,        -- TODO: update when place is available
+        Water         = 15999399322,
+        Fire          = 16167296427,
+        Wind          = 0,        -- TODO: update when place is available
+        Growth        = 0,        -- TODO: update when place is available
+        Ice           = 0,        -- TODO: update when place is available
+        Light         = 0,        -- TODO: update when place is available
+        Metal         = 0,        -- TODO: update when place is available
+        Strength      = 89974873129107,
+        Atoms         = 15915218395,
 }
+
+-- Maintain legacy name for compatibility
+TeleportClient.WorldPlaceIds = TeleportClient.worldSpawnIds
 
 local debounce = false
 local function resetDebounceAfter(seconds)
@@ -107,16 +111,18 @@ function TeleportClient.bindWorldButtons(gui)
                 return
         end
 
-        for name, placeId in pairs(TeleportClient.WorldPlaceIds) do
-                if placeId and placeId > 0 then
+        for name, placeId in pairs(TeleportClient.worldSpawnIds) do
                 local button = worldFrame:FindFirstChild(name .. "Button")
                 if button then
-                        button.Activated:Connect(function()
-                                teleportToPlace(placeId)
-                        end)
+                        if placeId and placeId > 0 then
+                                button.Activated:Connect(function()
+                                        teleportToPlace(placeId)
+                                end)
+                        else
+                                warn("TeleportClient: missing asset id for realm " .. name)
+                        end
                 else
                         warn("World button not found for: " .. name)
-                end
                 end
         end
 end
