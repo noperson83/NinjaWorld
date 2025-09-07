@@ -224,7 +224,7 @@ paperBG.ZIndex = 1
 paperBG.Parent = root
 
 local logoImg = Instance.new("ImageLabel")
-logoImg.Size = UDim2.fromOffset(900,900)
+logoImg.Size = UDim2.fromOffset(300,300)
 logoImg.Position = UDim2.fromScale(0.5,0.25)
 logoImg.AnchorPoint = Vector2.new(0.5,0.5)
 logoImg.BackgroundTransparency = 1
