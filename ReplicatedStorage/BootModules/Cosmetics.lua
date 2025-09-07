@@ -210,7 +210,7 @@ function Cosmetics.init(config, root, bootUI)
 
     -- Display starter dojo image above personas inside the picker
     local starterDojoImg = Instance.new("ImageLabel")
-    starterDojoImg.Size = UDim2.fromOffset(700,80)
+    starterDojoImg.Size = UDim2.fromOffset(700,240)
     starterDojoImg.Position = UDim2.fromScale(0.5,0.08)
     starterDojoImg.AnchorPoint = Vector2.new(0.5,0.5)
     starterDojoImg.Image = "rbxassetid://137361385013636"
@@ -244,23 +244,10 @@ function Cosmetics.init(config, root, bootUI)
     line.ZIndex = 11
     line.Parent = picker
 
-    local slotsTitle = Instance.new("TextLabel")
-    slotsTitle.Size = UDim2.new(0.9,0,0,32)
-    -- Lift persona slot title to reduce empty space below the dojo title
-    slotsTitle.Position = UDim2.fromScale(0.5,0.3)
-    slotsTitle.AnchorPoint = Vector2.new(0.5,0.5)
-    slotsTitle.Text = "Persona Slots"
-    slotsTitle.Font = Enum.Font.GothamSemibold
-    slotsTitle.TextScaled = true
-    slotsTitle.TextColor3 = Color3.fromRGB(230,230,230)
-    slotsTitle.BackgroundTransparency = 1
-    slotsTitle.ZIndex = 11
-    slotsTitle.Parent = picker
-
+    -- Display persona slots directly beneath the dojo logo
     local slotsFrame = Instance.new("ScrollingFrame")
     slotsFrame.Size = UDim2.new(0.9,0,0.55,0)
-    -- Move persona slots upward to better utilize vertical space
-    slotsFrame.Position = UDim2.fromScale(0.5,0.6)
+    slotsFrame.Position = UDim2.fromScale(0.5,0.5)
     slotsFrame.AnchorPoint = Vector2.new(0.5,0.5)
     slotsFrame.BackgroundTransparency = 1
     slotsFrame.BorderSizePixel = 0
