@@ -3,24 +3,25 @@ CurrencyService.__index = CurrencyService
 
 -- Simple currency tracker with client/server sync.
 function CurrencyService.new(config)
-        local self = setmetatable({}, CurrencyService)
-        self.coins = config.startCoins or 0
-        self.orbs = config.startOrbs or 0
+    local self = setmetatable({}, CurrencyService)
+    self.coins = 0
+    self.orbs = 0
 
-        self.BalanceChanged = Instance.new("BindableEvent")
-        self.BalanceChanged:Fire(self.coins, self.orbs)
+    self.BalanceChanged = Instance.new("BindableEvent")
+    self.BalanceChanged:Fire(self.coins, self.orbs)
 
-        local ReplicatedStorage = game:GetService("ReplicatedStorage")
-        self.updateEvent = ReplicatedStorage:FindFirstChild("CurrencyUpdated")
-        if self.updateEvent then
-                self.updateEvent.OnClientEvent:Connect(function(data)
-                        if data.coins then self.coins = data.coins end
-                        if data.orbs then self.orbs = data.orbs end
-                        self.BalanceChanged:Fire(self.coins, self.orbs)
-                end)
-        end
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    self.updateEvent = ReplicatedStorage:FindFirstChild("CurrencyUpdated")
+    if self.updateEvent then
+        self.updateEvent.OnClientEvent:Connect(function(data)
+            if data.coins then self.coins = data.coins end
+            if data.orbs then self.orbs = data.orbs end
+            self.BalanceChanged:Fire(self.coins, self.orbs)
+        end)
+        self.updateEvent:FireServer({request = true})
+    end
 
-        return self
+    return self
 end
 
 function CurrencyService:GetBalance()
