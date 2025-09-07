@@ -12,6 +12,7 @@ local dojo
 local slotButtons = {}
 local boot
 local rootUI
+local slotsFrame
 
 local personaCache = {slots = {}, slotCount = 0}
 local currentChoiceType = "Roblox"
@@ -77,50 +78,68 @@ end
 
 local refreshSlots
 
-local function updateSlotLabels()
+local function highestUsed()
+    local hi = 0
+    for i = 1, personaCache.slotCount do
+        if personaCache.slots[i] ~= nil then
+            hi = i
+        end
+    end
+    return hi
+end
+
+local function updateSlots()
+    local hi = highestUsed()
+    local visible = math.min(hi + 1, personaCache.slotCount)
     for i = 1, personaCache.slotCount do
         local slot = personaCache.slots[i]
         local ui = slotButtons[i]
         if ui then
-            local index = i
-            ui.label.Text = slot and ("Slot %d – %s"):format(index, slot.name or slot.type) or ("Slot %d – (empty)"):format(index)
-            if slot then
-                ui.useBtn.Visible = true
-                ui.clearBtn.Visible = true
-                ui.robloxBtn.Visible = false
-                ui.starterBtn.Visible = false
-                if not ui.clearConn then
-                    ui.clearConn = ui.clearBtn.MouseButton1Click:Connect(function()
-                        showConfirm(("Clear slot %d?"):format(index), function()
-                            local res = rf:InvokeServer("clear", {slot = index})
-                            if res and res.ok then
-                                personaCache = res
-                                if chosenSlot == index then chosenSlot = nil end
-                                refreshSlots()
-                            else
-                                warn("Clear failed:", res and res.err)
-                            end
+            ui.row.Visible = i <= visible
+            if i <= visible then
+                local index = i
+                ui.label.Text = slot and ("Slot %d – %s"):format(index, slot.name or slot.type) or ("Slot %d – (empty)"):format(index)
+                if slot then
+                    ui.useBtn.Visible = true
+                    ui.clearBtn.Visible = true
+                    ui.robloxBtn.Visible = false
+                    ui.starterBtn.Visible = false
+                    if not ui.clearConn then
+                        ui.clearConn = ui.clearBtn.MouseButton1Click:Connect(function()
+                            showConfirm(("Clear slot %d?"):format(index), function()
+                                local res = rf:InvokeServer("clear", {slot = index})
+                                if res and res.ok then
+                                    personaCache = res
+                                    if chosenSlot == index then chosenSlot = nil end
+                                    refreshSlots()
+                                else
+                                    warn("Clear failed:", res and res.err)
+                                end
+                            end)
                         end)
-                    end)
-                end
-            else
-                ui.useBtn.Visible = false
-                ui.clearBtn.Visible = false
-                ui.robloxBtn.Visible = true
-                ui.starterBtn.Visible = true
-                if ui.clearConn then
-                    ui.clearConn:Disconnect()
-                    ui.clearConn = nil
+                    end
+                else
+                    ui.useBtn.Visible = false
+                    ui.clearBtn.Visible = false
+                    ui.robloxBtn.Visible = true
+                    ui.starterBtn.Visible = true
+                    if ui.clearConn then
+                        ui.clearConn:Disconnect()
+                        ui.clearConn = nil
+                    end
                 end
             end
         end
+    end
+    if slotsFrame then
+        slotsFrame.CanvasSize = UDim2.new(0,0,0, visible * 40)
     end
 end
 
 refreshSlots = function()
     local data = rf:InvokeServer("get", {})
     personaCache = data or personaCache
-    updateSlotLabels()
+    updateSlots()
 end
 
 local function showDojoPicker()
@@ -250,7 +269,7 @@ function Cosmetics.init(config, root, bootUI)
     line.Parent = picker
 
     -- Display persona slots directly beneath the dojo logo
-    local slotsFrame = Instance.new("ScrollingFrame")
+    slotsFrame = Instance.new("ScrollingFrame")
     slotsFrame.Size = UDim2.new(0.9,0,0.55,0)
     slotsFrame.Position = UDim2.fromScale(0.5,0.5)
     slotsFrame.AnchorPoint = Vector2.new(0.5,0.5)
@@ -333,6 +352,7 @@ function Cosmetics.init(config, root, bootUI)
         clearBtn.Parent = row
 
         slotButtons[index] = {
+            row = row,
             useBtn = useBtn,
             clearBtn = clearBtn,
             robloxBtn = robloxBtn,
@@ -341,13 +361,12 @@ function Cosmetics.init(config, root, bootUI)
         }
     end
     for i = 1, personaCache.slotCount do makeSlot(i) end
-    slotsFrame.CanvasSize = UDim2.new(0,0,0, personaCache.slotCount * 40)
 
-    updateSlotLabels()
+    updateSlots()
 
-    for i,row in pairs(slotButtons) do
+    for i,entry in pairs(slotButtons) do
         local index = i
-        row.useBtn.MouseButton1Click:Connect(function()
+        entry.useBtn.MouseButton1Click:Connect(function()
             local result = rf:InvokeServer("use", {slot = index})
             if not (result and result.ok) then warn("Use slot failed:", result and result.err) return end
             chosenSlot = index
@@ -355,7 +374,7 @@ function Cosmetics.init(config, root, bootUI)
             if boot and boot.tweenToEnd then boot.tweenToEnd() end
             showLoadout(result.persona and result.persona.type or currentChoiceType)
         end)
-        row.robloxBtn.MouseButton1Click:Connect(function()
+        entry.robloxBtn.MouseButton1Click:Connect(function()
             local res = rf:InvokeServer("save", {slot = index, type = "Roblox"})
             if res and res.ok then
                 personaCache = res
@@ -373,7 +392,7 @@ function Cosmetics.init(config, root, bootUI)
                 warn("Save failed:", res and res.err)
             end
         end)
-        row.starterBtn.MouseButton1Click:Connect(function()
+        entry.starterBtn.MouseButton1Click:Connect(function()
             local res = rf:InvokeServer("save", {slot = index, type = "Ninja"})
             if res and res.ok then
                 personaCache = res
