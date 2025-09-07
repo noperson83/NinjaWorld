@@ -177,9 +177,9 @@ if config.showShop then
     toggleShop()
 end
 local shopBtn = Instance.new("TextButton")
-shopBtn.Size = UDim2.fromOffset(120,40)
+shopBtn.Size = UDim2.fromScale(0.1,0.06)
 shopBtn.AnchorPoint = Vector2.new(1,1)
-shopBtn.Position = UDim2.new(1,-20,1,-20)
+shopBtn.Position = UDim2.fromScale(0.98,0.98)
 shopBtn.Text = "Shop"
 shopBtn.Font = Enum.Font.GothamSemibold
 shopBtn.TextScaled = true
@@ -208,7 +208,7 @@ paperBG.ZIndex = 1
 paperBG.Parent = root
 
 local logoImg = Instance.new("ImageLabel")
-logoImg.Size = UDim2.fromOffset(300,300)
+logoImg.Size = UDim2.fromScale(0.3,0.3)
 logoImg.Position = UDim2.fromScale(0.5,0.25)
 logoImg.AnchorPoint = Vector2.new(0.5,0.5)
 logoImg.BackgroundTransparency = 1
@@ -218,7 +218,7 @@ logoImg.Parent = root
 Instance.new("UIAspectRatioConstraint", logoImg).AspectRatio = 1
 
 local sub = Instance.new("TextLabel")
-sub.Size = UDim2.fromOffset(600,50)
+sub.Size = UDim2.fromScale(0.6,0.05)
 sub.Position = UDim2.fromScale(0.5,0.44)
 sub.AnchorPoint = Vector2.new(0.5,0.5)
 sub.Text = "Loading…"
@@ -230,7 +230,7 @@ sub.ZIndex = 5
 sub.Parent = root
 
 local barBG = Instance.new("Frame")
-barBG.Size = UDim2.new(0.6,0,0,8)
+barBG.Size = UDim2.new(0.6,0,0.01,0)
 barBG.Position = UDim2.fromScale(0.2,0.49)
 barBG.BackgroundColor3 = Color3.fromRGB(40,40,42)
 barBG.BorderSizePixel = 0
@@ -238,7 +238,7 @@ barBG.ZIndex = 4
 barBG.Parent = root
 
 local bar = Instance.new("Frame")
-bar.Size = UDim2.new(0,0,0,8)
+bar.Size = UDim2.new(0,0,0.01,0)
 bar.Position = UDim2.fromScale(0.2,0.49)
 bar.BackgroundColor3 = Color3.fromRGB(255,60,60)
 bar.BorderSizePixel = 0
@@ -329,7 +329,7 @@ bpCard.Parent = loadout
 
 local bpTitle = Instance.new("TextLabel")
 bpTitle.Size = UDim2.new(1,-20,0,36)
-bpTitle.Position = UDim2.fromOffset(10,8)
+bpTitle.Position = UDim2.new(0.02,0,0.02,0)
 bpTitle.BackgroundTransparency = 1
 bpTitle.TextXAlignment = Enum.TextXAlignment.Left
 bpTitle.Text = "Backpack"
@@ -340,7 +340,7 @@ bpTitle.Parent = bpCard
 
 local capBarBG = Instance.new("Frame")
 capBarBG.Size = UDim2.new(1,-20,0,10)
-capBarBG.Position = UDim2.fromOffset(10,50)
+capBarBG.Position = UDim2.new(0.02,0,0.12,0)
 capBarBG.BackgroundColor3 = Color3.fromRGB(60,60,62)
 capBarBG.BorderSizePixel = 0
 capBarBG.Parent = bpCard
@@ -353,7 +353,7 @@ capBar.Parent = capBarBG
 
 local capLabel = Instance.new("TextLabel")
 capLabel.Size = UDim2.new(1,-20,0,22)
-capLabel.Position = UDim2.fromOffset(10,66)
+capLabel.Position = UDim2.new(0.02,0,0.16,0)
 capLabel.BackgroundTransparency = 1
 capLabel.TextXAlignment = Enum.TextXAlignment.Left
 capLabel.Font = Enum.Font.Gotham
@@ -363,7 +363,7 @@ capLabel.Parent = bpCard
 
 local tabBar = Instance.new("Frame")
 tabBar.Size = UDim2.new(1,-20,0,30)
-tabBar.Position = UDim2.fromOffset(10,96)
+tabBar.Position = UDim2.new(0.02,0,0.26,0)
 tabBar.BackgroundTransparency = 1
 tabBar.Parent = bpCard
 
@@ -372,7 +372,7 @@ local tabNames = {"Main","Weapons","Food","Special"}
 for i,name in ipairs(tabNames) do
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(0,80,1,0)
-    btn.Position = UDim2.fromOffset((i-1)*82,0)
+    btn.Position = UDim2.new((i-1)*0.082,0,0,0)
     btn.BackgroundColor3 = Color3.fromRGB(50,50,52)
     btn.TextColor3 = Color3.new(1,1,1)
     btn.Font = Enum.Font.Gotham
@@ -385,7 +385,7 @@ end
 
 local list = Instance.new("ScrollingFrame")
 list.Size = UDim2.new(1,-20,1,-140)
-list.Position = UDim2.fromOffset(10,126)
+list.Position = UDim2.new(0.02,0,0.32,0)
 list.CanvasSize = UDim2.new()
 list.ScrollBarThickness = 6
 list.BackgroundTransparency = 1
@@ -874,8 +874,8 @@ if ASSETS.Logo ~= "" then table.insert(items, logoImg) end
 if ASSETS.PaperTex ~= "" then table.insert(items, paperBG) end
 pcall(function() ContentProvider:PreloadAsync(items) end)
 
-bar.Size = UDim2.new(0,0,0,8)
-TweenService:Create(bar, TweenInfo.new(1.6, Enum.EasingStyle.Quad), {Size = UDim2.new(0.6,0,0,8)}):Play()
+bar.Size = UDim2.new(0,0,0.01,0)
+TweenService:Create(bar, TweenInfo.new(1.6, Enum.EasingStyle.Quad), {Size = UDim2.new(0.6,0,0.01,0)}):Play()
 wait(1.65)
 
 local t = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)

@@ -104,9 +104,9 @@ function ShopUI.init(config, shop, bootUI, defaultTab)
     ShopUI.setTab(defaultTab or names[1])
 
     local closeBtn = Instance.new("TextButton")
-    closeBtn.Size = UDim2.fromOffset(24,24)
+    closeBtn.Size = UDim2.fromScale(0.06,0.12)
     closeBtn.AnchorPoint = Vector2.new(1,0)
-    closeBtn.Position = UDim2.new(1,-4,0,4)
+    closeBtn.Position = UDim2.fromScale(0.98,0.02)
     closeBtn.Text = "X"
     closeBtn.Font = Enum.Font.GothamBold
     closeBtn.TextScaled = true
