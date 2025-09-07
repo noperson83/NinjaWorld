@@ -2,6 +2,7 @@ local BootUI = {}
 
 function BootUI.start(config)
     config = config or {}
+    config.showShop = config.showShop or false
     BootUI.config = config
 -- Ninja World EXP 3000
 -- Boot.client.lua – v7.4
@@ -155,7 +156,29 @@ root.Parent = ui
 
 BootUI.root = root
 Cosmetics.init(config, root, BootUI)
-ShopUI.init(config, shop, BootUI)
+local function toggleShop()
+    if not BootUI.shopFrame then
+        BootUI.shopFrame = ShopUI.init(config, shop, BootUI)
+    else
+        BootUI.shopFrame.Visible = not BootUI.shopFrame.Visible
+    end
+end
+BootUI.toggleShop = toggleShop
+if config.showShop then
+    toggleShop()
+end
+local shopBtn = Instance.new("TextButton")
+shopBtn.Size = UDim2.fromOffset(120,40)
+shopBtn.Position = UDim2.fromOffset(20,20)
+shopBtn.Text = "Shop"
+shopBtn.Font = Enum.Font.GothamSemibold
+shopBtn.TextScaled = true
+shopBtn.TextColor3 = Color3.new(1,1,1)
+shopBtn.BackgroundColor3 = Color3.fromRGB(50,120,255)
+shopBtn.AutoButtonColor = true
+shopBtn.ZIndex = 10
+shopBtn.Parent = root
+shopBtn.Activated:Connect(toggleShop)
 TeleportClient.init(root)
 
 -- Intro visuals

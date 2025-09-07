@@ -37,6 +37,7 @@ function ShopUI.init(config, shop, bootUI)
         buy.Activated:Connect(function()
                 shop:Purchase("Sample", cost)
         end)
+        return frame
 end
 
 return ShopUI
