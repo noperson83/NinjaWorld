@@ -707,6 +707,10 @@ local function buildCharacterPreview(personaType)
 
     vpModel = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
     vpModel:PivotTo(CFrame.new(0,0,0))
+    -- Preload so preview shows fully skinned character instead of the default black model
+    pcall(function()
+        ContentProvider:PreloadAsync({vpModel})
+    end)
     vpModel.Parent = vpWorld
     vpHumanoid = vpModel:FindFirstChildOfClass("Humanoid")
 
