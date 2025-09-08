@@ -46,8 +46,10 @@ local function playerKey(userId) return "u_"..tostring(userId) end
 
 -- Resolve the Ninja HumanoidDescription from either ReplicatedStorage (HD) or ServerStorage (Model)
 local function resolveNinjaHD()
-	-- Preferred: client-visible HumanoidDescription (also used by viewport)
-	local rFolder = ReplicatedStorage:FindFirstChild("HumanoidDescriptions")
+       -- Preferred: client-visible HumanoidDescription folder is "HumanoidDescriptions".
+       -- Some older content used the singular name; fall back for compatibility.
+       local rFolder = ReplicatedStorage:FindFirstChild("HumanoidDescriptions")
+               or ReplicatedStorage:FindFirstChild("HumanoidDescription")
 	local hd = rFolder and rFolder:FindFirstChild("Ninja")
 	if hd and hd:IsA("HumanoidDescription") then return hd end
 

@@ -691,7 +691,10 @@ local function buildCharacterPreview(personaType)
     -- get a HumanoidDescription
     local desc
     if personaType == "Ninja" then
+        -- Expected folder "HumanoidDescriptions" contains client-visible HumanoidDescription assets.
+        -- Fall back to singular name if an older structure is present.
         local hdFolder = ReplicatedStorage:FindFirstChild("HumanoidDescriptions")
+            or ReplicatedStorage:FindFirstChild("HumanoidDescription")
         local hd = hdFolder and hdFolder:FindFirstChild("Ninja")
         if hd then desc = hd:Clone() end
     else

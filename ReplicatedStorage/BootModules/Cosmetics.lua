@@ -109,18 +109,21 @@ local function highestUsed()
 end
 
 local function getDescription(personaType)
-	local desc
-	if personaType == "Ninja" then
-		local hdFolder = ReplicatedStorage:FindFirstChild("HumanoidDescriptions")
-		local hd = hdFolder and hdFolder:FindFirstChild("Ninja")
-		if hd then desc = hd:Clone() end
-	else
-		local ok, hd = pcall(function()
-			return Players:GetHumanoidDescriptionFromUserId(player.UserId)
-		end)
-		if ok then desc = hd end
-	end
-	return desc
+       local desc
+       if personaType == "Ninja" then
+               -- Expected folder "HumanoidDescriptions" contains shared HumanoidDescription assets.
+               -- Use singular name as a fallback for legacy content.
+               local hdFolder = ReplicatedStorage:FindFirstChild("HumanoidDescriptions")
+                       or ReplicatedStorage:FindFirstChild("HumanoidDescription")
+               local hd = hdFolder and hdFolder:FindFirstChild("Ninja")
+               if hd then desc = hd:Clone() end
+       else
+               local ok, hd = pcall(function()
+                       return Players:GetHumanoidDescriptionFromUserId(player.UserId)
+               end)
+               if ok then desc = hd end
+       end
+       return desc
 end
 
 local function updateSlots()
