@@ -9,9 +9,7 @@ local ContentProvider = game:GetService("ContentProvider")
 local rf = ReplicatedStorage:WaitForChild("PersonaServiceRF")
 local player = Players.LocalPlayer
 
-local dojoFrame
-local dojoQuestPanel
-local dojoBackpackPanel
+local dojo
 local slotButtons = {}
 local boot
 local rootUI
@@ -112,21 +110,21 @@ local function highestUsed()
 end
 
 local function getDescription(personaType)
-       local desc
-       if personaType == "Ninja" then
-               -- Expected folder "HumanoidDescriptions" contains shared HumanoidDescription assets.
-               -- Use singular name as a fallback for legacy content.
-               local hdFolder = ReplicatedStorage:FindFirstChild("HumanoidDescriptions")
-                       or ReplicatedStorage:FindFirstChild("HumanoidDescription")
-               local hd = hdFolder and hdFolder:FindFirstChild("Ninja")
-               if hd then desc = hd:Clone() end
-       else
-               local ok, hd = pcall(function()
-                       return Players:GetHumanoidDescriptionFromUserId(player.UserId)
-               end)
-               if ok then desc = hd end
-       end
-       return desc
+	local desc
+	if personaType == "Ninja" then
+		-- Expected folder "HumanoidDescriptions" contains shared HumanoidDescription assets.
+		-- Use singular name as a fallback for legacy content.
+		local hdFolder = ReplicatedStorage:FindFirstChild("HumanoidDescriptions")
+			or ReplicatedStorage:FindFirstChild("HumanoidDescription")
+		local hd = hdFolder and hdFolder:FindFirstChild("Ninja")
+		if hd then desc = hd:Clone() end
+	else
+		local ok, hd = pcall(function()
+			return Players:GetHumanoidDescriptionFromUserId(player.UserId)
+		end)
+		if ok then desc = hd end
+	end
+	return desc
 end
 
 local function updateSlots()
@@ -145,7 +143,7 @@ local function updateSlots()
 			end
 			ui.frame.Visible = i <= visible
 			if i <= visible then
-                                local index = i
+				local index = i
 				if slot then
 					ui.useBtn.Visible = true
 					ui.clearBtn.Visible = true
@@ -154,22 +152,22 @@ local function updateSlots()
 					if ui.placeholder then ui.placeholder.Visible = false end
 					if ui.viewport then
 						local desc = getDescription(slot.type)
-                                                if desc then
-                                                        local world = Instance.new("WorldModel")
-                                                        world.Parent = ui.viewport
-                                                        local model = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
-                                                        model:PivotTo(CFrame.new(0,0,0) * CFrame.Angles(0, math.pi, 0))
-                                                        -- Preload assets so the preview doesn't show the default black figure.
-                                                        pcall(function()
-                                                                ContentProvider:PreloadAsync({model})
-                                                        end)
-                                                        model.Parent = world
-                                                        local cam = Instance.new("Camera")
-                                                        cam.CFrame = CFrame.new(Vector3.new(0,2,4), Vector3.new(0,2,0))
-                                                        cam.Parent = ui.viewport
-                                                        ui.viewport.CurrentCamera = cam
-                                                end
-                                        end
+						if desc then
+							local world = Instance.new("WorldModel")
+							world.Parent = ui.viewport
+							local model = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
+							model:PivotTo(CFrame.new(0,0,0) * CFrame.Angles(0, math.pi, 0))
+							-- Preload assets so the preview doesn't show the default black figure.
+							pcall(function()
+								ContentProvider:PreloadAsync({model})
+							end)
+							model.Parent = world
+							local cam = Instance.new("Camera")
+							cam.CFrame = CFrame.new(Vector3.new(0,2,4), Vector3.new(0,2,0))
+							cam.Parent = ui.viewport
+							ui.viewport.CurrentCamera = cam
+						end
+					end
 					if not ui.clearConn then
 						ui.clearConn = ui.clearBtn.MouseButton1Click:Connect(function()
 							showConfirm(("Clear slot %d?"):format(index), function()
@@ -208,60 +206,44 @@ refreshSlots = function()
 end
 
 local function showDojoPicker()
-        if dojoFrame then dojoFrame.Visible = true end
-        if dojoQuestPanel then dojoQuestPanel.Visible = true end
-        if boot then
-                if boot.loadout then
-                        boot.loadout.Parent = dojoBackpackPanel
-                        boot.loadout.Size = UDim2.fromScale(1,1)
-                        boot.loadout.Position = UDim2.new(0,0,0,0)
-                        boot.loadout.Visible = true
-                end
-                if boot.shopBtn then
-                        boot.shopBtn.Parent = dojoBackpackPanel
-                        boot.shopBtn.Visible = true
-                end
-        end
+	if dojo then dojo.Visible = true end
+	if boot then
+		if boot.loadout then boot.loadout.Visible = false end
+		if boot.shopBtn then boot.shopBtn.Visible = false end
+	end
 end
 
 local function showLoadout(personaType)
-        if dojoQuestPanel then dojoQuestPanel.Visible = false end
-        if dojoFrame then dojoFrame.Visible = false end
-        if boot then
-                if boot.shopBtn then
-                        boot.shopBtn.Parent = rootUI
-                        boot.shopBtn.Visible = true
-                end
-                if boot.loadout then
-                        boot.loadout.Parent = rootUI
-                        boot.loadout.Size = UDim2.fromScale(1,1)
-                        boot.loadout.Position = UDim2.new(0,0,0,0)
-                        boot.loadout.Visible = true
-                        if boot.buildCharacterPreview then boot.buildCharacterPreview(personaType) end
-                        if boot.populateBackpackUI then
-                                local saved = player:GetAttribute("Inventory")
-                                if typeof(saved) == "string" then
-                                        local ok, data = pcall(HttpService.JSONDecode, HttpService, saved)
-                                        if ok then
-                                                boot.populateBackpackUI(data)
-                                        end
-                                elseif boot.StarterBackpack then
-                                        boot.populateBackpackUI(boot.StarterBackpack)
-                                        local conn
-                                        conn = player:GetAttributeChangedSignal("Inventory"):Connect(function()
-                                                local inv = player:GetAttribute("Inventory")
-                                                if typeof(inv) == "string" then
-                                                        local ok, data = pcall(HttpService.JSONDecode, HttpService, inv)
-                                                        if ok then
-                                                                boot.populateBackpackUI(data)
-                                                                conn:Disconnect()
-                                                        end
-                                                end
-                                        end)
-                                end
-                        end
-                end
-        end
+	if dojo then dojo.Visible = false end
+	if boot then
+		if boot.shopBtn then boot.shopBtn.Visible = true end
+		if boot.loadout then
+			boot.loadout.Visible = true
+			if boot.buildCharacterPreview then boot.buildCharacterPreview(personaType) end
+			if boot.populateBackpackUI then
+				local saved = player:GetAttribute("Inventory")
+				if typeof(saved) == "string" then
+					local ok, data = pcall(HttpService.JSONDecode, HttpService, saved)
+					if ok then
+						boot.populateBackpackUI(data)
+					end
+				elseif boot.StarterBackpack then
+					boot.populateBackpackUI(boot.StarterBackpack)
+					local conn
+					conn = player:GetAttributeChangedSignal("Inventory"):Connect(function()
+						local inv = player:GetAttribute("Inventory")
+						if typeof(inv) == "string" then
+							local ok, data = pcall(HttpService.JSONDecode, HttpService, inv)
+							if ok then
+								boot.populateBackpackUI(data)
+								conn:Disconnect()
+							end
+						end
+					end)
+				end
+			end
+		end
+	end
 end
 
 function Cosmetics.getSelectedPersona()
@@ -305,62 +287,44 @@ function Cosmetics.init(config, root, bootUI)
 	end
 	player:GetAttributeChangedSignal("Level"):Connect(updateLevelLabels)
 
-        dojoFrame = Instance.new("Frame")
-        dojoFrame.Size = UDim2.fromScale(1,1)
-        dojoFrame.BackgroundTransparency = 1
-        dojoFrame.Visible = false
-        dojoFrame.ZIndex = 10
-        dojoFrame.Parent = root
+	dojo = Instance.new("Frame")
+	dojo.Size = UDim2.fromScale(1,1)
+	dojo.BackgroundTransparency = 1
+	dojo.Visible = false
+	dojo.ZIndex = 10
+	dojo.Parent = root
 
-        dojoQuestPanel = Instance.new("Frame")
-        dojoQuestPanel.Name = "DojoQuestPanel"
-        dojoQuestPanel.Size = UDim2.new(0.5,0,1,0)
-        dojoQuestPanel.BackgroundTransparency = 1
-        dojoQuestPanel.Visible = false
-        dojoQuestPanel.Parent = dojoFrame
+	local dojoTitle = Instance.new("ImageLabel")
+	dojoTitle.Size = UDim2.fromScale(0.7,0.24)
+	dojoTitle.Position = UDim2.fromScale(0.5,0.1)
+	dojoTitle.AnchorPoint = Vector2.new(0.5,0.5)
+	-- Use BootUI logo where starter dojo image was
+	dojoTitle.Image = "rbxassetid://138217463115431"
+	dojoTitle.BackgroundTransparency = 1
+	dojoTitle.ScaleType = Enum.ScaleType.Fit
+	dojoTitle.ZIndex = 11
+	dojoTitle.Parent = dojo
 
-        dojoBackpackPanel = Instance.new("Frame")
-        dojoBackpackPanel.Name = "DojoBackpackPanel"
-        dojoBackpackPanel.Size = UDim2.new(0.5,0,1,0)
-        dojoBackpackPanel.Position = UDim2.fromScale(0.5,0)
-        dojoBackpackPanel.BackgroundTransparency = 1
-        dojoBackpackPanel.Parent = dojoFrame
+	local picker = Instance.new("Frame")
+	picker.Size = UDim2.fromScale(0.8,0.7)
+	picker.Position = UDim2.fromScale(0.5,0.55)
+	picker.AnchorPoint = Vector2.new(0.5,0.5)
+	picker.BackgroundColor3 = Color3.fromRGB(24,26,28)
+	picker.BackgroundTransparency = 0.6
+	picker.BorderSizePixel = 0
+	picker.ZIndex = 11
+	picker.Parent = dojo
 
-        if boot then
-                boot.DojoBackpackPanel = dojoBackpackPanel
-        end
-
-        local dojoTitle = Instance.new("ImageLabel")
-        dojoTitle.Size = UDim2.fromScale(0.7,0.24)
-        dojoTitle.Position = UDim2.fromScale(0.5,0.1)
-        dojoTitle.AnchorPoint = Vector2.new(0.5,0.5)
-        -- Use BootUI logo where starter dojo image was
-        dojoTitle.Image = "rbxassetid://138217463115431"
-        dojoTitle.BackgroundTransparency = 1
-        dojoTitle.ScaleType = Enum.ScaleType.Fit
-        dojoTitle.ZIndex = 11
-        dojoTitle.Parent = dojoQuestPanel
-
-        local picker = Instance.new("Frame")
-        picker.Size = UDim2.fromScale(0.8,0.7)
-        picker.Position = UDim2.fromScale(0.5,0.55)
-        picker.AnchorPoint = Vector2.new(0.5,0.5)
-        picker.BackgroundColor3 = Color3.fromRGB(24,26,28)
-        picker.BackgroundTransparency = 0.6
-        picker.BorderSizePixel = 0
-        picker.ZIndex = 11
-        picker.Parent = dojoQuestPanel
-
-        -- Display starter dojo image at the bottom of the picker
-        local starterDojoImg = Instance.new("ImageLabel")
-        starterDojoImg.Size = UDim2.fromScale(0.7,0.08)
-        starterDojoImg.Position = UDim2.fromScale(0.5,0.92)
-        starterDojoImg.AnchorPoint = Vector2.new(0.5,1)
-        starterDojoImg.Image = "rbxassetid://137361385013636"
-        starterDojoImg.BackgroundTransparency = 1
-        starterDojoImg.ScaleType = Enum.ScaleType.Fit
-        starterDojoImg.ZIndex = 12
-        starterDojoImg.Parent = picker
+	-- Display starter dojo image at the bottom of the picker
+	local starterDojoImg = Instance.new("ImageLabel")
+	starterDojoImg.Size = UDim2.fromScale(0.7,0.08)
+	starterDojoImg.Position = UDim2.fromScale(0.5,0.92)
+	starterDojoImg.AnchorPoint = Vector2.new(0.5,1)
+	starterDojoImg.Image = "rbxassetid://137361385013636"
+	starterDojoImg.BackgroundTransparency = 1
+	starterDojoImg.ScaleType = Enum.ScaleType.Fit
+	starterDojoImg.ZIndex = 12
+	starterDojoImg.Parent = picker
 
 	local function makeButton(text, y)
 		local b = Instance.new("TextButton")
@@ -420,19 +384,19 @@ function Cosmetics.init(config, root, bootUI)
 		placeholder.Parent = frame
 
 		local levelLabel = Instance.new("TextLabel")
-                levelLabel.Name = "LevelLabel"
-                levelLabel.Size = UDim2.new(1,0,0.15,0)
-                levelLabel.Position = UDim2.new(0.5,0,0,0)
-                levelLabel.AnchorPoint = Vector2.new(0.5,1)
-                levelLabel.BackgroundTransparency = 1
-                levelLabel.TextXAlignment = Enum.TextXAlignment.Center
-                levelLabel.Text = ""
-                levelLabel.Font = Enum.Font.Garamond
-                levelLabel.TextScaled = false
-                levelLabel.TextSize = 14
-                levelLabel.TextColor3 = Color3.fromRGB(220,220,220)
-                levelLabel.ZIndex = 11
-                levelLabel.Parent = frame
+		levelLabel.Name = "LevelLabel"
+		levelLabel.Size = UDim2.new(1,0,0.15,0)
+		levelLabel.Position = UDim2.new(0.5,0,0,0)
+		levelLabel.AnchorPoint = Vector2.new(0.5,1)
+		levelLabel.BackgroundTransparency = 1
+		levelLabel.TextXAlignment = Enum.TextXAlignment.Center
+		levelLabel.Text = ""
+		levelLabel.Font = Enum.Font.Garamond
+		levelLabel.TextScaled = false
+		levelLabel.TextSize = 14
+		levelLabel.TextColor3 = Color3.fromRGB(220,220,220)
+		levelLabel.ZIndex = 11
+		levelLabel.Parent = frame
 
 		local robloxBtn = Instance.new("TextButton")
 		robloxBtn.Size = UDim2.new(0.45,0,0.25,0)
@@ -458,27 +422,27 @@ function Cosmetics.init(config, root, bootUI)
 		starterBtn.ZIndex = 11
 		starterBtn.Parent = frame
 
-                local useBtn = Instance.new("TextButton")
-                useBtn.Size = UDim2.new(0.7,0,0.15,0)
-                useBtn.Position = UDim2.new(0.15,0,0.7,0)
-                useBtn.Text = "Use"
-                useBtn.Font = Enum.Font.GothamSemibold
-                useBtn.TextScaled = true
-                useBtn.TextColor3 = Color3.new(1,1,1)
-                useBtn.BackgroundColor3 = Color3.fromRGB(60,180,110)
-                useBtn.AutoButtonColor = true
-                useBtn.ZIndex = 11
-                useBtn.Parent = frame
+		local useBtn = Instance.new("TextButton")
+		useBtn.Size = UDim2.new(0.7,0,0.15,0)
+		useBtn.Position = UDim2.new(0.15,0,0.7,0)
+		useBtn.Text = "Use"
+		useBtn.Font = Enum.Font.GothamSemibold
+		useBtn.TextScaled = true
+		useBtn.TextColor3 = Color3.new(1,1,1)
+		useBtn.BackgroundColor3 = Color3.fromRGB(60,180,110)
+		useBtn.AutoButtonColor = true
+		useBtn.ZIndex = 11
+		useBtn.Parent = frame
 
-                local clearBtn = Instance.new("TextButton")
-                clearBtn.Size = UDim2.new(0.5,0,0.08,0)
-                clearBtn.AnchorPoint = Vector2.new(0.5,0)
-                clearBtn.Position = UDim2.new(0.5,0,0.88,0)
-                clearBtn.Text = "Clear"
-                clearBtn.Font = Enum.Font.Gotham
-                clearBtn.TextScaled = true
-                clearBtn.TextColor3 = Color3.new(1,1,1)
-                clearBtn.BackgroundColor3 = Color3.fromRGB(200,80,80)
+		local clearBtn = Instance.new("TextButton")
+		clearBtn.Size = UDim2.new(0.5,0,0.08,0)
+		clearBtn.AnchorPoint = Vector2.new(0.5,0)
+		clearBtn.Position = UDim2.new(0.5,0,0.88,0)
+		clearBtn.Text = "Clear"
+		clearBtn.Font = Enum.Font.Gotham
+		clearBtn.TextScaled = true
+		clearBtn.TextColor3 = Color3.new(1,1,1)
+		clearBtn.BackgroundColor3 = Color3.fromRGB(200,80,80)
 		clearBtn.AutoButtonColor = true
 		clearBtn.ZIndex = 11
 		clearBtn.Parent = frame
@@ -486,14 +450,14 @@ function Cosmetics.init(config, root, bootUI)
 		slotButtons[1] = {
 			frame = frame,
 			viewport = viewport,
-                        placeholder = placeholder,
-                        useBtn = useBtn,
-                        clearBtn = clearBtn,
-                        robloxBtn = robloxBtn,
-                        starterBtn = starterBtn,
-                        levelLabel = levelLabel
-                }
-        end
+			placeholder = placeholder,
+			useBtn = useBtn,
+			clearBtn = clearBtn,
+			robloxBtn = robloxBtn,
+			starterBtn = starterBtn,
+			levelLabel = levelLabel
+		}
+	end
 
 	-- create slot 2 (left)
 	do
@@ -519,20 +483,20 @@ function Cosmetics.init(config, root, bootUI)
 		placeholder.ZIndex = 10
 		placeholder.Parent = frame
 
-                local levelLabel = Instance.new("TextLabel")
-                levelLabel.Name = "LevelLabel"
-                levelLabel.Size = UDim2.new(1,0,0.15,0)
-                levelLabel.Position = UDim2.new(0.5,0,0,0)
-                levelLabel.AnchorPoint = Vector2.new(0.5,1)
-                levelLabel.BackgroundTransparency = 1
-                levelLabel.TextXAlignment = Enum.TextXAlignment.Center
-                levelLabel.Text = ""
-                levelLabel.Font = Enum.Font.Garamond
-                levelLabel.TextScaled = false
-                levelLabel.TextSize = 14
-                levelLabel.TextColor3 = Color3.fromRGB(220,220,220)
-                levelLabel.ZIndex = 11
-                levelLabel.Parent = frame
+		local levelLabel = Instance.new("TextLabel")
+		levelLabel.Name = "LevelLabel"
+		levelLabel.Size = UDim2.new(1,0,0.15,0)
+		levelLabel.Position = UDim2.new(0.5,0,0,0)
+		levelLabel.AnchorPoint = Vector2.new(0.5,1)
+		levelLabel.BackgroundTransparency = 1
+		levelLabel.TextXAlignment = Enum.TextXAlignment.Center
+		levelLabel.Text = ""
+		levelLabel.Font = Enum.Font.Garamond
+		levelLabel.TextScaled = false
+		levelLabel.TextSize = 14
+		levelLabel.TextColor3 = Color3.fromRGB(220,220,220)
+		levelLabel.ZIndex = 11
+		levelLabel.Parent = frame
 
 		local robloxBtn = Instance.new("TextButton")
 		robloxBtn.Size = UDim2.new(0.45,0,0.25,0)
@@ -558,42 +522,42 @@ function Cosmetics.init(config, root, bootUI)
 		starterBtn.ZIndex = 11
 		starterBtn.Parent = frame
 
-                local useBtn = Instance.new("TextButton")
-                useBtn.Size = UDim2.new(0.7,0,0.15,0)
-                useBtn.Position = UDim2.new(0.15,0,0.7,0)
-                useBtn.Text = "Use"
-                useBtn.Font = Enum.Font.GothamSemibold
-                useBtn.TextScaled = true
-                useBtn.TextColor3 = Color3.new(1,1,1)
-                useBtn.BackgroundColor3 = Color3.fromRGB(60,180,110)
-                useBtn.AutoButtonColor = true
-                useBtn.ZIndex = 11
-                useBtn.Parent = frame
+		local useBtn = Instance.new("TextButton")
+		useBtn.Size = UDim2.new(0.7,0,0.15,0)
+		useBtn.Position = UDim2.new(0.15,0,0.7,0)
+		useBtn.Text = "Use"
+		useBtn.Font = Enum.Font.GothamSemibold
+		useBtn.TextScaled = true
+		useBtn.TextColor3 = Color3.new(1,1,1)
+		useBtn.BackgroundColor3 = Color3.fromRGB(60,180,110)
+		useBtn.AutoButtonColor = true
+		useBtn.ZIndex = 11
+		useBtn.Parent = frame
 
-                local clearBtn = Instance.new("TextButton")
-                clearBtn.Size = UDim2.new(0.5,0,0.08,0)
-                clearBtn.AnchorPoint = Vector2.new(0.5,0)
-                clearBtn.Position = UDim2.new(0.5,0,0.88,0)
-                clearBtn.Text = "Clear"
-                clearBtn.Font = Enum.Font.Gotham
-                clearBtn.TextScaled = true
-                clearBtn.TextColor3 = Color3.new(1,1,1)
-                clearBtn.BackgroundColor3 = Color3.fromRGB(200,80,80)
+		local clearBtn = Instance.new("TextButton")
+		clearBtn.Size = UDim2.new(0.5,0,0.08,0)
+		clearBtn.AnchorPoint = Vector2.new(0.5,0)
+		clearBtn.Position = UDim2.new(0.5,0,0.88,0)
+		clearBtn.Text = "Clear"
+		clearBtn.Font = Enum.Font.Gotham
+		clearBtn.TextScaled = true
+		clearBtn.TextColor3 = Color3.new(1,1,1)
+		clearBtn.BackgroundColor3 = Color3.fromRGB(200,80,80)
 		clearBtn.AutoButtonColor = true
 		clearBtn.ZIndex = 11
 		clearBtn.Parent = frame
 
-                slotButtons[2] = {
-                        frame = frame,
-                        viewport = viewport,
-                        placeholder = placeholder,
-                        useBtn = useBtn,
-                        clearBtn = clearBtn,
-                        robloxBtn = robloxBtn,
-                        starterBtn = starterBtn,
-                        levelLabel = levelLabel
-                }
-        end
+		slotButtons[2] = {
+			frame = frame,
+			viewport = viewport,
+			placeholder = placeholder,
+			useBtn = useBtn,
+			clearBtn = clearBtn,
+			robloxBtn = robloxBtn,
+			starterBtn = starterBtn,
+			levelLabel = levelLabel
+		}
+	end
 
 	-- create slot 3 (right)
 	do
@@ -619,20 +583,20 @@ function Cosmetics.init(config, root, bootUI)
 		placeholder.ZIndex = 10
 		placeholder.Parent = frame
 
-                local levelLabel = Instance.new("TextLabel")
-                levelLabel.Name = "LevelLabel"
-                levelLabel.Size = UDim2.new(1,0,0.15,0)
-                levelLabel.Position = UDim2.new(0.5,0,0,0)
-                levelLabel.AnchorPoint = Vector2.new(0.5,1)
-                levelLabel.BackgroundTransparency = 1
-                levelLabel.TextXAlignment = Enum.TextXAlignment.Center
-                levelLabel.Text = ""
-                levelLabel.Font = Enum.Font.Garamond
-                levelLabel.TextScaled = false
-                levelLabel.TextSize = 14
-                levelLabel.TextColor3 = Color3.fromRGB(220,220,220)
-                levelLabel.ZIndex = 11
-                levelLabel.Parent = frame
+		local levelLabel = Instance.new("TextLabel")
+		levelLabel.Name = "LevelLabel"
+		levelLabel.Size = UDim2.new(1,0,0.15,0)
+		levelLabel.Position = UDim2.new(0.5,0,0,0)
+		levelLabel.AnchorPoint = Vector2.new(0.5,1)
+		levelLabel.BackgroundTransparency = 1
+		levelLabel.TextXAlignment = Enum.TextXAlignment.Center
+		levelLabel.Text = ""
+		levelLabel.Font = Enum.Font.Garamond
+		levelLabel.TextScaled = false
+		levelLabel.TextSize = 14
+		levelLabel.TextColor3 = Color3.fromRGB(220,220,220)
+		levelLabel.ZIndex = 11
+		levelLabel.Parent = frame
 
 		local robloxBtn = Instance.new("TextButton")
 		robloxBtn.Size = UDim2.new(0.45,0,0.25,0)
@@ -658,42 +622,42 @@ function Cosmetics.init(config, root, bootUI)
 		starterBtn.ZIndex = 11
 		starterBtn.Parent = frame
 
-                local useBtn = Instance.new("TextButton")
-                useBtn.Size = UDim2.new(0.7,0,0.15,0)
-                useBtn.Position = UDim2.new(0.15,0,0.7,0)
-                useBtn.Text = "Use"
-                useBtn.Font = Enum.Font.GothamSemibold
-                useBtn.TextScaled = true
-                useBtn.TextColor3 = Color3.new(1,1,1)
-                useBtn.BackgroundColor3 = Color3.fromRGB(60,180,110)
-                useBtn.AutoButtonColor = true
-                useBtn.ZIndex = 11
-                useBtn.Parent = frame
+		local useBtn = Instance.new("TextButton")
+		useBtn.Size = UDim2.new(0.7,0,0.15,0)
+		useBtn.Position = UDim2.new(0.15,0,0.7,0)
+		useBtn.Text = "Use"
+		useBtn.Font = Enum.Font.GothamSemibold
+		useBtn.TextScaled = true
+		useBtn.TextColor3 = Color3.new(1,1,1)
+		useBtn.BackgroundColor3 = Color3.fromRGB(60,180,110)
+		useBtn.AutoButtonColor = true
+		useBtn.ZIndex = 11
+		useBtn.Parent = frame
 
-                local clearBtn = Instance.new("TextButton")
-                clearBtn.Size = UDim2.new(0.5,0,0.08,0)
-                clearBtn.AnchorPoint = Vector2.new(0.5,0)
-                clearBtn.Position = UDim2.new(0.5,0,0.88,0)
-                clearBtn.Text = "Clear"
-                clearBtn.Font = Enum.Font.Gotham
-                clearBtn.TextScaled = true
-                clearBtn.TextColor3 = Color3.new(1,1,1)
-                clearBtn.BackgroundColor3 = Color3.fromRGB(200,80,80)
+		local clearBtn = Instance.new("TextButton")
+		clearBtn.Size = UDim2.new(0.5,0,0.08,0)
+		clearBtn.AnchorPoint = Vector2.new(0.5,0)
+		clearBtn.Position = UDim2.new(0.5,0,0.88,0)
+		clearBtn.Text = "Clear"
+		clearBtn.Font = Enum.Font.Gotham
+		clearBtn.TextScaled = true
+		clearBtn.TextColor3 = Color3.new(1,1,1)
+		clearBtn.BackgroundColor3 = Color3.fromRGB(200,80,80)
 		clearBtn.AutoButtonColor = true
 		clearBtn.ZIndex = 11
 		clearBtn.Parent = frame
 
-                slotButtons[3] = {
-                        frame = frame,
-                        viewport = viewport,
-                        placeholder = placeholder,
-                        useBtn = useBtn,
-                        clearBtn = clearBtn,
-                        robloxBtn = robloxBtn,
-                        starterBtn = starterBtn,
-                        levelLabel = levelLabel
-                }
-        end
+		slotButtons[3] = {
+			frame = frame,
+			viewport = viewport,
+			placeholder = placeholder,
+			useBtn = useBtn,
+			clearBtn = clearBtn,
+			robloxBtn = robloxBtn,
+			starterBtn = starterBtn,
+			levelLabel = levelLabel
+		}
+	end
 
 	updateSlots()
 
