@@ -6,7 +6,8 @@
 -- v2 adds robust Ninja look resolution:
 --   • Prefers ReplicatedStorage/HumanoidDescriptions/Ninja (HumanoidDescription)
 --   • Falls back to ServerStorage/HumanoidDescription(s)/Ninja (a MODEL).
---     In that case we read Humanoid:GetAppliedDescription() from the model.
+--     In that case we read Humanoid:GetAppliedDescription() from the model
+--     and replicate it to ReplicatedStorage for the client UI.
 
 local Players            = game:GetService("Players")
 local ReplicatedStorage  = game:GetService("ReplicatedStorage")
@@ -50,21 +51,38 @@ local function resolveNinjaHD()
        -- Some older content used the singular name; fall back for compatibility.
        local rFolder = ReplicatedStorage:FindFirstChild("HumanoidDescriptions")
                or ReplicatedStorage:FindFirstChild("HumanoidDescription")
-	local hd = rFolder and rFolder:FindFirstChild("Ninja")
-	if hd and hd:IsA("HumanoidDescription") then return hd end
+       local hd = rFolder and rFolder:FindFirstChild("Ninja")
+       if hd and hd:IsA("HumanoidDescription") then return hd end
 
-	-- Fallback: server-only model of the ninja
-	local sFolder = ServerStorage:FindFirstChild("HumanoidDescription") or ServerStorage:FindFirstChild("HumanoidDescriptions")
-	local ninModel = sFolder and sFolder:FindFirstChild("Ninja")
-	if ninModel then
-		local hum = ninModel:FindFirstChildOfClass("Humanoid")
-		if hum then
-			local ok, desc = pcall(function() return hum:GetAppliedDescription() end)
-			if ok and desc then return desc end
-		end
-	end
-	return nil
+       -- Fallback: server-only model of the ninja
+       local sFolder = ServerStorage:FindFirstChild("HumanoidDescription") or ServerStorage:FindFirstChild("HumanoidDescriptions")
+       local ninModel = sFolder and sFolder:FindFirstChild("Ninja")
+       if ninModel then
+               local hum = ninModel:FindFirstChildOfClass("Humanoid")
+               if hum then
+                       local ok, desc = pcall(function() return hum:GetAppliedDescription() end)
+                       if ok and desc then
+                               -- Replicate to ReplicatedStorage so clients can render the ninja immediately.
+                               local target = ReplicatedStorage:FindFirstChild("HumanoidDescriptions")
+                               if not target then
+                                       target = Instance.new("Folder")
+                                       target.Name = "HumanoidDescriptions" -- expected plural folder
+                                       target.Parent = ReplicatedStorage
+                               end
+                               if not target:FindFirstChild("Ninja") then
+                                       local clone = desc:Clone()
+                                       clone.Name = "Ninja"
+                                       clone.Parent = target
+                               end
+                               return desc
+                       end
+               end
+       end
+       return nil
 end
+
+-- Preload the description so it's replicated before any players join.
+resolveNinjaHD()
 
 -- Apply selected persona whenever the character loads (safely idempotent)
 local function onCharacterAppearance(player, character)
