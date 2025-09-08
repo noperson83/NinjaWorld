@@ -3,11 +3,6 @@
 -- PersonaService.server.lua — v2
 -- Purpose: Data + persona selection via RemoteFunction (no spawning here).
 -- Works side-by-side with Init.server.lua (which controls WHEN/HOW we spawn).
--- v2 adds robust Ninja look resolution:
---   • Prefers ReplicatedStorage/HumanoidDescriptions/Ninja (HumanoidDescription)
---   • Falls back to ServerStorage/HumanoidDescription(s)/Ninja (a MODEL).
---     In that case we read Humanoid:GetAppliedDescription() from the model
---     and replicate it to ReplicatedStorage for the client UI.
 
 local Players            = game:GetService("Players")
 local ReplicatedStorage  = game:GetService("ReplicatedStorage")
