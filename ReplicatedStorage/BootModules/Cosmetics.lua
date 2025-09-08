@@ -9,9 +9,7 @@ local ContentProvider = game:GetService("ContentProvider")
 local rf = ReplicatedStorage:WaitForChild("PersonaServiceRF")
 local player = Players.LocalPlayer
 
-local dojoFrame
-local dojoQuestPanel
-local dojoBackpackPanel
+local dojo
 local slotButtons = {}
 local boot
 local rootUI
@@ -208,15 +206,19 @@ refreshSlots = function()
 end
 
 local function showDojoPicker()
-        if dojoQuestPanel then dojoQuestPanel.Visible = true end
+	if dojo then dojo.Visible = true end
+	if boot then
+		if boot.loadout then boot.loadout.Visible = false end
+		if boot.shopBtn then boot.shopBtn.Visible = false end
+	end
 end
 
 local function showLoadout(personaType)
-        if dojoQuestPanel then dojoQuestPanel.Visible = false end
-        if boot then
-                if boot.shopBtn then boot.shopBtn.Visible = true end
-                if boot.loadout then
-                        boot.loadout.Visible = true
+	if dojo then dojo.Visible = false end
+	if boot then
+		if boot.shopBtn then boot.shopBtn.Visible = true end
+		if boot.loadout then
+			boot.loadout.Visible = true
 			if boot.buildCharacterPreview then boot.buildCharacterPreview(personaType) end
 			if boot.populateBackpackUI then
 				local saved = player:GetAttribute("Inventory")
@@ -285,67 +287,44 @@ function Cosmetics.init(config, root, bootUI)
 	end
 	player:GetAttributeChangedSignal("Level"):Connect(updateLevelLabels)
 
-        dojoFrame = Instance.new("Frame")
-        dojoFrame.Size = UDim2.fromScale(1,1)
-        dojoFrame.BackgroundTransparency = 1
-        dojoFrame.ZIndex = 10
-        dojoFrame.Parent = root
+	dojo = Instance.new("Frame")
+	dojo.Size = UDim2.fromScale(1,1)
+	dojo.BackgroundTransparency = 1
+	dojo.Visible = false
+	dojo.ZIndex = 10
+	dojo.Parent = root
 
-        dojoQuestPanel = Instance.new("Frame")
-        dojoQuestPanel.Name = "DojoQuestPanel"
-        dojoQuestPanel.Size = UDim2.new(0.5,0,1,0)
-        dojoQuestPanel.BackgroundTransparency = 1
-        dojoQuestPanel.Visible = false
-        dojoQuestPanel.Parent = dojoFrame
+	local dojoTitle = Instance.new("ImageLabel")
+	dojoTitle.Size = UDim2.fromScale(0.7,0.24)
+	dojoTitle.Position = UDim2.fromScale(0.5,0.1)
+	dojoTitle.AnchorPoint = Vector2.new(0.5,0.5)
+	-- Use BootUI logo where starter dojo image was
+	dojoTitle.Image = "rbxassetid://138217463115431"
+	dojoTitle.BackgroundTransparency = 1
+	dojoTitle.ScaleType = Enum.ScaleType.Fit
+	dojoTitle.ZIndex = 11
+	dojoTitle.Parent = dojo
 
-        dojoBackpackPanel = Instance.new("Frame")
-        dojoBackpackPanel.Name = "DojoBackpackPanel"
-        dojoBackpackPanel.Size = UDim2.new(0.5,0,1,0)
-        dojoBackpackPanel.Position = UDim2.fromScale(0.5,0)
-        dojoBackpackPanel.BackgroundTransparency = 1
-        dojoBackpackPanel.Parent = dojoFrame
+	local picker = Instance.new("Frame")
+	picker.Size = UDim2.fromScale(0.8,0.7)
+	picker.Position = UDim2.fromScale(0.5,0.55)
+	picker.AnchorPoint = Vector2.new(0.5,0.5)
+	picker.BackgroundColor3 = Color3.fromRGB(24,26,28)
+	picker.BackgroundTransparency = 0.6
+	picker.BorderSizePixel = 0
+	picker.ZIndex = 11
+	picker.Parent = dojo
 
-        if boot then
-                boot.DojoBackpackPanel = dojoBackpackPanel
-                task.spawn(function()
-                        while not boot.loadout do task.wait() end
-                        boot.loadout.Parent = dojoBackpackPanel
-                        boot.loadout.Size = UDim2.fromScale(1,1)
-                        boot.loadout.Position = UDim2.new(0,0,0,0)
-                end)
-        end
-
-        local dojoTitle = Instance.new("ImageLabel")
-        dojoTitle.Size = UDim2.fromScale(0.7,0.24)
-        dojoTitle.Position = UDim2.fromScale(0.5,0.1)
-        dojoTitle.AnchorPoint = Vector2.new(0.5,0.5)
-        -- Use BootUI logo where starter dojo image was
-        dojoTitle.Image = "rbxassetid://138217463115431"
-        dojoTitle.BackgroundTransparency = 1
-        dojoTitle.ScaleType = Enum.ScaleType.Fit
-        dojoTitle.ZIndex = 11
-        dojoTitle.Parent = dojoQuestPanel
-
-        local picker = Instance.new("Frame")
-        picker.Size = UDim2.fromScale(0.8,0.7)
-        picker.Position = UDim2.fromScale(0.5,0.55)
-        picker.AnchorPoint = Vector2.new(0.5,0.5)
-        picker.BackgroundColor3 = Color3.fromRGB(24,26,28)
-        picker.BackgroundTransparency = 0.6
-        picker.BorderSizePixel = 0
-        picker.ZIndex = 11
-        picker.Parent = dojoQuestPanel
-
-        -- Display starter dojo image at the bottom of the picker
-        local starterDojoImg = Instance.new("ImageLabel")
-        starterDojoImg.Size = UDim2.fromScale(0.7,0.08)
-        starterDojoImg.Position = UDim2.fromScale(0.5,0.92)
-        starterDojoImg.AnchorPoint = Vector2.new(0.5,1)
-        starterDojoImg.Image = "rbxassetid://137361385013636"
-        starterDojoImg.BackgroundTransparency = 1
-        starterDojoImg.ScaleType = Enum.ScaleType.Fit
-        starterDojoImg.ZIndex = 12
-        starterDojoImg.Parent = picker
+	-- Display starter dojo image at the bottom of the picker
+	local starterDojoImg = Instance.new("ImageLabel")
+	starterDojoImg.Size = UDim2.fromScale(0.7,0.08)
+	starterDojoImg.Position = UDim2.fromScale(0.5,0.92)
+	starterDojoImg.AnchorPoint = Vector2.new(0.5,1)
+	starterDojoImg.Image = "rbxassetid://137361385013636"
+	starterDojoImg.BackgroundTransparency = 1
+	starterDojoImg.ScaleType = Enum.ScaleType.Fit
+	starterDojoImg.ZIndex = 12
+	starterDojoImg.Parent = picker
 
 	local function makeButton(text, y)
 		local b = Instance.new("TextButton")
