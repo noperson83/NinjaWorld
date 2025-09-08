@@ -1,15 +1,15 @@
 -- Ninja World EXP 3000 
--- Init.server.lua — persona-controlled spawning (v4)
+-- Init.server.lua â€” persona-controlled spawning (v4)
 -- Put this in **ServerScriptService** and REMOVE any older DojoSpawn.server.lua to avoid conflicts.
 -- What it does:
---   • Disables automatic spawning (CharacterAutoLoads=false) so NOTHING spawns before persona is chosen
---   • Ensures ReplicatedStorage.EnterDojoRE is a RemoteEvent
---   • On EnterDojoRE: spawns with the chosen persona
+--   â€¢ Disables automatic spawning (CharacterAutoLoads=false) so NOTHING spawns before persona is chosen
+--   â€¢ Ensures ReplicatedStorage.EnterDojoRE is a RemoteEvent
+--   â€¢ On EnterDojoRE: spawns with the chosen persona
 --         - Ninja: **prefer a full MODEL** at ServerStorage/HumanoidDescription(s)/Ninja (clone as character)
 --                  fallback to HumanoidDescription if present
 --         - Roblox: default LoadCharacter()
---   • After spawn: drops player on a spawn pad and faces them toward Cameras.endPos
---   • Ensures the cloned Ninja has a working **Animate (LocalScript)** and an **Animator** so it isn't stiff
+--   â€¢ After spawn: drops player on a spawn pad and faces them toward Cameras.endPos
+--   â€¢ Ensures the cloned Ninja has a working **Animate (LocalScript)** and an **Animator** so it isn't stiff
 
 local Players           = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -62,11 +62,14 @@ end
 
 -- Optional: a HumanoidDescription for Ninja (for fallback if there's no model)
 local function getNinjaDescription()
-	local rFolder = ReplicatedStorage:FindFirstChild("HumanoidDescriptions")
-	local hd = rFolder and rFolder:FindFirstChild("Ninja")
-	if hd and hd:IsA("HumanoidDescription") then return hd end
-	-- try deriving from a model in ServerStorage if present
-	local sFolder = ServerStorage:FindFirstChild("HumanoidDescription") or ServerStorage:FindFirstChild("HumanoidDescriptions")
+        -- Preferred: ReplicatedStorage/HumanoidDescriptions contains client-visible assets.
+        -- Fall back to singular name for legacy content.
+        local rFolder = ReplicatedStorage:FindFirstChild("HumanoidDescriptions")
+                or ReplicatedStorage:FindFirstChild("HumanoidDescription")
+        local hd = rFolder and rFolder:FindFirstChild("Ninja")
+        if hd and hd:IsA("HumanoidDescription") then return hd end
+        -- try deriving from a model in ServerStorage if present
+        local sFolder = ServerStorage:FindFirstChild("HumanoidDescription") or ServerStorage:FindFirstChild("HumanoidDescriptions")
 	local ninModel = sFolder and sFolder:FindFirstChild("Ninja")
 	if ninModel then
 		local hum = ninModel:FindFirstChildOfClass("Humanoid")

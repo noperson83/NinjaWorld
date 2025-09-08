@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
+local ContentProvider = game:GetService("ContentProvider")
 
 local rf = ReplicatedStorage:WaitForChild("PersonaServiceRF")
 local player = Players.LocalPlayer
@@ -109,18 +110,21 @@ local function highestUsed()
 end
 
 local function getDescription(personaType)
-	local desc
-	if personaType == "Ninja" then
-		local hdFolder = ReplicatedStorage:FindFirstChild("HumanoidDescriptions")
-		local hd = hdFolder and hdFolder:FindFirstChild("Ninja")
-		if hd then desc = hd:Clone() end
-	else
-		local ok, hd = pcall(function()
-			return Players:GetHumanoidDescriptionFromUserId(player.UserId)
-		end)
-		if ok then desc = hd end
-	end
-	return desc
+       local desc
+       if personaType == "Ninja" then
+               -- Expected folder "HumanoidDescriptions" contains shared HumanoidDescription assets.
+               -- Use singular name as a fallback for legacy content.
+               local hdFolder = ReplicatedStorage:FindFirstChild("HumanoidDescriptions")
+                       or ReplicatedStorage:FindFirstChild("HumanoidDescription")
+               local hd = hdFolder and hdFolder:FindFirstChild("Ninja")
+               if hd then desc = hd:Clone() end
+       else
+               local ok, hd = pcall(function()
+                       return Players:GetHumanoidDescriptionFromUserId(player.UserId)
+               end)
+               if ok then desc = hd end
+       end
+       return desc
 end
 
 local function updateSlots()
@@ -148,18 +152,22 @@ local function updateSlots()
 					if ui.placeholder then ui.placeholder.Visible = false end
 					if ui.viewport then
 						local desc = getDescription(slot.type)
-						if desc then
-							local world = Instance.new("WorldModel")
-							world.Parent = ui.viewport
-							local model = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
-							model:PivotTo(CFrame.new(0,0,0) * CFrame.Angles(0, math.pi, 0))
-							model.Parent = world
+                                                if desc then
+                                                        local world = Instance.new("WorldModel")
+                                                        world.Parent = ui.viewport
+                                                        local model = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
+                                                        model:PivotTo(CFrame.new(0,0,0) * CFrame.Angles(0, math.pi, 0))
+                                                        -- Preload assets so the preview doesn't show the default black figure.
+                                                        pcall(function()
+                                                                ContentProvider:PreloadAsync({model})
+                                                        end)
+                                                        model.Parent = world
                                                         local cam = Instance.new("Camera")
                                                         cam.CFrame = CFrame.new(Vector3.new(0,2,4), Vector3.new(0,2,0))
                                                         cam.Parent = ui.viewport
                                                         ui.viewport.CurrentCamera = cam
-						end
-					end
+                                                end
+                                        end
 					if not ui.clearConn then
 						ui.clearConn = ui.clearBtn.MouseButton1Click:Connect(function()
 							showConfirm(("Clear slot %d?"):format(index), function()
