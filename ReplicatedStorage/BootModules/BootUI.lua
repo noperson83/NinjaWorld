@@ -790,8 +790,9 @@ end)
 
 btnEnterRealm.MouseButton1Click:Connect(function()
     if not selectedRealm then return end
-    DojoClient.hide()
-    if selectedRealm == "StarterDojo" then
+    local realmName = selectedRealm
+    DojoClient.start(realmName)
+    if realmName == "StarterDojo" then
         TweenService:Create(fade, TweenInfo.new(0.25), {BackgroundTransparency = 0}):Play()
         task.wait(0.28)
 
@@ -809,18 +810,21 @@ btnEnterRealm.MouseButton1Click:Connect(function()
         cam.CameraType = Enum.CameraType.Custom
         if hum then cam.CameraSubject = hum end
 
+        DojoClient.hide()
         restoreUIBlur()
         TweenService:Create(fade, TweenInfo.new(0.35), {BackgroundTransparency = 1}):Play()
         task.delay(0.4, function() if ui and ui.Parent then ui:Destroy() end end)
     else
-        local placeId = TeleportClient.WorldPlaceIds[selectedRealm]
+        local placeId = TeleportClient.WorldPlaceIds[realmName]
         if not (placeId and placeId > 0) then
-            warn("No place id for realm: " .. tostring(selectedRealm))
+            warn("No place id for realm: " .. tostring(realmName))
+            DojoClient.hide()
             return
         end
         TweenService:Create(fade, TweenInfo.new(0.25), {BackgroundTransparency = 0}):Play()
         task.wait(0.28)
         local _, chosenSlot = Cosmetics.getSelectedPersona()
+        DojoClient.hide()
         local ok, err = pcall(function()
             TeleportService:Teleport(placeId, player, {slot = chosenSlot})
         end)
