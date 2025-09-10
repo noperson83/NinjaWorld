@@ -171,19 +171,18 @@ local function updateSlots()
 					if not ui.clearConn then
 						ui.clearConn = ui.clearBtn.MouseButton1Click:Connect(function()
 							showConfirm(("Clear slot %d?"):format(index), function()
-								local res = rf:InvokeServer("clear", {slot = index})
-								if res and res.ok then
-									personaCache = res
-									if chosenSlot == index then chosenSlot = nil end
-									refreshSlots()
-								else
-									warn("Clear failed:", res and res.err)
-								end
-							end)
-						end)
-					end
-				else
-					ui.useBtn.Visible = false
+                                                                local res = rf:InvokeServer("clear", {slot = index})
+                                                                if res and res.ok then
+                                                                        if chosenSlot == index then chosenSlot = nil end
+                                                                        refreshSlots(res)
+                                                                else
+                                                                        warn("Clear failed:", res and res.err)
+                                                                end
+                                                        end)
+                                                end)
+                                        end
+                                else
+                                        ui.useBtn.Visible = false
 					ui.clearBtn.Visible = false
 					ui.robloxBtn.Visible = true
 					ui.starterBtn.Visible = true
@@ -199,10 +198,9 @@ local function updateSlots()
 	updateLevelLabels()
 end
 
-refreshSlots = function()
-	local data = rf:InvokeServer("get", {})
-	personaCache = data or personaCache
-	updateSlots()
+refreshSlots = function(data)
+        personaCache = data or personaCache
+        updateSlots()
 end
 
 local function showDojoPicker()
@@ -255,8 +253,8 @@ function Cosmetics.getSelectedPersona()
 	return personaType, chosenSlot
 end
 
-function Cosmetics.refreshSlots()
-	refreshSlots()
+function Cosmetics.refreshSlots(data)
+        refreshSlots(data)
 end
 
 function Cosmetics.showDojoPicker()
@@ -352,8 +350,8 @@ function Cosmetics.init(config, root, bootUI)
 	slotsContainer.ZIndex = 11
 	slotsContainer.Parent = picker
 
-	-- fetch initial slot data
-	personaCache = rf:InvokeServer("get", {}) or personaCache
+        -- fetch initial slot data
+        personaCache = config.personaData or personaCache
 
 	slotButtons = {}
 
@@ -672,40 +670,38 @@ function Cosmetics.init(config, root, bootUI)
 			showLoadout(result.persona and result.persona.type or currentChoiceType)
 		end)
 		entry.robloxBtn.MouseButton1Click:Connect(function()
-			local res = rf:InvokeServer("save", {slot = index, type = "Roblox"})
-			if res and res.ok then
-				personaCache = res
-				refreshSlots()
-				local useRes = rf:InvokeServer("use", {slot = index})
-				if useRes and useRes.ok then
-					chosenSlot = index
-					currentChoiceType = "Roblox"
-					if boot and boot.tweenToEnd then boot.tweenToEnd() end
-					showLoadout("Roblox")
-				else
-					warn("Use slot failed:", useRes and useRes.err)
-				end
-			else
-				warn("Save failed:", res and res.err)
-			end
+                        local res = rf:InvokeServer("save", {slot = index, type = "Roblox"})
+                        if res and res.ok then
+                                refreshSlots(res)
+                                local useRes = rf:InvokeServer("use", {slot = index})
+                                if useRes and useRes.ok then
+                                        chosenSlot = index
+                                        currentChoiceType = "Roblox"
+                                        if boot and boot.tweenToEnd then boot.tweenToEnd() end
+                                        showLoadout("Roblox")
+                                else
+                                        warn("Use slot failed:", useRes and useRes.err)
+                                end
+                        else
+                                warn("Save failed:", res and res.err)
+                        end
 		end)
 		entry.starterBtn.MouseButton1Click:Connect(function()
-			local res = rf:InvokeServer("save", {slot = index, type = "Ninja"})
-			if res and res.ok then
-				personaCache = res
-				refreshSlots()
-				local useRes = rf:InvokeServer("use", {slot = index})
-				if useRes and useRes.ok then
-					chosenSlot = index
-					currentChoiceType = "Ninja"
-					if boot and boot.tweenToEnd then boot.tweenToEnd() end
-					showLoadout("Ninja")
-				else
-					warn("Use slot failed:", useRes and useRes.err)
-				end
-			else
-				warn("Save failed:", res and res.err)
-			end
+                        local res = rf:InvokeServer("save", {slot = index, type = "Ninja"})
+                        if res and res.ok then
+                                refreshSlots(res)
+                                local useRes = rf:InvokeServer("use", {slot = index})
+                                if useRes and useRes.ok then
+                                        chosenSlot = index
+                                        currentChoiceType = "Ninja"
+                                        if boot and boot.tweenToEnd then boot.tweenToEnd() end
+                                        showLoadout("Ninja")
+                                else
+                                        warn("Use slot failed:", useRes and useRes.err)
+                                end
+                        else
+                                warn("Save failed:", res and res.err)
+                        end
 		end)
 	end
 end

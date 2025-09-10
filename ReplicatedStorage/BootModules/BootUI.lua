@@ -1,16 +1,5 @@
 local BootUI = {}
 
-function BootUI.start(config)
-    config = config or {}
-    config.showShop = config.showShop or false
-    BootUI.config = config
--- Ninja World EXP 3000
--- Boot.client.lua – v7.4
--- Changes from v7.3:
---  • Viewport: avatar now faces the camera by default (yaw = π)
---  • Emote bar across the top of Loadout to animate preview (Wave / Point / Dance / Laugh / Cheer / Sit / Idle)
---  • Minor: consistent 0.6 transparency panels, plus small cleanups
-
 -- =====================
 -- Services & locals
 -- =====================
@@ -23,6 +12,7 @@ local TeleportService   = game:GetService("TeleportService")
 local RunService        = game:GetService("RunService")
 local Workspace         = game:GetService("Workspace")
 local Lighting          = game:GetService("Lighting")
+local HttpService       = game:GetService("HttpService")
 
 local player  = Players.LocalPlayer
 local rf      = ReplicatedStorage:WaitForChild("PersonaServiceRF")
@@ -30,6 +20,20 @@ local cam     = Workspace.CurrentCamera
 local enterRE = ReplicatedStorage:FindFirstChild("EnterDojoRE") -- created by server script
 
 local topInsetY = GuiService:GetGuiInset().Y
+
+function BootUI.fetchData()
+    local persona = rf:InvokeServer("get", {}) or {}
+    local inventory
+    local invStr = player:GetAttribute("Inventory")
+    if typeof(invStr) == "string" then
+        local ok, decoded = pcall(HttpService.JSONDecode, HttpService, invStr)
+        if ok then inventory = decoded end
+    end
+    return {
+        inventory = inventory,
+        personaData = persona,
+    }
+end
 
 -- =====================
 -- Module requires
@@ -39,6 +43,17 @@ local CurrencyService = require(ReplicatedStorage.BootModules.CurrencyService)
 local Shop            = require(ReplicatedStorage.BootModules.Shop)
 local ShopUI          = require(ReplicatedStorage.BootModules.ShopUI)
 local TeleportClient  = require(ReplicatedStorage.ClientModules.TeleportClient)
+
+function BootUI.start(config)
+    config = config or {}
+    config.showShop = config.showShop or false
+    BootUI.config = config
+-- Ninja World EXP 3000
+-- Boot.client.lua – v7.4
+-- Changes from v7.3:
+--  • Viewport: avatar now faces the camera by default (yaw = π)
+--  • Emote bar across the top of Loadout to animate preview (Wave / Point / Dance / Laugh / Cheer / Sit / Idle)
+--  • Minor: consistent 0.6 transparency panels, plus small cleanups
 
 -- =====================
 -- Module instances
@@ -53,7 +68,7 @@ BootUI.shop = shop
 -- =====================
 local CAM_TWEEN_TIME = 1.6
 
-local StarterBackpack = config.starterBackpack or {
+local StarterBackpack = config.inventory or config.starterBackpack or {
     capacity = 20,
     weapons = {},
     food = {},
@@ -62,6 +77,7 @@ local StarterBackpack = config.starterBackpack or {
     orbs = {},
 }
 BootUI.StarterBackpack = StarterBackpack
+BootUI.personaData = config.personaData
 
 -- =====================
 -- Camera helpers (world)
@@ -822,7 +838,7 @@ disableUIBlur()
 
 Cosmetics.showDojoPicker()
 -- We do NOT tween to end here anymore; only after "Use".
-Cosmetics.refreshSlots()
+Cosmetics.refreshSlots(config.personaData)
 
 
 end
