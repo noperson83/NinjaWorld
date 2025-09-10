@@ -5,6 +5,7 @@ local HttpService = game:GetService("HttpService")
 
 -- single datastore for all player data
 local DataStore = DataStoreService:GetDataStore("PlayerData")
+local PersonaStore = DataStoreService:GetDataStore("NW_Personas_v1")
 
 -- default schema for player saves
 local REALM_LIST = {
@@ -54,6 +55,7 @@ local DEFAULT_DATA = {
         food = {},
         special = {},
     },
+    slots = {},
 }
 
 local sessionData = {}
@@ -108,6 +110,17 @@ local function loadPlayerData(player)
     if success then
         data = data or deepCopy(DEFAULT_DATA)
         fillMissing(data, DEFAULT_DATA)
+        data.slots = typeof(data.slots) == "table" and data.slots or {}
+        local slotData = data.slots["1"]
+        if not slotData then
+            slotData = {
+                inventory = deepCopy(data.inventory),
+                unlockedRealms = deepCopy(data.unlockedRealms),
+            }
+            data.slots["1"] = slotData
+        end
+        data.inventory = slotData.inventory or data.inventory
+        data.unlockedRealms = slotData.unlockedRealms or data.unlockedRealms
         -- ensure all realm flags exist
         data.unlockedRealms = type(data.unlockedRealms) == "table" and data.unlockedRealms or {}
         for _, realm in ipairs(REALM_LIST) do
@@ -137,11 +150,28 @@ local function savePlayerData(player)
     else
         data.inventory.orbs = sanitizeOrbs(data.inventory.orbs)
     end
+    local slot = tonumber(player:GetAttribute("PersonaSlot")) or 1
+    data.slots[tostring(slot)] = data.slots[tostring(slot)] or {}
+    data.slots[tostring(slot)].inventory = data.inventory
+    data.slots[tostring(slot)].unlockedRealms = data.unlockedRealms
+
     local success, err = pcall(function()
         DataStore:SetAsync(key, data)
     end)
     if not success then
         warn("Failed to save data for " .. player.Name .. ": " .. err)
+    end
+
+    local personaKey = "u_" .. tostring(player.UserId)
+    local ok, raw = pcall(function() return PersonaStore:GetAsync(personaKey) end)
+    raw = ok and raw or {}
+    local pSlot = raw[tostring(slot)] or {}
+    pSlot.inventory = data.inventory
+    pSlot.unlockedRealms = data.unlockedRealms
+    raw[tostring(slot)] = pSlot
+    local ok2, err2 = pcall(function() PersonaStore:SetAsync(personaKey, raw) end)
+    if not ok2 then
+        warn("Failed to save persona data for " .. player.Name .. ": " .. err2)
     end
 end
 
@@ -159,6 +189,17 @@ local function playerAdded(player)
         player:Kick("Couldn't load your data, rejoin")
         return
     end
+
+    sessionData[player.UserId].slot = 1
+    player:SetAttribute("PersonaSlot", 1)
+    player:GetAttributeChangedSignal("PersonaSlot"):Connect(function()
+        local sd = sessionData[player.UserId]
+        local old = sd.slot or 1
+        sd.slots[tostring(old)] = sd.slots[tostring(old)] or {}
+        sd.slots[tostring(old)].inventory = sd.inventory
+        sd.slots[tostring(old)].unlockedRealms = sd.unlockedRealms
+        sd.slot = tonumber(player:GetAttribute("PersonaSlot")) or 1
+    end)
 
     data.inventory.orbs = sanitizeOrbs(data.inventory.orbs)
     player:SetAttribute("Inventory", HttpService:JSONEncode(data.inventory))
