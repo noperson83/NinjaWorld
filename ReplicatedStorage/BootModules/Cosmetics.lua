@@ -21,6 +21,28 @@ local chosenSlot
 
 local levelValue
 
+local function applyPersonaData(p)
+        if not p then return end
+        if p.inventory then
+                player:SetAttribute("Inventory", HttpService:JSONEncode(p.inventory))
+        end
+        local realms = p.unlockedRealms or p.realms
+        if realms then
+                local folder = player:FindFirstChild("Realms")
+                if folder then
+                        for name, value in pairs(realms) do
+                                local flag = folder:FindFirstChild(name)
+                                if not flag then
+                                        flag = Instance.new("BoolValue")
+                                        flag.Name = name
+                                        flag.Parent = folder
+                                end
+                                flag.Value = value and true or false
+                        end
+                end
+        end
+end
+
 local function getLevel()
 	if levelValue and levelValue.Value then
 		return levelValue.Value
@@ -661,15 +683,16 @@ function Cosmetics.init(config, root, bootUI)
 
 	for i,entry in pairs(slotButtons) do
 		local index = i
-		entry.useBtn.MouseButton1Click:Connect(function()
-			local result = rf:InvokeServer("use", {slot = index})
-			if not (result and result.ok) then warn("Use slot failed:", result and result.err) return end
-			chosenSlot = index
-			currentChoiceType = result.persona and result.persona.type or currentChoiceType
-			if boot and boot.tweenToEnd then boot.tweenToEnd() end
-			showLoadout(result.persona and result.persona.type or currentChoiceType)
-		end)
-		entry.robloxBtn.MouseButton1Click:Connect(function()
+               entry.useBtn.MouseButton1Click:Connect(function()
+                        local result = rf:InvokeServer("use", {slot = index})
+                        if not (result and result.ok) then warn("Use slot failed:", result and result.err) return end
+                        chosenSlot = index
+                        currentChoiceType = result.persona and result.persona.type or currentChoiceType
+                        applyPersonaData(result.persona)
+                        if boot and boot.tweenToEnd then boot.tweenToEnd() end
+                        showLoadout(result.persona and result.persona.type or currentChoiceType)
+                end)
+               entry.robloxBtn.MouseButton1Click:Connect(function()
                         local res = rf:InvokeServer("save", {slot = index, type = "Roblox"})
                         if res and res.ok then
                                 refreshSlots(res)
@@ -677,6 +700,7 @@ function Cosmetics.init(config, root, bootUI)
                                 if useRes and useRes.ok then
                                         chosenSlot = index
                                         currentChoiceType = "Roblox"
+                                        applyPersonaData(useRes.persona)
                                         if boot and boot.tweenToEnd then boot.tweenToEnd() end
                                         showLoadout("Roblox")
                                 else
@@ -685,8 +709,8 @@ function Cosmetics.init(config, root, bootUI)
                         else
                                 warn("Save failed:", res and res.err)
                         end
-		end)
-		entry.starterBtn.MouseButton1Click:Connect(function()
+                end)
+               entry.starterBtn.MouseButton1Click:Connect(function()
                         local res = rf:InvokeServer("save", {slot = index, type = "Ninja"})
                         if res and res.ok then
                                 refreshSlots(res)
@@ -694,6 +718,7 @@ function Cosmetics.init(config, root, bootUI)
                                 if useRes and useRes.ok then
                                         chosenSlot = index
                                         currentChoiceType = "Ninja"
+                                        applyPersonaData(useRes.persona)
                                         if boot and boot.tweenToEnd then boot.tweenToEnd() end
                                         showLoadout("Ninja")
                                 else
@@ -702,7 +727,7 @@ function Cosmetics.init(config, root, bootUI)
                         else
                                 warn("Save failed:", res and res.err)
                         end
-		end)
+                end)
 	end
 end
 

@@ -136,25 +136,34 @@ rf.OnServerInvoke = function(player, action, data)
         if action == "get" then
                 return { slots = personas, slotCount = MAX_SLOTS }
 
-	elseif action == "save" then
-		local s = data and tonumber(data.slot)
-		local t = data and tostring(data.type or "")
-		local n = data and tostring(data.name or "")
-                if not (s and s >= 1 and s <= MAX_SLOTS) then return {ok=false, err="bad slot"} end
-		if t ~= "Roblox" and t ~= "Ninja" then return {ok=false, err="bad type"} end
+       elseif action == "save" then
+               local s = data and tonumber(data.slot)
+               local t = data and tostring(data.type or "")
+               local n = data and tostring(data.name or "")
+               if not (s and s >= 1 and s <= MAX_SLOTS) then return {ok=false, err="bad slot"} end
+               if t ~= "Roblox" and t ~= "Ninja" then return {ok=false, err="bad type"} end
 
-                personas[s] = { type = t, name = (#n > 0 and n) or (t == "Ninja" and "Starter Ninja" or "My Avatar") }
-                persist()
-                return {ok=true, slots = personas}
+               personas[s] = personas[s] or {inventory = {}, unlockedRealms = {}}
+               personas[s].type = t
+               personas[s].name = (#n > 0 and n) or (t == "Ninja" and "Starter Ninja" or "My Avatar")
+               if data.inventory then personas[s].inventory = data.inventory end
+               if data.unlockedRealms or data.realms then
+                       personas[s].unlockedRealms = data.unlockedRealms or data.realms
+               end
+               persist()
+               return {ok=true, slots = personas}
 
-        elseif action == "use" then
-                local s = data and tonumber(data.slot)
-                if not (s and s >= 1 and s <= MAX_SLOTS) then return {ok=false, err="bad slot"} end
-                local p = personas[s]
-                if not p then return {ok=false, err="empty slot"} end
+       elseif action == "use" then
+               local s = data and tonumber(data.slot)
+               if not (s and s >= 1 and s <= MAX_SLOTS) then return {ok=false, err="bad slot"} end
+               local p = personas[s]
+               if not p then return {ok=false, err="empty slot"} end
 
-                player:SetAttribute("PersonaType", p.type)
-                return {ok=true, persona=p}
+               player:SetAttribute("PersonaType", p.type)
+               player:SetAttribute("PersonaSlot", s)
+               p.inventory = p.inventory or {}
+               p.unlockedRealms = p.unlockedRealms or {}
+               return {ok=true, persona=p}
 
         elseif action == "clear" then
                 local s = data and tonumber(data.slot)
