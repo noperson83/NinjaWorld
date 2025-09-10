@@ -43,6 +43,7 @@ local CurrencyService = require(ReplicatedStorage.BootModules.CurrencyService)
 local Shop            = require(ReplicatedStorage.BootModules.Shop)
 local ShopUI          = require(ReplicatedStorage.BootModules.ShopUI)
 local TeleportClient  = require(ReplicatedStorage.ClientModules.TeleportClient)
+local DojoClient      = require(ReplicatedStorage.BootModules.DojoClient)
 
 function BootUI.start(config)
     config = config or {}
@@ -789,6 +790,7 @@ end)
 
 btnEnterRealm.MouseButton1Click:Connect(function()
     if not selectedRealm then return end
+    DojoClient.hide()
     if selectedRealm == "StarterDojo" then
         TweenService:Create(fade, TweenInfo.new(0.25), {BackgroundTransparency = 0}):Play()
         task.wait(0.28)
