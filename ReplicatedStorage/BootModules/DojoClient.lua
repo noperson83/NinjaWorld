@@ -5,9 +5,14 @@ local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 local gui
+local label
 
-function DojoClient.start()
-    if gui then return end
+function DojoClient.start(realmName)
+    local text = "Entering " .. (realmName or "Dojo") .. "..."
+    if gui then
+        if label then label.Text = text end
+        return
+    end
     gui = Instance.new("ScreenGui")
     gui.Name = "DojoLoadingGui"
     gui.IgnoreGuiInset = true
@@ -21,8 +26,8 @@ function DojoClient.start()
     root.BackgroundTransparency = 0.2
     root.Parent = gui
 
-    local label = Instance.new("TextLabel")
-    label.Text = "Entering Dojo..."
+    label = Instance.new("TextLabel")
+    label.Text = text
     label.Font = Enum.Font.GothamBold
     label.TextScaled = true
     label.TextColor3 = Color3.new(1,1,1)
@@ -40,6 +45,7 @@ function DojoClient.hide()
     if gui then
         gui:Destroy()
         gui = nil
+        label = nil
     end
 end
 
