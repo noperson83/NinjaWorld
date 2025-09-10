@@ -6,4 +6,5 @@ local PersonaUI = require(BootModules:WaitForChild("PersonaUI"))
 PersonaUI.start()
 
 local BootUI = require(BootModules:WaitForChild("BootUI"))
-BootUI.start()
+local config = BootUI.fetchData()
+BootUI.start(config)
