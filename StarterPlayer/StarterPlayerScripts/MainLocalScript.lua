@@ -140,19 +140,31 @@ local ignoredInputKeys = {
         [Enum.KeyCode.LeftShift] = true,
 }
 
--- Toggle to enable logging of unmapped key presses for debugging.
-local debugUnmappedInputs = false
+-- Toggle to enable logging of raw and unmapped key presses for debugging.
+local debugInputLogging = false
+
+-- Pressing this key will toggle the debug logging at runtime.
+local LOG_TOGGLE_KEY = Enum.KeyCode.F8
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if gameProcessed then return end
+        -- Allow developers to toggle input logging with a single key press.
+        if input.KeyCode == LOG_TOGGLE_KEY then
+                debugInputLogging = not debugInputLogging
+                warn("Raw input logging " .. (debugInputLogging and "enabled" or "disabled"))
+                return
+        end
 
-	print("?? Raw KeyCode input:", input.KeyCode.Name)
+        if gameProcessed then return end
 
-	if abilityKeybinds[input.KeyCode] then
-		print("Triggering ability for:", input.KeyCode.Name)
-		abilityKeybinds[input.KeyCode]()
-		return
-	end
+        if debugInputLogging and not ignoredInputKeys[input.KeyCode] then
+                print("?? Raw KeyCode input:", input.KeyCode.Name)
+        end
+
+        if abilityKeybinds[input.KeyCode] then
+                print("Triggering ability for:", input.KeyCode.Name)
+                abilityKeybinds[input.KeyCode]()
+                return
+        end
 
 	if combatKeybinds[input.KeyCode] then
 		local action = combatKeybinds[input.KeyCode]
@@ -166,7 +178,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		return
 	end
 
-        if debugUnmappedInputs and not ignoredInputKeys[input.KeyCode] then
+        if debugInputLogging and not ignoredInputKeys[input.KeyCode] then
                 warn("Key pressed but no action mapped:", input.KeyCode.Name)
         end
 end)
