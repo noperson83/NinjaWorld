@@ -17,6 +17,7 @@ local DEFAULT_DATA = {
     level = 1,
     experience = 0,
     kills = 0,
+    rebirths = 0,
     currency = {
         Coins = 0,
         Orbs = 0,
@@ -59,6 +60,10 @@ local DEFAULT_DATA = {
 }
 
 local sessionData = {}
+
+local rebirthFunction = Instance.new("BindableFunction")
+rebirthFunction.Name = "RebirthFunction"
+rebirthFunction.Parent = script
 
 local function decodeInventory(value)
     if typeof(value) ~= "string" then return nil end
@@ -116,11 +121,13 @@ local function loadPlayerData(player)
             slotData = {
                 inventory = deepCopy(data.inventory),
                 unlockedRealms = deepCopy(data.unlockedRealms),
+                rebirths = data.rebirths or 0,
             }
             data.slots["1"] = slotData
         end
         data.inventory = slotData.inventory or data.inventory
         data.unlockedRealms = slotData.unlockedRealms or data.unlockedRealms
+        data.rebirths = slotData.rebirths or data.rebirths or 0
         -- ensure all realm flags exist
         data.unlockedRealms = type(data.unlockedRealms) == "table" and data.unlockedRealms or {}
         for _, realm in ipairs(REALM_LIST) do
@@ -154,6 +161,7 @@ local function savePlayerData(player)
     data.slots[tostring(slot)] = data.slots[tostring(slot)] or {}
     data.slots[tostring(slot)].inventory = data.inventory
     data.slots[tostring(slot)].unlockedRealms = data.unlockedRealms
+    data.slots[tostring(slot)].rebirths = data.rebirths
 
     local success, err = pcall(function()
         DataStore:SetAsync(key, data)
@@ -168,6 +176,7 @@ local function savePlayerData(player)
     local pSlot = raw[tostring(slot)] or {}
     pSlot.inventory = data.inventory
     pSlot.unlockedRealms = data.unlockedRealms
+    pSlot.rebirths = data.rebirths
     raw[tostring(slot)] = pSlot
     local ok2, err2 = pcall(function() PersonaStore:SetAsync(personaKey, raw) end)
     if not ok2 then
@@ -182,6 +191,44 @@ local function addExperience(player, amount)
     end
     exp.Value += amount
 end
+
+local function performRebirth(player)
+    local data = sessionData[player.UserId]
+    if not data then
+        return false
+    end
+
+    data.rebirths = (data.rebirths or 0) + 1
+
+    for element in pairs(data.elements) do
+        data.elements[element] = 0
+    end
+
+    data.unlockedAbilities = {}
+    local abilitiesFolder = player:FindFirstChild("Abilities")
+    if abilitiesFolder then
+        abilitiesFolder:ClearAllChildren()
+    end
+
+    local inv = data.inventory
+    inv.orbs = {}
+    inv.weapons = {}
+    inv.food = {}
+    inv.special = {}
+    player:SetAttribute("Inventory", HttpService:JSONEncode(inv))
+
+    local stats = player:FindFirstChild("Stats")
+    if stats then
+        local rebirthsValue = stats:FindFirstChild("Rebirths")
+        if rebirthsValue then
+            rebirthsValue.Value = data.rebirths
+        end
+    end
+
+    return true
+end
+
+rebirthFunction.OnInvoke = performRebirth
 
 local function playerAdded(player)
     local data = loadPlayerData(player)
@@ -198,7 +245,12 @@ local function playerAdded(player)
         sd.slots[tostring(old)] = sd.slots[tostring(old)] or {}
         sd.slots[tostring(old)].inventory = sd.inventory
         sd.slots[tostring(old)].unlockedRealms = sd.unlockedRealms
+        sd.slots[tostring(old)].rebirths = sd.rebirths
         sd.slot = tonumber(player:GetAttribute("PersonaSlot")) or 1
+        local new = sd.slots[tostring(sd.slot)] or {}
+        sd.inventory = new.inventory or sd.inventory
+        sd.unlockedRealms = new.unlockedRealms or sd.unlockedRealms
+        sd.rebirths = new.rebirths or sd.rebirths or 0
     end)
 
     data.inventory.orbs = sanitizeOrbs(data.inventory.orbs)
@@ -251,6 +303,14 @@ local function playerAdded(player)
     kills.Parent = statsFolder
     kills:GetPropertyChangedSignal("Value"):Connect(function()
         sessionData[player.UserId].kills = kills.Value
+    end)
+
+    local rebirthsValue = Instance.new("IntValue")
+    rebirthsValue.Name = "Rebirths"
+    rebirthsValue.Value = data.rebirths or 0
+    rebirthsValue.Parent = statsFolder
+    rebirthsValue:GetPropertyChangedSignal("Value"):Connect(function()
+        sessionData[player.UserId].rebirths = rebirthsValue.Value
     end)
 
     local leaderLevel = Instance.new("IntValue")
