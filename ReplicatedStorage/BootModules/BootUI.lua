@@ -157,21 +157,37 @@ local function tweenToEnd()
 end
 BootUI.tweenToEnd = tweenToEnd
 
--- =====================
 -- Lighting helpers (disable DOF while UI is visible)
 -- =====================
-local savedDOF = nil
+local savedDOF
+local savedBlurEnabled
 local function disableUIBlur()
-    if savedDOF then return end
+    if savedDOF or savedBlurEnabled ~= nil then return end
     savedDOF = {}
     for _,e in ipairs(Lighting:GetChildren()) do
-        if e:IsA("DepthOfFieldEffect") then savedDOF[e] = e.Enabled; e.Enabled = false end
+        if e:IsA("DepthOfFieldEffect") then
+            savedDOF[e] = e.Enabled
+            e.Enabled = false
+        end
+    end
+    local blur = Lighting:FindFirstChild("Blur") or Lighting:FindFirstChildOfClass("BlurEffect")
+    if blur then
+        savedBlurEnabled = blur.Enabled
+        blur.Enabled = false
     end
 end
 local function restoreUIBlur()
-    if not savedDOF then return end
-    for e,was in pairs(savedDOF) do if e and e.Parent then e.Enabled = was end end
-    savedDOF = nil
+    if savedDOF then
+        for e,was in pairs(savedDOF) do
+            if e and e.Parent then e.Enabled = was end
+        end
+        savedDOF = nil
+    end
+    if savedBlurEnabled ~= nil then
+        local blur = Lighting:FindFirstChild("Blur") or Lighting:FindFirstChildOfClass("BlurEffect")
+        if blur then blur.Enabled = savedBlurEnabled end
+        savedBlurEnabled = nil
+    end
 end
 
 -- =====================
