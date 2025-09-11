@@ -60,6 +60,7 @@ local DEFAULT_DATA = {
 }
 
 local sessionData = {}
+shared.sessionData = sessionData
 
 local rebirthFunction = Instance.new("BindableFunction")
 rebirthFunction.Name = "RebirthFunction"
@@ -79,7 +80,7 @@ local function deepCopy(tbl)
     return copy
 end
 
--- Ensure orbs table is a dictionary with a total not exceeding 10
+-- Ensure orbs table is a dictionary; limit total to 10 to match inventory size
 local function sanitizeOrbs(orbs)
     orbs = typeof(orbs) == "table" and orbs or {}
     local total = 0
@@ -91,6 +92,16 @@ local function sanitizeOrbs(orbs)
             cleaned[element] = allowed
             total += allowed
         end
+    end
+    return cleaned
+end
+
+-- Ensure elements table only contains numbers for known elements
+local function sanitizeElements(elements)
+    elements = typeof(elements) == "table" and elements or {}
+    local cleaned = {}
+    for element, _ in pairs(DEFAULT_DATA.elements) do
+        cleaned[element] = tonumber(elements[element]) or 0
     end
     return cleaned
 end
@@ -115,6 +126,7 @@ local function loadPlayerData(player)
     if success then
         data = data or deepCopy(DEFAULT_DATA)
         fillMissing(data, DEFAULT_DATA)
+        data.elements = sanitizeElements(data.elements)
         data.slots = typeof(data.slots) == "table" and data.slots or {}
         local slotData = data.slots["1"]
         if not slotData then
@@ -163,6 +175,7 @@ local function savePlayerData(player)
     data.slots[tostring(slot)].unlockedRealms = data.unlockedRealms
     data.slots[tostring(slot)].rebirths = data.rebirths
 
+    data.elements = sanitizeElements(data.elements)
     local success, err = pcall(function()
         DataStore:SetAsync(key, data)
     end)
