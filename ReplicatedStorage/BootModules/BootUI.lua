@@ -45,6 +45,10 @@ local ShopUI          = require(ReplicatedStorage.BootModules.ShopUI)
 local TeleportClient  = require(ReplicatedStorage.ClientModules.TeleportClient)
 local DojoClient      = require(ReplicatedStorage.BootModules.DojoClient)
 
+function BootUI.unlockRealm(name)
+    TeleportClient.unlockRealm(name)
+end
+
 local currencyService
 local backpackData
 local currentTab = "Main"
