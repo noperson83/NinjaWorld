@@ -2,6 +2,8 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local DataStoreService = game:GetService("DataStoreService")
 local HttpService = game:GetService("HttpService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local GameSettings = require(ReplicatedStorage:WaitForChild("GameSettings"))
 
 -- single datastore for all player data
 local DataStore = DataStoreService:GetDataStore("PlayerData")
@@ -326,6 +328,34 @@ local function playerAdded(player)
         sessionData[player.UserId].rebirths = rebirthsValue.Value
     end)
 
+    local walkSpeedValue = Instance.new("NumberValue")
+    walkSpeedValue.Name = "WalkSpeed"
+    walkSpeedValue.Value = GameSettings.movementSpeed(levelValue.Value)
+    walkSpeedValue.Parent = statsFolder
+
+    local jumpPowerValue = Instance.new("NumberValue")
+    jumpPowerValue.Name = "JumpPower"
+    jumpPowerValue.Value = GameSettings.jumpPower(levelValue.Value)
+    jumpPowerValue.Parent = statsFolder
+
+    local leaderSpeed = Instance.new("IntValue")
+    leaderSpeed.Name = "WalkSpeed"
+    leaderSpeed.Value = walkSpeedValue.Value
+    leaderSpeed.Parent = leaderstats
+
+    local leaderJump = Instance.new("IntValue")
+    leaderJump.Name = "JumpPower"
+    leaderJump.Value = jumpPowerValue.Value
+    leaderJump.Parent = leaderstats
+
+    walkSpeedValue:GetPropertyChangedSignal("Value"):Connect(function()
+        leaderSpeed.Value = walkSpeedValue.Value
+    end)
+
+    jumpPowerValue:GetPropertyChangedSignal("Value"):Connect(function()
+        leaderJump.Value = jumpPowerValue.Value
+    end)
+
     local leaderLevel = Instance.new("IntValue")
     leaderLevel.Name = "Level"
     leaderLevel.Value = levelValue.Value
@@ -342,6 +372,16 @@ local function playerAdded(player)
         sessionData[player.UserId].level = levelValue.Value
         if leaderLevel.Value ~= levelValue.Value then
             leaderLevel.Value = levelValue.Value
+        end
+
+        local speed = GameSettings.movementSpeed(levelValue.Value)
+        local jump = GameSettings.jumpPower(levelValue.Value)
+        walkSpeedValue.Value = speed
+        jumpPowerValue.Value = jump
+        local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = speed
+            humanoid.JumpPower = jump
         end
     end)
 
@@ -386,11 +426,23 @@ local function playerAdded(player)
     end)
 
     experienceValue:GetPropertyChangedSignal("Value"):Connect(function()
+        local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
         local requiredExperience = math.floor(levelValue.Value ^ 1.5 + 0.5) * 500
-        local maxHealth = math.floor(player.Character:WaitForChild("Humanoid").MaxHealth ^ 0 + 1) * 1
         if experienceValue.Value >= requiredExperience then
             levelValue.Value += 1
-            player.Character:WaitForChild("Humanoid").MaxHealth += maxHealth
+            if humanoid then
+                local maxHealth = math.floor(humanoid.MaxHealth ^ 0 + 1) * 1
+                humanoid.MaxHealth += maxHealth
+            end
+        end
+
+        local speed = GameSettings.movementSpeed(levelValue.Value)
+        local jump = GameSettings.jumpPower(levelValue.Value)
+        walkSpeedValue.Value = speed
+        jumpPowerValue.Value = jump
+        if humanoid then
+            humanoid.WalkSpeed = speed
+            humanoid.JumpPower = jump
         end
     end)
 
@@ -399,6 +451,9 @@ local function playerAdded(player)
         if not humanoid then
             return
         end
+
+        humanoid.WalkSpeed = walkSpeedValue.Value
+        humanoid.JumpPower = jumpPowerValue.Value
 
         humanoid.Died:Connect(function()
             local creator = humanoid:FindFirstChild("creator")
@@ -412,6 +467,14 @@ local function playerAdded(player)
             end
         end)
     end)
+
+    if player.Character then
+        local humanoid = player.Character:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = walkSpeedValue.Value
+            humanoid.JumpPower = jumpPowerValue.Value
+        end
+    end
 end
 
 Players.PlayerAdded:Connect(playerAdded)
