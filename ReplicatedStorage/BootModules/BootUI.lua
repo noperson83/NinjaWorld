@@ -86,13 +86,6 @@ local StarterBackpack = config.inventory or config.starterBackpack or {
 BootUI.StarterBackpack = StarterBackpack
 BootUI.personaData = config.personaData
 
-    currencyService.BalanceChanged.Event:Connect(function(coins, orbs, elements)
-        backpackData = backpackData or {}
-        backpackData.coins = coins
-        backpackData.orbs = orbs
-        backpackData.elements = elements
-        renderBackpack(currentTab)
-    end)
 
 -- =====================
 -- Camera helpers (world)
@@ -797,6 +790,14 @@ function BootUI.populateBackpackUI(bp)
     backpackData.elements = currencyService and currencyService.elements or backpackData.elements
     renderBackpack(currentTab)
 end
+
+currencyService.BalanceChanged.Event:Connect(function(coins, orbs, elements)
+    backpackData = backpackData or {}
+    backpackData.coins = coins
+    backpackData.orbs = orbs
+    backpackData.elements = elements
+    renderBackpack(currentTab)
+end)
 
 -- =====================
 btnBack.MouseButton1Click:Connect(function()
