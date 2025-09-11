@@ -1,6 +1,11 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local AbilityMetadata = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("AbilityMetadata"))
-local ShopItems = require(ReplicatedStorage:WaitForChild("BootModules"):WaitForChild("ShopItems"))
+local bootModules = ReplicatedStorage:WaitForChild("BootModules")
+local shopItemsModule = bootModules:FindFirstChild("ShopItems")
+if not shopItemsModule then
+    warn("ShopItems module missing")
+end
+local ShopItems = shopItemsModule and require(shopItemsModule) or {Elements = {}, Weapons = {}}
 
 local ShopUI = {}
 

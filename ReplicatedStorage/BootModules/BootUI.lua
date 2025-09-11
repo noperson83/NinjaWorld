@@ -802,15 +802,6 @@ end
         backpackData.elements = currencyService and currencyService.elements or backpackData.elements
         renderBackpack(currentTab)
     end
-
-currencyService.BalanceChanged.Event:Connect(function(coins, orbs, elements)
-    backpackData = backpackData or {}
-    backpackData.coins = coins
-    backpackData.orbs = orbs
-    backpackData.elements = elements
-    renderBackpack(currentTab)
-end)
-
 -- =====================
 btnBack.MouseButton1Click:Connect(function()
     -- Return to picker; snap camera back to start
