@@ -802,7 +802,6 @@ end
         backpackData.elements = currencyService and currencyService.elements or backpackData.elements
         renderBackpack(currentTab)
     end
-
 -- =====================
 btnBack.MouseButton1Click:Connect(function()
     -- Return to picker; snap camera back to start
