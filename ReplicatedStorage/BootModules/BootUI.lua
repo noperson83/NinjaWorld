@@ -791,7 +791,8 @@ end)
 btnEnterRealm.MouseButton1Click:Connect(function()
     if not selectedRealm then return end
     local realmName = selectedRealm
-    DojoClient.start(realmDisplayLookup[realmName])
+    local displayName = realmDisplayLookup[selectedRealm]
+    DojoClient.start(displayName)
     if realmName == "StarterDojo" then
         TweenService:Create(fade, TweenInfo.new(0.25), {BackgroundTransparency = 0}):Play()
         task.wait(0.28)
