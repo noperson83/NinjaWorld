@@ -7,21 +7,32 @@ local SoundService = game:GetService("SoundService")
  
 -- Function to preload audio assets
 AudioPlayer.preloadAudio = function(assetArray)
-	local audioAssets = {}
- 
-	-- Add new "Sound" assets to "audioAssets" array
-	for name, audioID in pairs(assetArray) do
-		local audioInstance = Instance.new("Sound")
-		audioInstance.SoundId = "rbxassetid://" .. audioID
-		audioInstance.Name = name
-		audioInstance.Parent = SoundService
-		
-		table.insert(audioAssets, audioInstance)
-	end
- 
-	local success, assets = pcall(function()
-		ContentProvider:PreloadAsync(audioAssets)
-	end)
+       local audioAssets = {}
+
+       -- Add new "Sound" assets to "audioAssets" array
+       for name, audioID in pairs(assetArray) do
+               local numericID = tonumber(audioID)
+               if not numericID or numericID <= 0 or numericID % 1 ~= 0 then
+                       warn(
+                               string.format(
+                                       "Invalid audio ID for '%s': %s",
+                                       name,
+                                       tostring(audioID)
+                               )
+                       )
+               else
+                       local audioInstance = Instance.new("Sound")
+                       audioInstance.SoundId = "rbxassetid://" .. numericID
+                       audioInstance.Name = name
+                       audioInstance.Parent = SoundService
+
+                       table.insert(audioAssets, audioInstance)
+               end
+       end
+
+       local success, assets = pcall(function()
+               ContentProvider:PreloadAsync(audioAssets)
+       end)
 end
  
 -- Function to play an audio asset
