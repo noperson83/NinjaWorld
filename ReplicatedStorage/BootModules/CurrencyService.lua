@@ -29,11 +29,9 @@ function CurrencyService:GetBalance()
 end
 
 function CurrencyService:AddCoins(amount)
-        self.coins = self.coins + amount
         if self.updateEvent then
-                self.updateEvent:FireServer({coins = self.coins})
+                self.updateEvent:FireServer({addCoins = amount})
         end
-        self.BalanceChanged:Fire(self.coins, self.orbs)
 end
 
 function CurrencyService:GetOrbCount()
@@ -57,12 +55,9 @@ function CurrencyService:AddOrb(element)
 end
 
 function CurrencyService:SpendCoins(amount)
-        if self.coins < amount then return false end
-        self.coins = self.coins - amount
         if self.updateEvent then
-                self.updateEvent:FireServer({coins = self.coins})
+                self.updateEvent:FireServer({spendCoins = amount})
         end
-        self.BalanceChanged:Fire(self.coins, self.orbs)
         return true
 end
 

@@ -12,6 +12,9 @@ end
 local MAX_ORBS = 10
 local balances = {}
 
+local CurrencyService = {balances = balances}
+shared.CurrencyService = CurrencyService
+
 local function getOrbCount(orbs)
     local total = 0
     for _, v in pairs(orbs) do
@@ -25,6 +28,20 @@ local function sendBalance(player)
     if data then
         updateEvent:FireClient(player, data)
     end
+end
+
+function CurrencyService.GetBalance(player)
+    return balances[player.UserId]
+end
+
+function CurrencyService.AdjustCoins(player, amount)
+    local balance = balances[player.UserId]
+    if not balance or balance.coins + amount < 0 then
+        return false
+    end
+    balance.coins += amount
+    sendBalance(player)
+    return true
 end
 
 local function addOrb(player, element)
@@ -50,6 +67,7 @@ end
 
 Players.PlayerAdded:Connect(function(player)
     balances[player.UserId] = {coins = 0, orbs = {}}
+    sendBalance(player)
     player:GetAttributeChangedSignal("Inventory"):Connect(function()
         local invStr = player:GetAttribute("Inventory")
         if typeof(invStr) == "string" then
@@ -73,8 +91,9 @@ updateEvent.OnServerEvent:Connect(function(player, data)
         balances[player.UserId] = balance
     end
     if typeof(data) == "table" then
-        if data.coins then balance.coins = data.coins end
         if data.addOrb then addOrb(player, data.addOrb) return end
+        if data.addCoins then CurrencyService.AdjustCoins(player, data.addCoins) return end
+        if data.spendCoins then CurrencyService.AdjustCoins(player, -data.spendCoins) return end
         if data.request then sendBalance(player) return end
     end
     sendBalance(player)
