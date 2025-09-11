@@ -8,13 +8,16 @@ local Abilities = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitFo
 local CombatController = {}
 
 local cooldowns = {
-	Punch = 0.3,
-	Kick = 0.3,
-	Roll = 0.3,
-	Crouch = 0.3,
-	Slide = 1,
-	Rain = 3
+        Punch = 0.3,
+        Kick = 0.3,
+        Roll = 0.3,
+        Crouch = 0.3,
+        Slide = 1,
+        Rain = 3
 }
+
+local slideDuration = cooldowns.Slide
+local slideSpeedMultiplier = 1.25
 
 local canStrike = true
 local animationTracks = {}
@@ -53,7 +56,15 @@ function CombatController.initAnimations()
 end
 
 function CombatController.getTracks()
-	return animationTracks
+        return animationTracks
+end
+
+function CombatController.setSlideDuration(seconds)
+       slideDuration = seconds
+end
+
+function CombatController.setSlideSpeedMultiplier(multiplier)
+       slideSpeedMultiplier = multiplier
 end
 
 function CombatController.perform(actionName)
@@ -98,20 +109,22 @@ function CombatController.perform(actionName)
 		else
 			warn("?? Animation track missing for:", actionName)
 		end
-		if snd then snd:Play() end
-		if actionName == "Slid" then
-			CharacterManager.humanoid.WalkSpeed = 30
-			task.delay(cooldowns["Slide"], function()
-				if track then track:Stop() end
-				CharacterManager.humanoid.WalkSpeed = 24
-				canStrike = true
-			end)
-			return
-		end
-		task.delay(cooldowns[actionName], function()
-			canStrike = true
-		end)
-	end
+                if snd then snd:Play() end
+                if actionName == "Slid" then
+                       local humanoid = CharacterManager.humanoid
+                       local originalSpeed = humanoid.WalkSpeed
+                       humanoid.WalkSpeed = originalSpeed * slideSpeedMultiplier
+                       task.delay(slideDuration, function()
+                               if track then track:Stop() end
+                               humanoid.WalkSpeed = originalSpeed
+                               canStrike = true
+                       end)
+                       return
+                end
+                task.delay(cooldowns[actionName], function()
+                        canStrike = true
+                end)
+        end
 end
 
 return CombatController

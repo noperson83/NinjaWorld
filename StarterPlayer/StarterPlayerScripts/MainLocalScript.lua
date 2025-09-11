@@ -153,7 +153,7 @@ end)
 
 -- Extended Slide behavior (1.5s duration, increased movement)
 CombatController.setSlideDuration(1.5)
-CombatController.setSlideqSpeedMultiplier(2.0)
+CombatController.setSlideSpeedMultiplier(2.0)
 
 -- Print Game Settings debug info
 print("Game Title:", GameSettings.gameName)
