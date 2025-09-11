@@ -218,8 +218,12 @@ function TeleportClient.init(gui)
                 return
         end
 
-        TeleportClient.bindZoneButtons(gui)
-        TeleportClient.bindWorldButtons(gui)
+        if gui:FindFirstChild("TeleFrame", true) then
+                TeleportClient.bindZoneButtons(gui)
+        end
+        if gui:FindFirstChild("WorldTeleFrame", true) then
+                TeleportClient.bindWorldButtons(gui)
+        end
 end
 
 return TeleportClient
