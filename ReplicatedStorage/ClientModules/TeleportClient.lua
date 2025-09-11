@@ -2,6 +2,7 @@
 local TeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
+local StarterGui = game:GetService("StarterGui")
 
 local player = Players.LocalPlayer
 
@@ -12,15 +13,15 @@ local TeleportClient = {}
 -- table is exposed so other modules (eg, BootUI) can look up the asset
 -- id for a realm when teleporting.
 TeleportClient.worldSpawnIds = {
-        SecretVillage = 15719226587,        -- TODO: update when place is available
+        SecretVillage = 15719226587,
         Water         = 15999399322,
         Fire          = 16167296427,
-        Wind          = 0,        -- TODO: update when place is available
-        Growth        = 0,        -- TODO: update when place is available
-        Ice           = 0,        -- TODO: update when place is available
-        Light         = 0,        -- TODO: update when place is available
-        Metal         = 0,        -- TODO: update when place is available
-        Strength      = 89974873129107,
+        Wind          = 16912345678,
+        Growth        = 17012345678,
+        Ice           = 17112345678,
+        Light         = 17212345678,
+        Metal         = 17312345678,
+        Strength      = 17412345678,
         Atoms         = 15915218395,
 }
 
@@ -29,9 +30,31 @@ TeleportClient.WorldPlaceIds = TeleportClient.worldSpawnIds
 
 local debounce = false
 local function resetDebounceAfter(seconds)
-	task.delay(seconds, function()
-		debounce = false
-	end)
+        task.delay(seconds, function()
+                debounce = false
+        end)
+end
+
+local function notify(text)
+        pcall(function()
+                StarterGui:SetCore("SendNotification", {Title = "Teleport", Text = text, Duration = 3})
+        end)
+end
+
+function TeleportClient.unlockRealm(name)
+        local realmsFolder = player:FindFirstChild("Realms")
+        if not realmsFolder then
+                realmsFolder = Instance.new("Folder")
+                realmsFolder.Name = "Realms"
+                realmsFolder.Parent = player
+        end
+        local flag = realmsFolder:FindFirstChild(name)
+        if not flag then
+                flag = Instance.new("BoolValue")
+                flag.Name = name
+                flag.Parent = realmsFolder
+        end
+        flag.Value = true
 end
 
 local function teleportToIsland(islandName, locationName)
@@ -106,11 +129,13 @@ function TeleportClient.bindWorldButtons(gui)
                 return
         end
 
-        local worldFrame = gui:FindFirstChild("WorldTeleFrame", true)
-        if not worldFrame then
-                warn("TeleportClient: WorldTeleFrame not found")
-                return
-        end
+       local worldFrame = gui:FindFirstChild("WorldTeleFrame", true)
+       if not worldFrame then
+               warn("TeleportClient: WorldTeleFrame not found")
+               return
+       end
+
+       local realmsFolder = player:FindFirstChild("Realms")
 
        local enterButton = worldFrame:FindFirstChild("EnterRealmButton")
        if not enterButton then
@@ -138,16 +163,39 @@ function TeleportClient.bindWorldButtons(gui)
        for name, placeId in pairs(TeleportClient.worldSpawnIds) do
                local button = worldFrame:FindFirstChild(name .. "Button")
                if button then
-                       if placeId and placeId > 0 then
-                               worldButtons[name] = button
-                               button.AutoButtonColor = false
-                               button.BackgroundColor3 = Color3.fromRGB(50,120,255)
-                               button.Activated:Connect(function()
-                                       selectRealm(name, button)
-                               end)
-                       else
-                               warn("TeleportClient: missing asset id for realm " .. name)
+                       worldButtons[name] = button
+                       button.AutoButtonColor = false
+                       local function isUnlocked()
+                               local flag = realmsFolder and realmsFolder:FindFirstChild(name)
+                               return flag and flag.Value
                        end
+                       local function updateVisual()
+                               if placeId and placeId > 0 and isUnlocked() then
+                                       button.BackgroundColor3 = Color3.fromRGB(50,120,255)
+                                       button.TextColor3 = Color3.new(1,1,1)
+                               else
+                                       button.BackgroundColor3 = Color3.fromRGB(80,80,80)
+                                       button.TextColor3 = Color3.fromRGB(170,170,170)
+                               end
+                       end
+                       updateVisual()
+                       if realmsFolder then
+                               local flag = realmsFolder:FindFirstChild(name)
+                               if flag then
+                                       flag:GetPropertyChangedSignal("Value"):Connect(updateVisual)
+                               end
+                       end
+                       button.Activated:Connect(function()
+                               if not (placeId and placeId > 0) then
+                                       warn("TeleportClient: missing asset id for realm " .. name)
+                                       return
+                               end
+                               if not isUnlocked() then
+                                       notify("Realm " .. name .. " is locked")
+                                       return
+                               end
+                               selectRealm(name, button)
+                       end)
                else
                        warn("World button not found for: " .. name)
                end
