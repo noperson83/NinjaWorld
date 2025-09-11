@@ -70,6 +70,18 @@ local shop            = Shop.new(config, currencyService)
 BootUI.currencyService = currencyService
 BootUI.shop = shop
 
+    -- connect currency updates after service is created but before backpack UI is defined
+    local renderBackpack
+    currencyService.BalanceChanged.Event:Connect(function(coins, orbs, elements)
+        backpackData = backpackData or {}
+        backpackData.coins = coins
+        backpackData.orbs = orbs
+        backpackData.elements = elements
+        if renderBackpack then
+            renderBackpack(currentTab)
+        end
+    end)
+
 -- =====================
 -- Config
 -- =====================
@@ -715,7 +727,7 @@ local function updateTabButtonStates()
     end
 end
 
-local function renderBackpack(tab)
+    function renderBackpack(tab)
     if backpackData == nil then return end
     currentTab = tab or currentTab
     updateTabButtonStates()
@@ -785,11 +797,11 @@ for name,btn in pairs(tabButtons) do
     end)
 end
 
-function BootUI.populateBackpackUI(bp)
-    backpackData = bp
-    backpackData.elements = currencyService and currencyService.elements or backpackData.elements
-    renderBackpack(currentTab)
-end
+    function BootUI.populateBackpackUI(bp)
+        backpackData = bp
+        backpackData.elements = currencyService and currencyService.elements or backpackData.elements
+        renderBackpack(currentTab)
+    end
 
 currencyService.BalanceChanged.Event:Connect(function(coins, orbs, elements)
     backpackData = backpackData or {}
