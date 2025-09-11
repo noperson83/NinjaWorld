@@ -45,6 +45,10 @@ local ShopUI          = require(ReplicatedStorage.BootModules.ShopUI)
 local TeleportClient  = require(ReplicatedStorage.ClientModules.TeleportClient)
 local DojoClient      = require(ReplicatedStorage.BootModules.DojoClient)
 
+local currencyService
+local backpackData
+local currentTab = "Main"
+
 function BootUI.start(config)
     config = config or {}
     config.showShop = config.showShop or false
@@ -57,9 +61,7 @@ function BootUI.start(config)
 --  • Minor: consistent 0.6 transparency panels, plus small cleanups
 
 -- =====================
--- Module instances
--- =====================
-local currencyService = CurrencyService.new(config)
+currencyService = CurrencyService.new(config)
 local shop            = Shop.new(config, currencyService)
 BootUI.currencyService = currencyService
 BootUI.shop = shop
@@ -79,6 +81,14 @@ local StarterBackpack = config.inventory or config.starterBackpack or {
 }
 BootUI.StarterBackpack = StarterBackpack
 BootUI.personaData = config.personaData
+
+    currencyService.BalanceChanged.Event:Connect(function(coins, orbs, elements)
+        backpackData = backpackData or {}
+        backpackData.coins = coins
+        backpackData.orbs = orbs
+        backpackData.elements = elements
+        renderBackpack(currentTab)
+    end)
 
 -- =====================
 -- Camera helpers (world)
@@ -702,9 +712,6 @@ local function buildCharacterPreview(personaType)
 end
 BootUI.buildCharacterPreview = buildCharacterPreview
 
-local backpackData
-local currentTab = "Main"
-
 local function updateTabButtonStates()
     for name,btn in pairs(tabButtons) do
         btn.BackgroundColor3 = (name == currentTab) and Color3.fromRGB(70,70,72) or Color3.fromRGB(50,50,52)
@@ -723,10 +730,15 @@ local function renderBackpack(tab)
         capBarBG.Visible, capBar.Visible, capLabel.Visible = false, false, false
         addHeader("Currency")
         addSimpleRow("Coins", backpackData.coins or 0)
+        local elementLevels = backpackData.elements or {}
+        addHeader("Element Levels")
+        for element, lvl in pairs(elementLevels) do
+            if lvl > 0 then addSimpleRow(element, lvl) end
+        end
         local orbTable = backpackData.orbs or {}
         local totalOrbs = 0
         for _, v in pairs(orbTable) do totalOrbs = totalOrbs + v end
-        addHeader(string.format("Elements (%d)", totalOrbs))
+        addHeader(string.format("Orbs (%d)", totalOrbs))
         for element, v in pairs(orbTable) do
             if v > 0 then addSimpleRow(element, v) end
         end
@@ -778,6 +790,7 @@ end
 
 function BootUI.populateBackpackUI(bp)
     backpackData = bp
+    backpackData.elements = currencyService and currencyService.elements or backpackData.elements
     renderBackpack(currentTab)
 end
 

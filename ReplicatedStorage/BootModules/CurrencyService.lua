@@ -6,9 +6,11 @@ function CurrencyService.new(config)
     local self = setmetatable({}, CurrencyService)
     self.coins = 0
     self.orbs = {}
+    self.elements = {}
 
     self.BalanceChanged = Instance.new("BindableEvent")
-    self.BalanceChanged:Fire(self.coins, self.orbs)
+    self.ElementLeveled = Instance.new("BindableEvent")
+    self.BalanceChanged:Fire(self.coins, self.orbs, self.elements)
 
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
     self.updateEvent = ReplicatedStorage:FindFirstChild("CurrencyUpdated")
@@ -16,7 +18,11 @@ function CurrencyService.new(config)
         self.updateEvent.OnClientEvent:Connect(function(data)
             if data.coins then self.coins = data.coins end
             if data.orbs then self.orbs = data.orbs end
-            self.BalanceChanged:Fire(self.coins, self.orbs)
+            if data.elements then self.elements = data.elements end
+            if data.elementLeveled then
+                self.ElementLeveled:Fire(data.elementLeveled, self.elements[data.elementLeveled])
+            end
+            self.BalanceChanged:Fire(self.coins, self.orbs, self.elements)
         end)
         self.updateEvent:FireServer({request = true})
     end
@@ -25,7 +31,7 @@ function CurrencyService.new(config)
 end
 
 function CurrencyService:GetBalance()
-        return self.coins, self.orbs
+        return self.coins, self.orbs, self.elements
 end
 
 function CurrencyService:AddCoins(amount)
@@ -44,13 +50,11 @@ end
 
 function CurrencyService:AddOrb(element)
         if typeof(element) ~= "string" then return false end
-        if self.orbs[element] then return false end
-        if self:GetOrbCount() >= 10 then return false end
-        self.orbs[element] = 1
+        self.orbs[element] = (self.orbs[element] or 0) + 1
         if self.updateEvent then
                 self.updateEvent:FireServer({addOrb = element})
         end
-        self.BalanceChanged:Fire(self.coins, self.orbs)
+        self.BalanceChanged:Fire(self.coins, self.orbs, self.elements)
         return true
 end
 
