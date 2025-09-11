@@ -117,13 +117,27 @@ local abilityKeybinds = {
 
 -- Connect combat keybinds
 local combatKeybinds = {
-	[Enum.KeyCode.E] = "Punch",
-	[Enum.KeyCode.T] = "Punch",
-	[Enum.KeyCode.Q] = "Kick",
-	[Enum.KeyCode.R] = "Roll",
-	[Enum.KeyCode.C] = "Crouch",
-	[Enum.KeyCode.LeftControl] = "Slid"
+        [Enum.KeyCode.E] = "Punch",
+        [Enum.KeyCode.T] = "Punch",
+        [Enum.KeyCode.Q] = "Kick",
+        [Enum.KeyCode.R] = "Roll",
+        [Enum.KeyCode.C] = "Crouch",
+        [Enum.KeyCode.LeftControl] = "Slid"
 }
+
+-- Keys used for standard character movement that should not trigger
+-- "no action mapped" warnings when pressed.
+local ignoredInputKeys = {
+        [Enum.KeyCode.W] = true,
+        [Enum.KeyCode.A] = true,
+        [Enum.KeyCode.S] = true,
+        [Enum.KeyCode.D] = true,
+        [Enum.KeyCode.Space] = true,
+        [Enum.KeyCode.LeftShift] = true,
+}
+
+-- Toggle to enable logging of unmapped key presses for debugging.
+local debugUnmappedInputs = false
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed then return end
@@ -148,7 +162,9 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		return
 	end
 
-	print("? Key pressed but no action mapped:", input.KeyCode.Name)
+        if debugUnmappedInputs and not ignoredInputKeys[input.KeyCode] then
+                warn("Key pressed but no action mapped:", input.KeyCode.Name)
+        end
 end)
 
 -- Extended Slide behavior (1.5s duration, increased movement)
