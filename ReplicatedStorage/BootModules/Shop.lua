@@ -12,7 +12,8 @@ function Shop.new(config, currencyService)
 end
 
 function Shop:Purchase(itemId, cost)
-        if not self.currencyService:SpendCoins(cost) then
+        local coins = self.currencyService:GetBalance()
+        if coins < cost then
                 warn("Not enough coins for purchase")
                 return false
         end
