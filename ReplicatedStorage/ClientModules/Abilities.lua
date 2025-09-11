@@ -6,6 +6,27 @@ local Workspace = game:GetService("Workspace")
 local CharacterManager = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("CharacterManager"))
 local AbilityMetadata = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("AbilityMetadata"))
 
+local Elements = ReplicatedStorage:WaitForChild("Elements")
+local DragonFX = nil
+local BeastFX = nil
+
+do
+        local fireElem = Elements:FindFirstChild("FireElem")
+        local beastElem = Elements:FindFirstChild("BeastElem")
+        if fireElem then
+                local module = fireElem:FindFirstChild("DragonFX")
+                if module then
+                        DragonFX = require(module)
+                end
+        end
+        if beastElem then
+                local module = beastElem:FindFirstChild("BeastFX")
+                if module then
+                        BeastFX = require(module)
+                end
+        end
+end
+
 local Abilities = {}
 local unlocked = {}
 Abilities.unlocked = unlocked
@@ -162,11 +183,95 @@ end
 
 function Abilities.Dragon()
         if not ensureUnlocked("Dragon") then return end
-        warn("?? Dragon not implemented yet")
+
+        local animator = CharacterManager.animator
+        if not animator then return end
+
+        local projectile = DragonFX and DragonFX.create() or Instance.new("Part")
+        if not DragonFX then
+                projectile.Name = "DragonProjectile"
+                projectile.Size = Vector3.new(2, 2, 4)
+                projectile.Material = Enum.Material.Neon
+                projectile.BrickColor = BrickColor.new("Bright orange")
+                projectile.CanCollide = false
+                local fire = Instance.new("Fire")
+                fire.Heat = 0
+                fire.Size = 5
+                fire.Color = Color3.fromRGB(255, 170, 0)
+                fire.SecondaryColor = Color3.fromRGB(255, 255, 255)
+                fire.Parent = projectile
+        end
+
+        projectile.CFrame = CharacterManager.rightArm.CFrame * CFrame.new(0, -1.5, 0)
+        projectile.Velocity = CharacterManager.rightArm.CFrame.LookVector * 120
+        projectile.Parent = Workspace
+
+        projectile.Touched:Connect(function(hit)
+                local humanoid = hit.Parent and hit.Parent:FindFirstChild("Humanoid")
+                if humanoid and humanoid ~= CharacterManager.humanoid then
+                        humanoid:TakeDamage(40)
+                        local explosion = Instance.new("Explosion")
+                        explosion.Position = projectile.Position
+                        explosion.BlastRadius = 6
+                        explosion.BlastPressure = 0
+                        explosion.DestroyJointRadiusPercent = 0
+                        explosion.Parent = Workspace
+                        projectile:Destroy()
+                end
+        end)
+
+        task.delay(5, function()
+                if projectile then
+                        projectile:Destroy()
+                end
+        end)
 end
 function Abilities.Beast()
         if not ensureUnlocked("Beast") then return end
-        warn("?? Beast not implemented yet")
+
+        local humanoidRoot = CharacterManager.humanoidRoot
+        if not humanoidRoot then return end
+
+        local aura = BeastFX and BeastFX.create() or Instance.new("Part")
+        if not BeastFX then
+                aura.Name = "BeastAura"
+                aura.Shape = Enum.PartType.Ball
+                aura.Size = Vector3.new(8, 8, 8)
+                aura.Transparency = 0.7
+                aura.Material = Enum.Material.Neon
+                aura.BrickColor = BrickColor.new("Earth green")
+                aura.CanCollide = false
+                aura.Anchored = true
+                local smoke = Instance.new("Smoke")
+                smoke.Color = Color3.fromRGB(80, 255, 80)
+                smoke.Opacity = 0.3
+                smoke.Size = 5
+                smoke.RiseVelocity = 0
+                smoke.Parent = aura
+        end
+
+        aura.CFrame = humanoidRoot.CFrame
+        aura.Parent = Workspace
+
+        local radius = aura.Size.X / 2
+        local parts = Workspace:GetPartBoundsInRadius(humanoidRoot.Position, radius)
+        for _, part in ipairs(parts) do
+                local humanoid = part.Parent and part.Parent:FindFirstChild("Humanoid")
+                if humanoid and humanoid ~= CharacterManager.humanoid then
+                        humanoid:TakeDamage(25)
+                        local bodyVelocity = Instance.new("BodyVelocity")
+                        bodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+                        bodyVelocity.Velocity = (part.Position - humanoidRoot.Position).Unit * 60 + Vector3.new(0, 30, 0)
+                        bodyVelocity.Parent = part
+                        task.delay(0.5, function()
+                                bodyVelocity:Destroy()
+                        end)
+                end
+        end
+
+        task.delay(0.5, function()
+                aura:Destroy()
+        end)
 end
 
 return Abilities
