@@ -16,6 +16,10 @@ local GameSettings = require(ReplicatedStorage:WaitForChild("GameSettings"))
 local player = Players.LocalPlayer
 local PlayerGui = player:WaitForChild("PlayerGui")
 
+-- Preload and validate audio assets
+local invalidAudioCount = AudioPlayer.preloadAudio({})
+assert(invalidAudioCount == 0, "Invalid audio asset IDs detected during startup")
+
 -- Setup character and wait until fully initialized
 CharacterManager.setup(player)
 CombatController.initAnimations()
