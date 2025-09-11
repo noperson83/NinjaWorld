@@ -224,7 +224,49 @@ BootUI.shopBtn = shopBtn
 shopBtn.Activated:Connect(function()
     toggleShop()
 end)
-TeleportClient.init(root)
+
+    -- teleport UI placeholders
+    local teleFrame = Instance.new("Frame")
+    teleFrame.Name = "TeleFrame"
+    teleFrame.Size = UDim2.fromScale(1,1)
+    teleFrame.BackgroundTransparency = 1
+    teleFrame.Visible = false
+    teleFrame.Parent = root
+
+    local zoneButtons = {"Atom","Fire","Grow","Ice","Light","Metal","Water","Wind","Dojo","Starter"}
+    for _, zone in ipairs(zoneButtons) do
+        local button = Instance.new("TextButton")
+        button.Name = zone .. "Button"
+        button.Size = UDim2.new(0,0,0,0)
+        button.Visible = false
+        button.Text = zone
+        button.Parent = teleFrame
+    end
+
+    local worldFrame = Instance.new("Frame")
+    worldFrame.Name = "WorldTeleFrame"
+    worldFrame.Size = UDim2.fromScale(1,1)
+    worldFrame.BackgroundTransparency = 1
+    worldFrame.Visible = false
+    worldFrame.Parent = root
+
+    local enterRealmButton = Instance.new("TextButton")
+    enterRealmButton.Name = "EnterRealmButton"
+    enterRealmButton.Size = UDim2.new(0,0,0,0)
+    enterRealmButton.Visible = false
+    enterRealmButton.Text = "Enter"
+    enterRealmButton.Parent = worldFrame
+
+    for realmName, _ in pairs(TeleportClient.worldSpawnIds) do
+        local button = Instance.new("TextButton")
+        button.Name = realmName .. "Button"
+        button.Size = UDim2.new(0,0,0,0)
+        button.Visible = false
+        button.Text = realmName
+        button.Parent = worldFrame
+    end
+
+    TeleportClient.init(root)
 
 -- Intro visuals
 local fade = Instance.new("Frame")
