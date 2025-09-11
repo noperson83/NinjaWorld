@@ -8,7 +8,12 @@ if not shopEvent then
     shopEvent.Parent = ReplicatedStorage
 end
 
-local ShopItems = require(ReplicatedStorage:WaitForChild("BootModules"):WaitForChild("ShopItems"))
+local bootModules = ReplicatedStorage:WaitForChild("BootModules")
+local shopItemsModule = bootModules:FindFirstChild("ShopItems")
+if not shopItemsModule then
+    warn("ShopItems module missing")
+end
+local ShopItems = shopItemsModule and require(shopItemsModule) or {}
 local CurrencyService = shared.CurrencyService
 
 local function findItem(itemId)
