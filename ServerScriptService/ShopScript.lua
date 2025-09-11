@@ -1,38 +1,79 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local InsertService = game:GetService("InsertService")
 
-local merchModule = ReplicatedStorage:FindFirstChild("MerchBooth")
-if not merchModule then
-    warn("MerchBooth module not found")
-    return
+local shopEvent = ReplicatedStorage:FindFirstChild("ShopEvent")
+if not shopEvent then
+    shopEvent = Instance.new("RemoteEvent")
+    shopEvent.Name = "ShopEvent"
+    shopEvent.Parent = ReplicatedStorage
 end
 
-local MerchBooth = require(merchModule)
+local ShopItems = require(ReplicatedStorage:WaitForChild("BootModules"):WaitForChild("ShopItems"))
+local CurrencyService = shared.CurrencyService
 
-local items = {
-	125630227934002,  -- MetalMagic
-	125593084537583,  -- Longsleeve
-	120626848945926,  -- BLKRobotMagic
-	101437883259148,  -- LongSSLeeveLM
-  -- Sword A	16232452668,
-  -- Sword B	16232532667,
-  -- Sword C	16232504981,
-  -- Sword D	16232534668,
-  -- Bow A	16117888680,
-  -- Bow B	16117890021,	116257239830311,
-  -- Bow C	16117894011,
-  -- Bow D	16117895377,
-  -- BowBow	16232118442,
-  -- LMShirt	15899214466,
-  -- LMPants	15899822232,
-  -- Song 1	15933971668,
-  -- IceCoin	17799298968,
-}
-
-for _, assetId in items do
-	local success, errorMessage = pcall(function()
-		MerchBooth.addItemAsync(assetId)
-	end)
-	if not success then
-		warn(errorMessage)
-	end
+local function findItem(itemId)
+    for category, items in pairs(ShopItems) do
+        local item = items[itemId]
+        if item then
+            return category, item
+        end
+    end
 end
+
+local function giveWeapon(player, itemId, def)
+    local backpack = player:FindFirstChild("Backpack")
+    if not backpack then return end
+
+    if def.assetId then
+        local ok, model = pcall(function()
+            return InsertService:LoadAsset(def.assetId)
+        end)
+        if ok and model then
+            local tool = model:FindFirstChildWhichIsA("Tool")
+            if tool then
+                tool.Parent = backpack
+            end
+            model:Destroy()
+            return
+        end
+    end
+
+    local tool = Instance.new("Tool")
+    tool.Name = tostring(def.name or itemId or "Weapon")
+    tool.Parent = backpack
+end
+
+local function unlockElement(player, itemId)
+    local folder = player:FindFirstChild("Elements")
+    if not folder then
+        folder = Instance.new("Folder")
+        folder.Name = "Elements"
+        folder.Parent = player
+    end
+    if not folder:FindFirstChild(itemId) then
+        local flag = Instance.new("BoolValue")
+        flag.Name = itemId
+        flag.Value = true
+        flag.Parent = folder
+    end
+end
+
+shopEvent.OnServerEvent:Connect(function(player, data)
+    if typeof(data) ~= "table" then return end
+    local itemId = data.itemId
+    local cost = data.cost
+    if typeof(itemId) ~= "string" or typeof(cost) ~= "number" then return end
+
+    local category, def = findItem(itemId)
+    if not def or def.cost ~= cost then return end
+
+    local balance = CurrencyService and CurrencyService.GetBalance(player)
+    if not balance or balance.coins < cost then return end
+    if not CurrencyService.AdjustCoins(player, -cost) then return end
+
+    if category == "Weapons" then
+        giveWeapon(player, itemId, def)
+    elseif category == "Elements" then
+        unlockElement(player, itemId)
+    end
+end)

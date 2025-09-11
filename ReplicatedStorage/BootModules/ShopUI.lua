@@ -1,5 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local AbilityMetadata = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("AbilityMetadata"))
+local ShopItems = require(ReplicatedStorage:WaitForChild("BootModules"):WaitForChild("ShopItems"))
 
 local ShopUI = {}
 
@@ -80,20 +81,33 @@ function ShopUI.init(config, shop, bootUI, defaultTab)
         end)
     end
 
-    -- Placeholder tabs
-    local elementsLabel = Instance.new("TextLabel")
-    elementsLabel.Size = UDim2.new(1,0,0,40)
-    elementsLabel.BackgroundTransparency = 1
-    elementsLabel.Text = "Elements coming soon"
-    elementsLabel.TextColor3 = Color3.new(1,1,1)
-    elementsLabel.Parent = tabFrames["Elements"]
+    -- Elements tab
+    local elementsFrame = tabFrames["Elements"]
+    for itemId, info in pairs(ShopItems.Elements) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1,0,0,40)
+        btn.BackgroundColor3 = Color3.fromRGB(80,80,82)
+        btn.TextColor3 = Color3.new(1,1,1)
+        btn.Text = itemId .. " (" .. info.cost .. " Coins)"
+        btn.Parent = elementsFrame
+        btn.Activated:Connect(function()
+            shop:Purchase(itemId, info.cost)
+        end)
+    end
 
-    local weaponsLabel = Instance.new("TextLabel")
-    weaponsLabel.Size = UDim2.new(1,0,0,40)
-    weaponsLabel.BackgroundTransparency = 1
-    weaponsLabel.Text = "Weapons coming soon"
-    weaponsLabel.TextColor3 = Color3.new(1,1,1)
-    weaponsLabel.Parent = tabFrames["Weapons"]
+    -- Weapons tab
+    local weaponsFrame = tabFrames["Weapons"]
+    for itemId, info in pairs(ShopItems.Weapons) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1,0,0,40)
+        btn.BackgroundColor3 = Color3.fromRGB(80,80,82)
+        btn.TextColor3 = Color3.new(1,1,1)
+        btn.Text = itemId .. " (" .. info.cost .. " Coins)"
+        btn.Parent = weaponsFrame
+        btn.Activated:Connect(function()
+            shop:Purchase(itemId, info.cost)
+        end)
+    end
 
     function ShopUI.setTab(tabName)
         for name, f in pairs(tabFrames) do
