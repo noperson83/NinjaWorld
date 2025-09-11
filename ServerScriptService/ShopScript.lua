@@ -9,11 +9,8 @@ if not shopEvent then
 end
 
 local bootModules = ReplicatedStorage:WaitForChild("BootModules")
-local shopItemsModule = bootModules:WaitForChild("ShopItems", 5)
-if not shopItemsModule then
-    warn("ShopItems module missing")
-    return
-end
+local shopItemsModule = bootModules:WaitForChild("ShopItems")
+assert(shopItemsModule, "ShopItems module missing")
 local ShopItems = require(shopItemsModule)
 local CurrencyService = shared.CurrencyService
 
