@@ -147,6 +147,15 @@ local ignoredInputKeys = {
         [Enum.KeyCode.D] = true,
         [Enum.KeyCode.Space] = true,
         [Enum.KeyCode.LeftShift] = true,
+        -- Arrow keys
+        [Enum.KeyCode.Up] = true,
+        [Enum.KeyCode.Down] = true,
+        [Enum.KeyCode.Left] = true,
+        [Enum.KeyCode.Right] = true,
+        -- Common UI navigation keys
+        [Enum.KeyCode.Tab] = true,
+        [Enum.KeyCode.Escape] = true,
+        [Enum.KeyCode.Return] = true,
 }
 
 -- Toggle to enable logging of raw and unmapped key presses for debugging.
@@ -165,30 +174,26 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 
         if gameProcessed then return end
 
-        if debugInputLogging and not ignoredInputKeys[input.KeyCode] then
-                print("?? Raw KeyCode input:", input.KeyCode.Name)
-        end
-
         if abilityKeybinds[input.KeyCode] then
                 print("Triggering ability for:", input.KeyCode.Name)
                 abilityKeybinds[input.KeyCode]()
                 return
         end
 
-	if combatKeybinds[input.KeyCode] then
-		local action = combatKeybinds[input.KeyCode]
-		print("Triggering combat action for:", action)
-		if not CombatController or not CombatController.perform then
-			warn("CombatController or perform method is nil!")
-			return
-		end
-		print("Calling CombatController.perform with:", action)
-		CombatController.perform(action)
-		return
-	end
+        if combatKeybinds[input.KeyCode] then
+                local action = combatKeybinds[input.KeyCode]
+                print("Triggering combat action for:", action)
+                if not CombatController or not CombatController.perform then
+                        warn("CombatController or perform method is nil!")
+                        return
+                end
+                print("Calling CombatController.perform with:", action)
+                CombatController.perform(action)
+                return
+        end
 
         if debugInputLogging and not ignoredInputKeys[input.KeyCode] then
-                warn("Key pressed but no action mapped:", input.KeyCode.Name)
+                print("Unmapped key pressed:", input.KeyCode.Name)
         end
 end)
 
