@@ -161,6 +161,16 @@ BootUI.tweenToEnd = tweenToEnd
 -- =====================
 local savedDOF
 local savedBlurEnabled
+local function getOrCreateBlur()
+    local blur = Lighting:FindFirstChild("Blur") or Lighting:FindFirstChildOfClass("BlurEffect")
+    if not blur then
+        blur = Instance.new("BlurEffect")
+        blur.Name = "Blur"
+        blur.Enabled = false
+        blur.Parent = Lighting
+    end
+    return blur
+end
 local function disableUIBlur()
     if savedDOF or savedBlurEnabled ~= nil then return end
     savedDOF = {}
@@ -170,7 +180,7 @@ local function disableUIBlur()
             e.Enabled = false
         end
     end
-    local blur = Lighting:FindFirstChild("Blur") or Lighting:FindFirstChildOfClass("BlurEffect")
+    local blur = getOrCreateBlur()
     if blur then
         savedBlurEnabled = blur.Enabled
         blur.Enabled = false
@@ -184,7 +194,7 @@ local function restoreUIBlur()
         savedDOF = nil
     end
     if savedBlurEnabled ~= nil then
-        local blur = Lighting:FindFirstChild("Blur") or Lighting:FindFirstChildOfClass("BlurEffect")
+        local blur = getOrCreateBlur()
         if blur then blur.Enabled = savedBlurEnabled end
         savedBlurEnabled = nil
     end
