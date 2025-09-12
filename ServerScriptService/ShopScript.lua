@@ -10,7 +10,10 @@ end
 
 local bootModules = ReplicatedStorage:WaitForChild("BootModules")
 local shopItemsModule = bootModules:WaitForChild("ShopItems")
-assert(shopItemsModule, "ShopItems module missing")
+if not shopItemsModule then
+    warn("ShopItems module missing")
+    return
+end
 local ShopItems = require(shopItemsModule)
 local CurrencyService = shared.CurrencyService
 
