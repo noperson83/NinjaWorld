@@ -1,5 +1,12 @@
 local MerchBooth = {}
 
+MerchBooth.items = {}
+
+function MerchBooth.addItemAsync(assetId)
+    table.insert(MerchBooth.items, assetId)
+    -- Optionally fetch product info via MarketplaceService here
+end
+
 -- Toggles the catalog button visibility.
 function MerchBooth.toggleCatalogButton(_enabled)
     -- no-op stub
@@ -18,6 +25,10 @@ end
 -- Closes the merch booth interface.
 function MerchBooth.closeMerchBooth()
     -- no-op stub
+end
+
+function MerchBooth.getItems()
+    return MerchBooth.items
 end
 
 return MerchBooth
