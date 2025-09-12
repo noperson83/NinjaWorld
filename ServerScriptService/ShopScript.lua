@@ -13,7 +13,7 @@ local bootModules = ReplicatedStorage:WaitForChild("BootModules")
 -- Load ShopItems if available; otherwise continue with an empty list so the
 -- server script doesn't abort during startup.
 local ShopItems = {}
-local shopItemsModule = bootModules:FindFirstChild("ShopItems")
+local shopItemsModule = bootModules:WaitForChild("ShopItems", 5)
 if shopItemsModule then
     ShopItems = require(shopItemsModule)
 else
