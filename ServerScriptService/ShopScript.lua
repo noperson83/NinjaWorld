@@ -9,12 +9,16 @@ if not shopEvent then
 end
 
 local bootModules = ReplicatedStorage:WaitForChild("BootModules")
-local shopItemsModule = bootModules:WaitForChild("ShopItems", 5)
-if not shopItemsModule then
+
+-- Load ShopItems if available; otherwise continue with an empty list so the
+-- server script doesn't abort during startup.
+local ShopItems = {}
+local shopItemsModule = bootModules:FindFirstChild("ShopItems")
+if shopItemsModule then
+    ShopItems = require(shopItemsModule)
+else
     warn("ShopItems module missing")
-    return
 end
-local ShopItems = require(shopItemsModule)
 local CurrencyService = shared.CurrencyService
 
 local function findItem(itemId)
