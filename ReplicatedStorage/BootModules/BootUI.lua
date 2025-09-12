@@ -282,7 +282,8 @@ end)
         button.Parent = worldFrame
     end
 
-    TeleportClient.init(root)
+    TeleportClient.bindZoneButtons(root)
+    TeleportClient.bindWorldButtons(root)
 
 -- Intro visuals
 local fade = Instance.new("Frame")
