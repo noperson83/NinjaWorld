@@ -6,7 +6,7 @@ local bootModules = ReplicatedStorage:WaitForChild("BootModules")
 -- shop UI can still be created even if the module is missing. Returning nil
 -- from this module would cause requires to fail in BootUI.
 local ShopItems = {Elements = {}, Weapons = {}}
-local shopItemsModule = bootModules:FindFirstChild("ShopItems")
+local shopItemsModule = bootModules:WaitForChild("ShopItems", 5)
 if shopItemsModule then
     ShopItems = require(shopItemsModule)
 else
