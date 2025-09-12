@@ -4,9 +4,10 @@ local Players = game:GetService("Players")
 local GuiService = game:GetService("GuiService")
 local UserInputService = game:GetService("UserInputService")
 local CollectionService = game:GetService("CollectionService")
+local SoundService = game:GetService("SoundService")
 
 local Abilities = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("Abilities"))
-local AudioPlayer = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("AudioPlayer"))
+local AudioPlayer = require(ReplicatedStorage.ClientModules.AudioPlayer)
 local CharacterManager = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("CharacterManager"))
 local CombatController = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("CombatController"))
 local merchModule = ReplicatedStorage:FindFirstChild("MerchBooth")
@@ -17,8 +18,16 @@ local player = Players.LocalPlayer
 local PlayerGui = player:WaitForChild("PlayerGui")
 
 -- Preload and validate audio assets
-local invalidAudioCount = AudioPlayer.preloadAudio({})
+-- Purge placeholder sounds before preloading
+for _, descendant in ipairs(SoundService:GetDescendants()) do
+    if descendant:IsA("Sound") and descendant.SoundId:match("rbxassetid://0") then
+        descendant:Destroy()
+    end
+end
+
+local invalidAudioCount = AudioPlayer.preloadAudio({ Main_Background_Theme = 15933971668 })
 assert(invalidAudioCount == 0, "Invalid audio asset IDs detected during startup")
+AudioPlayer.playAudio("Main_Background_Theme")
 
 -- Setup character and wait until fully initialized
 CharacterManager.setup(player)
