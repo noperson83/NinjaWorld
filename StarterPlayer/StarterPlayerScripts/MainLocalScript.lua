@@ -21,7 +21,8 @@ local PlayerGui = player:WaitForChild("PlayerGui")
 -- Purge placeholder sounds before preloading
 for _, descendant in ipairs(SoundService:GetDescendants()) do
     if descendant:IsA("Sound") and descendant.SoundId:match("rbxassetid://0") then
-        descendant.SoundId = "rbxassetid://184586547" -- Generic placeholder beep
+        -- Replace placeholder/invalid sound IDs with a valid asset
+        descendant.SoundId = "rbxassetid://81165228663280"
     end
 end
 
