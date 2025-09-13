@@ -6,20 +6,21 @@ local UserInputService = game:GetService("UserInputService")
 local CollectionService = game:GetService("CollectionService")
 local SoundService = game:GetService("SoundService")
 
-local clientModules = ReplicatedStorage:WaitForChild("ClientModules", 5)
+-- Increase replication wait times to handle slow asset syncing
+local clientModules = ReplicatedStorage:WaitForChild("ClientModules", 15)
 local Abilities = require(clientModules:WaitForChild("Abilities"))
 local AudioPlayer = require(clientModules:WaitForChild("AudioPlayer"))
 local CharacterManager = require(clientModules:WaitForChild("CharacterManager"))
 local CombatController = require(clientModules:WaitForChild("CombatController"))
-local bootModules = ReplicatedStorage:WaitForChild("BootModules", 5)
+local bootModules = ReplicatedStorage:WaitForChild("BootModules", 15)
 if not bootModules then
     warn("BootModules folder missing")
     return
 end
 local merchModule = bootModules and (bootModules:FindFirstChild("MerchBooth")
-    or bootModules:WaitForChild("MerchBooth", 5))
+    or bootModules:WaitForChild("MerchBooth", 15))
 local MerchBooth = merchModule and require(merchModule)
-local GameSettings = require(ReplicatedStorage:WaitForChild("GameSettings", 5))
+local GameSettings = require(ReplicatedStorage:WaitForChild("GameSettings", 15))
 
 local player = Players.LocalPlayer
 local PlayerGui = player.PlayerGui
@@ -28,9 +29,9 @@ local PlayerGui = player.PlayerGui
 -- This mirrors the defensive loading used for other optional boot modules and
 -- prevents runtime errors when the file hasn't been replicated.
 local uiFolder = clientModules and (clientModules:FindFirstChild("UI")
-    or clientModules:WaitForChild("UI", 5))
+    or clientModules:WaitForChild("UI", 15))
 local actionUIModule = uiFolder and (uiFolder:FindFirstChild("ActionUI")
-    or uiFolder:WaitForChild("ActionUI", 5))
+    or uiFolder:WaitForChild("ActionUI", 15))
 local ActionUI = actionUIModule and require(actionUIModule) or { init = function() end }
 if not actionUIModule then
     warn("ActionUI module missing")
