@@ -1,6 +1,21 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local bootModules = ReplicatedStorage.BootModules
-local MerchBooth = require(bootModules.MerchBooth)
+
+-- BootModules may not be present in some testing environments. Guard against
+-- missing instances so the client's scripts continue running even if the
+-- merch booth functionality is unavailable.
+local bootModules = ReplicatedStorage:FindFirstChild("BootModules")
+if not bootModules then
+    warn("BootModules folder missing")
+    return
+end
+
+local merchModule = bootModules:FindFirstChild("MerchBooth")
+if not merchModule then
+    warn("MerchBooth module missing")
+    return
+end
+
+local MerchBooth = require(merchModule)
 
 local items = {
     -- Asset IDs to display in the booth
