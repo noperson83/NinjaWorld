@@ -17,7 +17,15 @@ local GameSettings = require(ReplicatedStorage.GameSettings)
 
 local player = Players.LocalPlayer
 local PlayerGui = player.PlayerGui
-local ActionUI = require(ReplicatedStorage.ClientModules.UI.ActionUI)
+
+-- Attempt to load the ActionUI module but don't hard fail if it is missing.
+-- This mirrors the defensive loading used for other optional boot modules and
+-- prevents runtime errors when the file hasn't been replicated.
+local actionUIModule = ReplicatedStorage.ClientModules.UI:FindFirstChild("ActionUI")
+local ActionUI = actionUIModule and require(actionUIModule) or { init = function() end }
+if not actionUIModule then
+    warn("ActionUI module missing")
+end
 
 -- Preload and validate audio assets
 -- Purge placeholder sounds before preloading
