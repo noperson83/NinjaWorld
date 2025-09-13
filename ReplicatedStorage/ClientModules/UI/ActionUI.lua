@@ -7,10 +7,44 @@ local UserInputService = game:GetService("UserInputService")
 local Abilities = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("Abilities"))
 local CombatController = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("CombatController"))
 
-function ActionUI.init()
+local function ensureActions()
     local player = Players.LocalPlayer
     local gui = player:WaitForChild("PlayerGui")
-    local actions = gui:WaitForChild("ScreenGui"):WaitForChild("Actions")
+
+    local screenGui = gui:FindFirstChild("ScreenGui")
+    if not screenGui then
+        screenGui = Instance.new("ScreenGui")
+        screenGui.Name = "ScreenGui"
+        screenGui.ResetOnSpawn = false
+        screenGui.Parent = gui
+    end
+
+    local actions = screenGui:FindFirstChild("Actions")
+    if not actions then
+        actions = Instance.new("Frame")
+        actions.Name = "Actions"
+        actions.Parent = screenGui
+    end
+
+    local buttons = {
+        "PunchButton", "KickButton", "RollButton", "CrouchButton", "SlideButton",
+        "TossButton", "StarButton", "RainButton", "BeastButton", "DragonButton",
+    }
+
+    for _, name in ipairs(buttons) do
+        if not actions:FindFirstChild(name) then
+            local btn = Instance.new("TextButton")
+            btn.Name = name
+            btn.Text = name
+            btn.Parent = actions
+        end
+    end
+
+    return actions
+end
+
+function ActionUI.init()
+    local actions = ensureActions()
 
     local actionMap = {
         PunchButton = "Punch",
