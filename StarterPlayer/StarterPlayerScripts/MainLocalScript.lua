@@ -10,7 +10,8 @@ local Abilities = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitFo
 local AudioPlayer = require(ReplicatedStorage.ClientModules.AudioPlayer)
 local CharacterManager = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("CharacterManager"))
 local CombatController = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("CombatController"))
-local merchModule = ReplicatedStorage:FindFirstChild("MerchBooth")
+local bootModules = ReplicatedStorage:WaitForChild("BootModules")
+local merchModule = bootModules:FindFirstChild("MerchBooth")
 local MerchBooth = merchModule and require(merchModule)
 local GameSettings = require(ReplicatedStorage:WaitForChild("GameSettings"))
 
