@@ -40,7 +40,7 @@ local BUTTON_DEFINITIONS = {
     -- Movement Actions (Yellow-green theme)
     {name = "RollButton", text = "ROLL", action = "Roll", category = "movement", keybind = "R"},
     {name = "CrouchButton", text = "CROUCH", action = "Crouch", category = "movement", keybind = "C"},
-    {name = "SlideButton", text = "SLIDE", action = "Slid", category = "movement", keybind = "Ctrl"},
+    {name = "SlideButton", text = "SLIDE", action = "Slide", category = "movement", keybind = "Ctrl"},
     
     -- Abilities (Blue theme)
     {name = "TossButton", text = "TOSS", action = "Toss", category = "ability", keybind = "F"},
@@ -249,7 +249,7 @@ function ActionUI.init()
         KickButton = "Kick",
         RollButton = "Roll",
         CrouchButton = "Crouch",
-        SlideButton = "Slid",
+        SlideButton = "Slide",
     }
 
     for buttonName, action in pairs(actionMap) do
@@ -292,7 +292,7 @@ function ActionUI.init()
         [Enum.KeyCode.Q] = "Kick",
         [Enum.KeyCode.R] = "Roll",
         [Enum.KeyCode.C] = "Crouch",
-        [Enum.KeyCode.LeftControl] = "Slid",
+        [Enum.KeyCode.LeftControl] = "Slide",
     }
 
     local ignoredInputKeys = {

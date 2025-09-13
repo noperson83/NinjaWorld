@@ -37,9 +37,9 @@ function CombatController.initAnimations()
 	local animations = {
 		Punch = "rbxassetid://16094588475",
 		Kick = "rbxassetid://16094054595",
-		Roll = "rbxassetid://16094647351",
-		Crch = "rbxassetid://16094669431",
-		Slid = "rbxassetid://16094829694"
+                Roll = "rbxassetid://16094647351",
+                Crch = "rbxassetid://16094669431",
+                Slide = "rbxassetid://16094829694"
 	}
 	task.spawn(function()
 		local tries = 0
@@ -116,7 +116,7 @@ function CombatController.perform(actionName)
 			warn("?? Animation track missing for:", actionName)
 		end
                 if snd then snd:Play() end
-                if actionName == "Slid" then
+                if actionName == "Slide" then
                        local humanoid = CharacterManager.humanoid
                        local originalSpeed = humanoid.WalkSpeed
                        humanoid.WalkSpeed = originalSpeed * slideSpeedMultiplier
