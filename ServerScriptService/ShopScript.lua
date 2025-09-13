@@ -9,6 +9,10 @@ if not shopEvent then
 end
 
 local bootModules = ReplicatedStorage:WaitForChild("BootModules", 5)
+if not bootModules then
+    warn("BootModules folder missing")
+    return
+end
 
 -- Load ShopItems if available; otherwise continue with an empty list so the
 -- server script doesn't abort during startup.

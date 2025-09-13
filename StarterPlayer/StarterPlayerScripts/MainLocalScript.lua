@@ -12,6 +12,10 @@ local AudioPlayer = require(clientModules:WaitForChild("AudioPlayer"))
 local CharacterManager = require(clientModules:WaitForChild("CharacterManager"))
 local CombatController = require(clientModules:WaitForChild("CombatController"))
 local bootModules = ReplicatedStorage:WaitForChild("BootModules", 5)
+if not bootModules then
+    warn("BootModules folder missing")
+    return
+end
 local merchModule = bootModules and (bootModules:FindFirstChild("MerchBooth")
     or bootModules:WaitForChild("MerchBooth", 5))
 local MerchBooth = merchModule and require(merchModule)
