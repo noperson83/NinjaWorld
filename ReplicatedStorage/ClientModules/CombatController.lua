@@ -4,6 +4,8 @@ local UserInputService = game:GetService("UserInputService")
 
 local CharacterManager = require(ReplicatedStorage.ClientModules.CharacterManager)
 local Abilities = require(ReplicatedStorage.ClientModules.Abilities)
+local AudioPlayer = require(ReplicatedStorage.ClientModules.AudioPlayer)
+local SoundService = game:GetService("SoundService")
 
 local CombatController = {}
 
@@ -21,11 +23,15 @@ local slideSpeedMultiplier = 1.25
 
 local canStrike = true
 local animationTracks = {}
-local snd = script:FindFirstChild("Sound") or Instance.new("Sound")
-snd.Name = "Sound"
-snd.SoundId = "rbxassetid://12222216" -- replace with actual sound
-snd.Volume = 1
-snd.Parent = script
+local STRIKE_SOUND_NAME = "Combat_Strike_SFX"
+local STRIKE_SOUND_ID = 9118820981
+
+AudioPlayer.preloadAudio({ [STRIKE_SOUND_NAME] = STRIKE_SOUND_ID })
+
+local snd = SoundService:WaitForChild(STRIKE_SOUND_NAME, 5)
+if snd then
+    snd.Volume = 1
+end
 
 function CombatController.initAnimations()
 	local animations = {
