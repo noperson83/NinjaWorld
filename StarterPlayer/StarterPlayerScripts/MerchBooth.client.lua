@@ -1,5 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local MerchBooth = require(ReplicatedStorage:WaitForChild("MerchBooth"))
+local bootModules = ReplicatedStorage:WaitForChild("BootModules")
+local MerchBooth = require(bootModules:WaitForChild("MerchBooth"))
 
 local items = {
     -- Asset IDs to display in the booth
