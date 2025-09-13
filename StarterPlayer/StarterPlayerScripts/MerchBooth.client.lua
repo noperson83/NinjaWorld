@@ -3,13 +3,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- BootModules may not be present in some testing environments. Guard against
 -- missing instances so the client's scripts continue running even if the
 -- merch booth functionality is unavailable.
-local bootModules = ReplicatedStorage:FindFirstChild("BootModules")
+local bootModules = ReplicatedStorage:WaitForChild("BootModules", 5)
 if not bootModules then
     warn("BootModules folder missing")
     return
 end
 
 local merchModule = bootModules:FindFirstChild("MerchBooth")
+    or bootModules:WaitForChild("MerchBooth", 5)
 if not merchModule then
     warn("MerchBooth module missing")
     return

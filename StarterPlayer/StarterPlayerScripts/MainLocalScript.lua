@@ -6,14 +6,16 @@ local UserInputService = game:GetService("UserInputService")
 local CollectionService = game:GetService("CollectionService")
 local SoundService = game:GetService("SoundService")
 
-local Abilities = require(ReplicatedStorage.ClientModules.Abilities)
-local AudioPlayer = require(ReplicatedStorage.ClientModules.AudioPlayer)
-local CharacterManager = require(ReplicatedStorage.ClientModules.CharacterManager)
-local CombatController = require(ReplicatedStorage.ClientModules.CombatController)
-local bootModules = ReplicatedStorage.BootModules
-local merchModule = bootModules:FindFirstChild("MerchBooth")
+local clientModules = ReplicatedStorage:WaitForChild("ClientModules", 5)
+local Abilities = require(clientModules:WaitForChild("Abilities"))
+local AudioPlayer = require(clientModules:WaitForChild("AudioPlayer"))
+local CharacterManager = require(clientModules:WaitForChild("CharacterManager"))
+local CombatController = require(clientModules:WaitForChild("CombatController"))
+local bootModules = ReplicatedStorage:WaitForChild("BootModules", 5)
+local merchModule = bootModules and (bootModules:FindFirstChild("MerchBooth")
+    or bootModules:WaitForChild("MerchBooth", 5))
 local MerchBooth = merchModule and require(merchModule)
-local GameSettings = require(ReplicatedStorage.GameSettings)
+local GameSettings = require(ReplicatedStorage:WaitForChild("GameSettings", 5))
 
 local player = Players.LocalPlayer
 local PlayerGui = player.PlayerGui
@@ -21,7 +23,10 @@ local PlayerGui = player.PlayerGui
 -- Attempt to load the ActionUI module but don't hard fail if it is missing.
 -- This mirrors the defensive loading used for other optional boot modules and
 -- prevents runtime errors when the file hasn't been replicated.
-local actionUIModule = ReplicatedStorage.ClientModules.UI:FindFirstChild("ActionUI")
+local uiFolder = clientModules and (clientModules:FindFirstChild("UI")
+    or clientModules:WaitForChild("UI", 5))
+local actionUIModule = uiFolder and (uiFolder:FindFirstChild("ActionUI")
+    or uiFolder:WaitForChild("ActionUI", 5))
 local ActionUI = actionUIModule and require(actionUIModule) or { init = function() end }
 if not actionUIModule then
     warn("ActionUI module missing")

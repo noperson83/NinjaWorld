@@ -1,12 +1,13 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local AbilityMetadata = require(ReplicatedStorage.ClientModules.AbilityMetadata)
-local bootModules = ReplicatedStorage.BootModules
+local bootModules = ReplicatedStorage:WaitForChild("BootModules", 5)
 
 -- Try to load the ShopItems module but fall back to an empty table so the
 -- shop UI can still be created even if the module is missing. Returning nil
 -- from this module would cause requires to fail in BootUI.
 local ShopItems = {Elements = {}, Weapons = {}}
-local shopItemsModule = bootModules:FindFirstChild("ShopItems")
+local shopItemsModule = bootModules and (bootModules:FindFirstChild("ShopItems")
+    or bootModules:WaitForChild("ShopItems", 5))
 if shopItemsModule then
     ShopItems = require(shopItemsModule)
 else
