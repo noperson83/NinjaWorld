@@ -8,12 +8,12 @@ if not shopEvent then
     shopEvent.Parent = ReplicatedStorage
 end
 
-local bootModules = ReplicatedStorage:WaitForChild("BootModules")
+local bootModules = ReplicatedStorage.BootModules
 
 -- Load ShopItems if available; otherwise continue with an empty list so the
 -- server script doesn't abort during startup.
 local ShopItems = {}
-local shopItemsModule = bootModules:WaitForChild("ShopItems", 5)
+local shopItemsModule = bootModules:FindFirstChild("ShopItems")
 if shopItemsModule then
     ShopItems = require(shopItemsModule)
 else

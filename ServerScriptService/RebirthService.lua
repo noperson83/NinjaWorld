@@ -11,8 +11,8 @@ if not rebirthEvent then
     rebirthEvent.Parent = ReplicatedStorage
 end
 
-local dataScript = script.Parent:WaitForChild("DataSavingScript")
-local rebirthFunction = dataScript:WaitForChild("RebirthFunction")
+local dataScript = script.Parent.DataSavingScript
+local rebirthFunction = dataScript and dataScript.RebirthFunction
 
 rebirthEvent.OnServerEvent:Connect(function(player)
     rebirthFunction:Invoke(player)

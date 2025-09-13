@@ -4,12 +4,12 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
-local Abilities = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("Abilities"))
-local CombatController = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("CombatController"))
+local Abilities = require(ReplicatedStorage.ClientModules.Abilities)
+local CombatController = require(ReplicatedStorage.ClientModules.CombatController)
 
 local function ensureActions()
     local player = Players.LocalPlayer
-    local gui = player:WaitForChild("PlayerGui")
+    local gui = player.PlayerGui
 
     local screenGui = gui:FindFirstChild("ScreenGui")
     if not screenGui then

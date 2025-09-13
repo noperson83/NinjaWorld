@@ -6,18 +6,18 @@ local UserInputService = game:GetService("UserInputService")
 local CollectionService = game:GetService("CollectionService")
 local SoundService = game:GetService("SoundService")
 
-local Abilities = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("Abilities"))
+local Abilities = require(ReplicatedStorage.ClientModules.Abilities)
 local AudioPlayer = require(ReplicatedStorage.ClientModules.AudioPlayer)
-local CharacterManager = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("CharacterManager"))
-local CombatController = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("CombatController"))
-local bootModules = ReplicatedStorage:WaitForChild("BootModules")
+local CharacterManager = require(ReplicatedStorage.ClientModules.CharacterManager)
+local CombatController = require(ReplicatedStorage.ClientModules.CombatController)
+local bootModules = ReplicatedStorage.BootModules
 local merchModule = bootModules:FindFirstChild("MerchBooth")
 local MerchBooth = merchModule and require(merchModule)
-local GameSettings = require(ReplicatedStorage:WaitForChild("GameSettings"))
+local GameSettings = require(ReplicatedStorage.GameSettings)
 
 local player = Players.LocalPlayer
-local PlayerGui = player:WaitForChild("PlayerGui")
-local ActionUI = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("UI"):WaitForChild("ActionUI"))
+local PlayerGui = player.PlayerGui
+local ActionUI = require(ReplicatedStorage.ClientModules.UI.ActionUI)
 
 -- Preload and validate audio assets
 -- Purge placeholder sounds before preloading
@@ -48,7 +48,7 @@ end
 --local ts = game:GetService("TweenService")
 --local currentCamera = game.Workspace.CurrentCamera
 
---local cameras = game.Workspace:WaitForChild("cameras")
+--local cameras = game.Workspace.Cameras
 
 --char.Hum
 --currentCamera.CameraType = Enum.CageType.Scriptable
@@ -58,8 +58,8 @@ end
 
 -- Attach WaterStar to character
 local function onCharacterAdded(character)
-	local elements = ReplicatedStorage:WaitForChild("Elements")
-	local waterElem = elements:WaitForChild("WaterElem")
+        local elements = ReplicatedStorage.Elements
+        local waterElem = elements and elements.WaterElem
 	local waterStarTemplate = waterElem:FindFirstChild("WaterStar")
 
 	if not waterStarTemplate then

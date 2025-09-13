@@ -8,7 +8,7 @@ local Players            = game:GetService("Players")
 local ReplicatedStorage  = game:GetService("ReplicatedStorage")
 local DataStoreService   = game:GetService("DataStoreService")
 local ServerStorage      = game:GetService("ServerStorage")
-local GameSettings       = require(ReplicatedStorage:WaitForChild("GameSettings"))
+local GameSettings       = require(ReplicatedStorage.GameSettings)
 
 -- === Remotes ===
 local rf = ReplicatedStorage:FindFirstChild("PersonaServiceRF")

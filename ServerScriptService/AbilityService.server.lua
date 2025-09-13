@@ -1,5 +1,5 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local AbilityMetadata = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("AbilityMetadata"))
+local AbilityMetadata = require(ReplicatedStorage.ClientModules.AbilityMetadata)
 local CurrencyService = shared.CurrencyService
 
 local learnRF = Instance.new("RemoteFunction")
