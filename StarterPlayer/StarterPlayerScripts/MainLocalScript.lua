@@ -34,12 +34,34 @@ end
 
 -- Preload and validate audio assets
 -- Purge placeholder sounds before preloading
-for _, descendant in ipairs(SoundService:GetDescendants()) do
-    if descendant:IsA("Sound") and descendant.SoundId:match("rbxassetid://0") then
-        -- Replace placeholder/invalid sound IDs with a valid asset
-        descendant.SoundId = "rbxassetid://81165228663280"
+local DEFAULT_SOUND_ID = "rbxassetid://81165228663280"
+
+local function fixSound(sound)
+    local id = sound.SoundId
+    if id == "" or id == "rbxassetid://0" then
+        if sound.Playing or sound.Looped or sound.PlayOnRemove then
+            sound.SoundId = DEFAULT_SOUND_ID
+        else
+            sound:Destroy()
+        end
     end
 end
+
+if not game:IsLoaded() then
+    game.Loaded:Wait()
+end
+
+for _, descendant in ipairs(game:GetDescendants()) do
+    if descendant:IsA("Sound") then
+        fixSound(descendant)
+    end
+end
+
+game.DescendantAdded:Connect(function(obj)
+    if obj:IsA("Sound") then
+        fixSound(obj)
+    end
+end)
 
 local invalidAudioCount = AudioPlayer.preloadAudio({ Main_Background_Theme = 15933971668 })
 assert(invalidAudioCount == 0, "Invalid audio asset IDs detected during startup")
