@@ -2,8 +2,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
-local CharacterManager = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("CharacterManager"))
-local Abilities = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("Abilities"))
+local CharacterManager = require(ReplicatedStorage.ClientModules.CharacterManager)
+local Abilities = require(ReplicatedStorage.ClientModules.Abilities)
 
 local CombatController = {}
 

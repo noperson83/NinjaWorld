@@ -127,15 +127,15 @@ local function ensureAnimateBits(char)
 end
 
 local function placeOnSpawn(char)
-	local hrp = char:FindFirstChild("HumanoidRootPart") or char:WaitForChild("HumanoidRootPart")
-	local hum = char:FindFirstChildOfClass("Humanoid")
-	local spawnPart = findSpawn()
-	if spawnPart then
-		local pos = spawnPart.CFrame.Position + Vector3.new(0,3,0)
-		local faceDir = getEndFacing()
-		hrp.CFrame = CFrame.lookAt(pos, pos + faceDir, Vector3.new(0,1,0))
-		if hum then hum:ChangeState(Enum.HumanoidStateType.GettingUp) end
-	end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        local spawnPart = findSpawn()
+        if hrp and spawnPart then
+                local pos = spawnPart.CFrame.Position + Vector3.new(0,3,0)
+                local faceDir = getEndFacing()
+                hrp.CFrame = CFrame.lookAt(pos, pos + faceDir, Vector3.new(0,1,0))
+                if hum then hum:ChangeState(Enum.HumanoidStateType.GettingUp) end
+        end
 end
 
 local function spawnNinjaModel(plr)

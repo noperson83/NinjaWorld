@@ -6,7 +6,13 @@ local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local ContentProvider = game:GetService("ContentProvider")
 
-local rf = ReplicatedStorage:WaitForChild("PersonaServiceRF")
+local rf = ReplicatedStorage.PersonaServiceRF
+local function profileRF(action, data)
+    local start = os.clock()
+    local result = rf:InvokeServer(action, data)
+    warn(string.format("PersonaServiceRF:%s took %.3fs", tostring(action), os.clock() - start))
+    return result
+end
 local player = Players.LocalPlayer
 
 local dojo
@@ -193,7 +199,7 @@ local function updateSlots()
 					if not ui.clearConn then
 						ui.clearConn = ui.clearBtn.MouseButton1Click:Connect(function()
 							showConfirm(("Clear slot %d?"):format(index), function()
-                                                                local res = rf:InvokeServer("clear", {slot = index})
+                                                                local res = profileRF("clear", {slot = index})
                                                                 if res and res.ok then
                                                                         if chosenSlot == index then chosenSlot = nil end
                                                                         refreshSlots(res)
@@ -684,7 +690,7 @@ function Cosmetics.init(config, root, bootUI)
 	for i,entry in pairs(slotButtons) do
 		local index = i
                entry.useBtn.MouseButton1Click:Connect(function()
-                        local result = rf:InvokeServer("use", {slot = index})
+                        local result = profileRF("use", {slot = index})
                         if not (result and result.ok) then warn("Use slot failed:", result and result.err) return end
                         chosenSlot = index
                         currentChoiceType = result.persona and result.persona.type or currentChoiceType
@@ -693,10 +699,10 @@ function Cosmetics.init(config, root, bootUI)
                         showLoadout(result.persona and result.persona.type or currentChoiceType)
                 end)
                entry.robloxBtn.MouseButton1Click:Connect(function()
-                        local res = rf:InvokeServer("save", {slot = index, type = "Roblox"})
+                        local res = profileRF("save", {slot = index, type = "Roblox"})
                         if res and res.ok then
                                 refreshSlots(res)
-                                local useRes = rf:InvokeServer("use", {slot = index})
+                                local useRes = profileRF("use", {slot = index})
                                 if useRes and useRes.ok then
                                         chosenSlot = index
                                         currentChoiceType = "Roblox"
@@ -711,10 +717,10 @@ function Cosmetics.init(config, root, bootUI)
                         end
                 end)
                entry.starterBtn.MouseButton1Click:Connect(function()
-                        local res = rf:InvokeServer("save", {slot = index, type = "Ninja"})
+                        local res = profileRF("save", {slot = index, type = "Ninja"})
                         if res and res.ok then
                                 refreshSlots(res)
-                                local useRes = rf:InvokeServer("use", {slot = index})
+                                local useRes = profileRF("use", {slot = index})
                                 if useRes and useRes.ok then
                                         chosenSlot = index
                                         currentChoiceType = "Ninja"

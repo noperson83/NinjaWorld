@@ -15,14 +15,21 @@ local Lighting          = game:GetService("Lighting")
 local HttpService       = game:GetService("HttpService")
 
 local player  = Players.LocalPlayer
-local rf      = ReplicatedStorage:WaitForChild("PersonaServiceRF")
+local rf      = ReplicatedStorage.PersonaServiceRF
 local cam     = Workspace.CurrentCamera
 local enterRE = ReplicatedStorage:FindFirstChild("EnterDojoRE") -- created by server script
 
 local topInsetY = GuiService:GetGuiInset().Y
 
+local function profileRF(action, data)
+    local start = os.clock()
+    local result = rf:InvokeServer(action, data)
+    warn(string.format("PersonaServiceRF:%s took %.3fs", tostring(action), os.clock() - start))
+    return result
+end
+
 function BootUI.fetchData()
-    local persona = rf:InvokeServer("get", {}) or {}
+    local persona = profileRF("get", {}) or {}
     local inventory
     local invStr = player:GetAttribute("Inventory")
     if typeof(invStr) == "string" then
@@ -41,9 +48,9 @@ end
 local Cosmetics       = require(ReplicatedStorage.BootModules.Cosmetics)
 local CurrencyService = require(ReplicatedStorage.BootModules.CurrencyService)
 local Shop            = require(ReplicatedStorage.BootModules.Shop)
-local ShopUI          = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("UI"):WaitForChild("ShopUI"))
-local QuestUI         = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("UI"):WaitForChild("QuestUI"))
-local BackpackUI      = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("UI"):WaitForChild("BackpackUI"))
+local ShopUI          = require(ReplicatedStorage.ClientModules.UI.ShopUI)
+local QuestUI         = require(ReplicatedStorage.ClientModules.UI.QuestUI)
+local BackpackUI      = require(ReplicatedStorage.ClientModules.UI.BackpackUI)
 local TeleportClient  = require(ReplicatedStorage.ClientModules.TeleportClient)
 local DojoClient      = require(ReplicatedStorage.BootModules.DojoClient)
 
@@ -98,7 +105,7 @@ BootUI.personaData = config.personaData
 -- =====================
 -- Camera helpers (world)
 -- =====================
-local camerasFolder = Workspace:WaitForChild("Cameras", 5)
+local camerasFolder = Workspace:FindFirstChild("Cameras")
 local startPos      = camerasFolder and camerasFolder:FindFirstChild("startPos")
 local endPos        = camerasFolder and camerasFolder:FindFirstChild("endPos")
 
@@ -204,7 +211,7 @@ ui.ResetOnSpawn   = false
 ui.Name           = "IntroGui"
 ui.IgnoreGuiInset = true
 ui.DisplayOrder   = 100
-ui.Parent         = player:WaitForChild("PlayerGui")
+ui.Parent         = player.PlayerGui
 
 local root = Instance.new("Frame")
 root.Size = UDim2.fromScale(1,1)
@@ -386,7 +393,7 @@ local realmInfo = {
 local realmDisplayLookup = {}
 for _,info in ipairs(realmInfo) do realmDisplayLookup[info.key] = info.name end
 
-local realmsFolder = player:FindFirstChild("Realms") or player:WaitForChild("Realms",5)
+local realmsFolder = player:FindFirstChild("Realms")
 
 local function updateRealmButton(key)
     local btn = realmButtons[key]

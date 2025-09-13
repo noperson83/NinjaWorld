@@ -19,7 +19,7 @@ function PersonaUI.start(config)
     gui.Name           = "IntroGui"
     gui.IgnoreGuiInset = true
     gui.DisplayOrder   = 100
-    gui.Parent         = player:WaitForChild("PlayerGui")
+    gui.Parent         = player.PlayerGui
 
     local root = Instance.new("Frame")
     root.Size = UDim2.fromScale(1,1)
@@ -82,17 +82,28 @@ function PersonaUI.start(config)
         ContentProvider:PreloadAsync(items)
     end)
 
-    bar.Size = UDim2.new(0,0,0.01,0)
-    TweenService:Create(bar, TweenInfo.new(1.6, Enum.EasingStyle.Quad), {Size = UDim2.new(0.6,0,0.01,0)}):Play()
-    wait(1.65)
+    local loadTime = config.waitTime
+    if loadTime == nil then loadTime = 1.65 end
+    local fadeTime = config.fadeTime
+    if fadeTime == nil then fadeTime = 0.25 end
 
-    local t = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-    TweenService:Create(sub, t, {TextTransparency = 1}):Play()
-    TweenService:Create(bar,  t, {BackgroundTransparency = 1}):Play()
-    TweenService:Create(barBG, t, {BackgroundTransparency = 1}):Play()
-    TweenService:Create(logoImg, t, {ImageTransparency = 1}):Play()
-    TweenService:Create(paperBG, t, {ImageTransparency = 1}):Play()
-    wait(0.28)
+    bar.Size = UDim2.new(0,0,0.01,0)
+    if loadTime > 0 then
+        TweenService:Create(bar, TweenInfo.new(loadTime, Enum.EasingStyle.Quad), {Size = UDim2.new(0.6,0,0.01,0)}):Play()
+        task.wait(loadTime)
+    else
+        bar.Size = UDim2.new(0.6,0,0.01,0)
+    end
+
+    if fadeTime > 0 then
+        local t = TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        TweenService:Create(sub, t, {TextTransparency = 1}):Play()
+        TweenService:Create(bar,  t, {BackgroundTransparency = 1}):Play()
+        TweenService:Create(barBG, t, {BackgroundTransparency = 1}):Play()
+        TweenService:Create(logoImg, t, {ImageTransparency = 1}):Play()
+        TweenService:Create(paperBG, t, {ImageTransparency = 1}):Play()
+        task.wait(fadeTime + 0.03)
+    end
 
     gui:Destroy()
 end

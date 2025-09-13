@@ -3,7 +3,7 @@ local RunService = game:GetService("RunService")
 local DataStoreService = game:GetService("DataStoreService")
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local GameSettings = require(ReplicatedStorage:WaitForChild("GameSettings"))
+local GameSettings = require(ReplicatedStorage.GameSettings)
 
 -- single datastore for all player data
 local DataStore = DataStoreService:GetDataStore("PlayerData")

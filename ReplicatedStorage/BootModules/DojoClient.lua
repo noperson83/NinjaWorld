@@ -18,7 +18,7 @@ function DojoClient.start(realmName)
     gui.IgnoreGuiInset = true
     gui.ResetOnSpawn = false
     gui.DisplayOrder = 200
-    gui.Parent = player:WaitForChild("PlayerGui")
+    gui.Parent = player.PlayerGui
 
     local root = Instance.new("Frame")
     root.Size = UDim2.fromScale(1,1)

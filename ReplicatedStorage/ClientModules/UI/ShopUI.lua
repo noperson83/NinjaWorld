@@ -1,12 +1,12 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local AbilityMetadata = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("AbilityMetadata"))
-local bootModules = ReplicatedStorage:WaitForChild("BootModules")
+local AbilityMetadata = require(ReplicatedStorage.ClientModules.AbilityMetadata)
+local bootModules = ReplicatedStorage.BootModules
 
 -- Try to load the ShopItems module but fall back to an empty table so the
 -- shop UI can still be created even if the module is missing. Returning nil
 -- from this module would cause requires to fail in BootUI.
 local ShopItems = {Elements = {}, Weapons = {}}
-local shopItemsModule = bootModules:WaitForChild("ShopItems", 5)
+local shopItemsModule = bootModules:FindFirstChild("ShopItems")
 if shopItemsModule then
     ShopItems = require(shopItemsModule)
 else
@@ -77,7 +77,7 @@ function ShopUI.init(config, shop, bootUI, defaultTab)
 
     -- Abilities tab
     local abilitiesFrame = tabFrames["Abilities"]
-    local learnRF = ReplicatedStorage:WaitForChild("LearnAbility")
+    local learnRF = ReplicatedStorage:FindFirstChild("LearnAbility")
     for ability, info in pairs(AbilityMetadata) do
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(1,0,0,40)
@@ -86,8 +86,10 @@ function ShopUI.init(config, shop, bootUI, defaultTab)
         btn.Text = ability .. " (" .. info.cost .. " Coins)"
         btn.Parent = abilitiesFrame
         btn.Activated:Connect(function()
-            if shop:Purchase(ability, info.cost) then
+            if shop:Purchase(ability, info.cost) and learnRF then
+                local start = os.clock()
                 learnRF:InvokeServer(ability)
+                warn(string.format("LearnAbility took %.3fs", os.clock() - start))
             end
         end)
     end

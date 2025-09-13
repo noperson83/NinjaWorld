@@ -3,10 +3,10 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
-local CharacterManager = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("CharacterManager"))
-local AbilityMetadata = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("AbilityMetadata"))
+local CharacterManager = require(ReplicatedStorage.ClientModules.CharacterManager)
+local AbilityMetadata = require(ReplicatedStorage.ClientModules.AbilityMetadata)
 
-local Elements = ReplicatedStorage:WaitForChild("Elements")
+local Elements = ReplicatedStorage.Elements
 local DragonFX = nil
 local BeastFX = nil
 
@@ -32,7 +32,7 @@ local unlocked = {}
 Abilities.unlocked = unlocked
 
 local player = Players.LocalPlayer
-local abilitiesFolder = player:WaitForChild("Abilities", 5)
+local abilitiesFolder = player:FindFirstChild("Abilities")
 if abilitiesFolder then
         for _, child in ipairs(abilitiesFolder:GetChildren()) do
                 if child:IsA("BoolValue") and child.Value then
@@ -141,7 +141,7 @@ function Abilities.Rain()
         local offset = Vector3.new(0, 12, 0)
 	local caster = CharacterManager.character
 	local humanoidRoot = CharacterManager.humanoidRoot
-	local rainTemplate = ReplicatedStorage:WaitForChild("Elements"):WaitForChild("WaterElem"):FindFirstChild("WaterRain")
+    local rainTemplate = ReplicatedStorage.Elements.WaterElem:FindFirstChild("WaterRain")
 	if not rainTemplate then warn("?? Missing WaterRain template") return end
 
 	local target = nil -- insert your enemy targeting logic here
