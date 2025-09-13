@@ -16,6 +16,7 @@ local GameSettings = require(ReplicatedStorage:WaitForChild("GameSettings"))
 
 local player = Players.LocalPlayer
 local PlayerGui = player:WaitForChild("PlayerGui")
+local ActionUI = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("UI"):WaitForChild("ActionUI"))
 
 -- Preload and validate audio assets
 -- Purge placeholder sounds before preloading
@@ -97,106 +98,7 @@ for _, region in CollectionService:GetTagged("ShopRegion") do
 end
 CollectionService:GetInstanceAddedSignal("ShopRegion"):Connect(setupRegion)
 
--- Connect GUI buttons
-local actions = PlayerGui.ScreenGui.Actions
-local actionMap = {
-	PunchButton = "Punch",
-	KickButton = "Kick",
-	RollButton = "Roll",
-	CrouchButton = "Crouch",
-	SlideButton = "Slid"
-}
-
-for buttonName, action in pairs(actionMap) do
-	actions[buttonName].Activated:Connect(function()
-		print("Button pressed for action:", action)
-		CombatController.perform(action)
-	end)
-end
-
-actions.TossButton.Activated:Connect(Abilities.Toss)
-actions.StarButton.Activated:Connect(Abilities.Star)
-actions.RainButton.Activated:Connect(Abilities.Rain)
-actions.BeastButton.Activated:Connect(Abilities.Beast)
-actions.DragonButton.Activated:Connect(Abilities.Dragon)
-
--- Connect all ability keybinds
-local abilityKeybinds = {
-	[Enum.KeyCode.F] = Abilities.Toss,
-	[Enum.KeyCode.G] = Abilities.Star,
-	[Enum.KeyCode.Z] = Abilities.Rain,
-	[Enum.KeyCode.B] = Abilities.Beast,
-	[Enum.KeyCode.X] = Abilities.Dragon
-}
-
--- Connect combat keybinds
-local combatKeybinds = {
-        [Enum.KeyCode.E] = "Punch",
-        [Enum.KeyCode.T] = "Punch",
-        [Enum.KeyCode.Q] = "Kick",
-        [Enum.KeyCode.R] = "Roll",
-        [Enum.KeyCode.C] = "Crouch",
-        [Enum.KeyCode.LeftControl] = "Slid"
-}
-
--- Keys used for standard character movement that should not trigger
--- "no action mapped" warnings when pressed.
-local ignoredInputKeys = {
-        [Enum.KeyCode.W] = true,
-        [Enum.KeyCode.A] = true,
-        [Enum.KeyCode.S] = true,
-        [Enum.KeyCode.D] = true,
-        [Enum.KeyCode.Space] = true,
-        [Enum.KeyCode.LeftShift] = true,
-        -- Arrow keys
-        [Enum.KeyCode.Up] = true,
-        [Enum.KeyCode.Down] = true,
-        [Enum.KeyCode.Left] = true,
-        [Enum.KeyCode.Right] = true,
-        -- Common UI navigation keys
-        [Enum.KeyCode.Tab] = true,
-        [Enum.KeyCode.Escape] = true,
-        [Enum.KeyCode.Return] = true,
-}
-
--- Toggle to enable logging of raw and unmapped key presses for debugging.
-local debugInputLogging = false
-
--- Pressing this key will toggle the debug logging at runtime.
-local LOG_TOGGLE_KEY = Enum.KeyCode.F8
-
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        -- Allow developers to toggle input logging with a single key press.
-        if input.KeyCode == LOG_TOGGLE_KEY then
-                debugInputLogging = not debugInputLogging
-                warn("Raw input logging " .. (debugInputLogging and "enabled" or "disabled"))
-                return
-        end
-
-        if gameProcessed then return end
-
-        if abilityKeybinds[input.KeyCode] then
-                print("Triggering ability for:", input.KeyCode.Name)
-                abilityKeybinds[input.KeyCode]()
-                return
-        end
-
-        if combatKeybinds[input.KeyCode] then
-                local action = combatKeybinds[input.KeyCode]
-                print("Triggering combat action for:", action)
-                if not CombatController or not CombatController.perform then
-                        warn("CombatController or perform method is nil!")
-                        return
-                end
-                print("Calling CombatController.perform with:", action)
-                CombatController.perform(action)
-                return
-        end
-
-        if debugInputLogging and not ignoredInputKeys[input.KeyCode] then
-                print("Unmapped key pressed:", input.KeyCode.Name)
-        end
-end)
+ActionUI.init()
 
 -- Extended Slide behavior (1.5s duration, increased movement)
 CombatController.setSlideDuration(1.5)

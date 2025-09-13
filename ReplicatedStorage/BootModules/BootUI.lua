@@ -41,7 +41,9 @@ end
 local Cosmetics       = require(ReplicatedStorage.BootModules.Cosmetics)
 local CurrencyService = require(ReplicatedStorage.BootModules.CurrencyService)
 local Shop            = require(ReplicatedStorage.BootModules.Shop)
-local ShopUI          = require(ReplicatedStorage.BootModules.ShopUI)
+local ShopUI          = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("UI"):WaitForChild("ShopUI"))
+local QuestUI         = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("UI"):WaitForChild("QuestUI"))
+local BackpackUI      = require(ReplicatedStorage:WaitForChild("ClientModules"):WaitForChild("UI"):WaitForChild("BackpackUI"))
 local TeleportClient  = require(ReplicatedStorage.ClientModules.TeleportClient)
 local DojoClient      = require(ReplicatedStorage.BootModules.DojoClient)
 
@@ -50,8 +52,7 @@ function BootUI.unlockRealm(name)
 end
 
 local currencyService
-local backpackData
-local currentTab = "Main"
+local backpackUI
 
 function BootUI.start(config)
     config = config or {}
@@ -71,14 +72,9 @@ BootUI.currencyService = currencyService
 BootUI.shop = shop
 
     -- connect currency updates after service is created but before backpack UI is defined
-    local renderBackpack
     currencyService.BalanceChanged.Event:Connect(function(coins, orbs, elements)
-        backpackData = backpackData or {}
-        backpackData.coins = coins
-        backpackData.orbs = orbs
-        backpackData.elements = elements
-        if renderBackpack then
-            renderBackpack(currentTab)
+        if backpackUI then
+            backpackUI:updateCurrency(coins, orbs, elements)
         end
     end)
 
@@ -328,121 +324,9 @@ loadTitle.TextScaled = true
 loadTitle.TextColor3 = Color3.fromRGB(255,200,120)
 loadTitle.Parent = loadout
 
--- Emote bar (top)
-local emoteBar = Instance.new("Frame")
-emoteBar.Size = UDim2.new(1,-40,0,38)
-emoteBar.Position = UDim2.fromOffset(20,baseY + 60)
-emoteBar.BackgroundColor3 = Color3.fromRGB(24,26,28)
-emoteBar.BackgroundTransparency = 0.6
-emoteBar.BorderSizePixel = 0
-emoteBar.Parent = loadout
-local emoteLayout = Instance.new("UIListLayout", emoteBar)
-emoteLayout.FillDirection = Enum.FillDirection.Horizontal
-emoteLayout.Padding = UDim.new(0,6)
-emoteLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-
-local function emoteButton(text)
-    local b = Instance.new("TextButton")
-    b.BackgroundColor3 = Color3.fromRGB(50,120,255)
-    b.TextColor3 = Color3.new(1,1,1)
-    b.Font = Enum.Font.GothamSemibold
-    b.TextScaled = true
-    b.AutoButtonColor = true
-    b.Size = UDim2.new(0,120,1,0)
-    b.Text = text
-    b.Parent = emoteBar
-    return b
-end
-
-local vpCard = Instance.new("Frame")
-vpCard.BackgroundTransparency = 0.6
-vpCard.Size = UDim2.new(0.48,-30,0.62,0)
-vpCard.Position = UDim2.fromOffset(20,baseY + 92)
-vpCard.BackgroundColor3 = Color3.fromRGB(24,26,28)
-vpCard.BorderSizePixel = 0
-vpCard.Parent = loadout
-
-local viewport = Instance.new("ViewportFrame")
-viewport.Size = UDim2.fromScale(1,1)
-viewport.BackgroundColor3 = Color3.fromRGB(16,16,16)
-viewport.BackgroundTransparency = 0.6
-viewport.BorderSizePixel = 0
-viewport.Parent = vpCard
-
-local bpCard = Instance.new("Frame")
-bpCard.Size = UDim2.new(0.48,-30,0.62,0)
-bpCard.Position = UDim2.new(1,-20,0,baseY + 92)
-bpCard.AnchorPoint = Vector2.new(1,0)
-bpCard.BackgroundColor3 = Color3.fromRGB(24,26,28)
-bpCard.BackgroundTransparency = 0.6
-bpCard.BorderSizePixel = 0
-bpCard.Parent = loadout
-
-local bpTitle = Instance.new("TextLabel")
-bpTitle.Size = UDim2.new(1,-20,0,36)
-bpTitle.Position = UDim2.new(0.02,0,0.02,0)
-bpTitle.BackgroundTransparency = 1
-bpTitle.TextXAlignment = Enum.TextXAlignment.Left
-bpTitle.Text = "Backpack"
-bpTitle.Font = Enum.Font.GothamSemibold
-bpTitle.TextScaled = true
-bpTitle.TextColor3 = Color3.new(1,1,1)
-bpTitle.Parent = bpCard
-
-local capBarBG = Instance.new("Frame")
-capBarBG.Size = UDim2.new(1,-20,0,10)
-capBarBG.Position = UDim2.new(0.02,0,0.12,0)
-capBarBG.BackgroundColor3 = Color3.fromRGB(60,60,62)
-capBarBG.BorderSizePixel = 0
-capBarBG.Parent = bpCard
-
-local capBar = Instance.new("Frame")
-capBar.Size = UDim2.new(0,0,1,0)
-capBar.BackgroundColor3 = Color3.fromRGB(80,180,120)
-capBar.BorderSizePixel = 0
-capBar.Parent = capBarBG
-
-local capLabel = Instance.new("TextLabel")
-capLabel.Size = UDim2.new(1,-20,0,22)
-capLabel.Position = UDim2.new(0.02,0,0.16,0)
-capLabel.BackgroundTransparency = 1
-capLabel.TextXAlignment = Enum.TextXAlignment.Left
-capLabel.Font = Enum.Font.Gotham
-capLabel.TextScaled = true
-capLabel.TextColor3 = Color3.fromRGB(230,230,230)
-capLabel.Parent = bpCard
-
-local tabBar = Instance.new("Frame")
-tabBar.Size = UDim2.new(1,-20,0,30)
-tabBar.Position = UDim2.new(0.02,0,0.26,0)
-tabBar.BackgroundTransparency = 1
-tabBar.Parent = bpCard
-
-local tabButtons = {}
-local tabNames = {"Main","Weapons","Food","Special"}
-for i,name in ipairs(tabNames) do
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0,80,1,0)
-    btn.Position = UDim2.new((i-1)*0.082,0,0,0)
-    btn.BackgroundColor3 = Color3.fromRGB(50,50,52)
-    btn.TextColor3 = Color3.new(1,1,1)
-    btn.Font = Enum.Font.Gotham
-    btn.TextScaled = true
-    btn.Text = name
-    btn.AutoButtonColor = true
-    btn.Parent = tabBar
-    tabButtons[name] = btn
-end
-
-local list = Instance.new("ScrollingFrame")
-list.Size = UDim2.new(1,-20,1,-140)
-list.Position = UDim2.new(0.02,0,0.32,0)
-list.CanvasSize = UDim2.new()
-list.ScrollBarThickness = 6
-list.BackgroundTransparency = 1
-list.Parent = bpCard
-local _layout = Instance.new("UIListLayout", list)
-_layout.Padding = UDim.new(0,6)
+local quest = QuestUI.init(loadout, baseY)
+BootUI.buildCharacterPreview = quest.buildCharacterPreview
+backpackUI = BackpackUI.init(loadout, baseY)
 
 local btnRow = Instance.new("Frame")
 btnRow.Size = UDim2.new(1,-40,0,60)
@@ -657,220 +541,11 @@ local function addItemRow(it)
     qty.Parent = row
 end
 
--- Orbitable viewport state
-local vpWorld, vpModel, vpCam, vpHumanoid, currentEmoteTrack
-local orbit = {yaw = math.pi, pitch = 0.1, dist = 10, min = 4, max = 40, center = Vector3.new(), dragging = false}
-
-local function updateVPCamera()
-    if not vpCam then return end
-    local dir = CFrame.fromEulerAnglesYXZ(orbit.pitch, orbit.yaw, 0).LookVector
-    local camPos = orbit.center - dir * orbit.dist
-    vpCam.CFrame = CFrame.new(camPos, orbit.center)
-end
-
-local function hookViewportControls()
-    viewport.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            orbit.dragging = true
-        elseif input.UserInputType == Enum.UserInputType.Touch then
-            orbit.dragging = true
-        end
-    end)
-    viewport.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            orbit.dragging = false
-        end
-    end)
-    viewport.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement and orbit.dragging then
-            local d = input.Delta
-            orbit.yaw = orbit.yaw - d.X * 0.01
-            orbit.pitch = math.clamp(orbit.pitch - d.Y * 0.01, -1.2, 1.2)
-            updateVPCamera()
-        elseif input.UserInputType == Enum.UserInputType.MouseWheel then
-            local scroll = input.Position.Z -- wheel delta
-            orbit.dist = math.clamp(orbit.dist - scroll * 1.5, orbit.min, orbit.max)
-            updateVPCamera()
-        end
-    end)
-end
-
-local function stopEmote()
-    if currentEmoteTrack then
-        currentEmoteTrack:Stop(0.1)
-        currentEmoteTrack:Destroy()
-        currentEmoteTrack = nil
+function BootUI.populateBackpackUI(bp)
+    if backpackUI then
+        backpackUI:setData(bp)
     end
 end
-
-local EMOTES = {
-    Idle  = "rbxassetid://507766388",
-    Wave  = "rbxassetid://507770239",
-    Point = "rbxassetid://507770453",
-    Dance = "rbxassetid://507771019",
-    Laugh = "rbxassetid://507770818",
-    Cheer = "rbxassetid://507770677",
-    Sit   = "rbxassetid://2506281703",
-}
-
-local function playEmote(name)
-    if not (vpHumanoid and EMOTES[name]) then return end
-    stopEmote()
-    local anim = Instance.new("Animation")
-    anim.AnimationId = EMOTES[name]
-    currentEmoteTrack = vpHumanoid:LoadAnimation(anim)
-    currentEmoteTrack.Looped = (name == "Idle" or name == "Dance")
-    currentEmoteTrack:Play(0.1)
-end
-
-local function wireEmoteButtons()
-    local order = {"Idle","Wave","Point","Dance","Laugh","Cheer","Sit"}
-    for _,label in ipairs(order) do
-        local b = emoteButton(label)
-        b.MouseButton1Click:Connect(function()
-            playEmote(label)
-        end)
-    end
-end
-
-local function buildCharacterPreview(personaType)
-    clearChildren(viewport)
-    vpWorld, vpModel, vpCam, vpHumanoid = nil, nil, nil, nil
-
-    vpWorld = Instance.new("WorldModel"); vpWorld.Parent = viewport
-
-    -- get a HumanoidDescription
-    local desc
-    if personaType == "Ninja" then
-        -- Expected folder "HumanoidDescriptions" contains client-visible HumanoidDescription assets.
-        -- Fall back to singular name if an older structure is present.
-        local hdFolder = ReplicatedStorage:FindFirstChild("HumanoidDescriptions")
-            or ReplicatedStorage:FindFirstChild("HumanoidDescription")
-        local hd = hdFolder and hdFolder:FindFirstChild("Ninja")
-        if hd then desc = hd:Clone() end
-    else
-        local ok, hd = pcall(function()
-            return Players:GetHumanoidDescriptionFromUserId(player.UserId)
-        end)
-        if ok then desc = hd end
-    end
-    if not desc then return end
-
-    vpModel = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
-    vpModel:PivotTo(CFrame.new(0,0,0))
-    -- Preload so preview shows fully skinned character instead of the default black model
-    pcall(function()
-        ContentProvider:PreloadAsync({vpModel})
-    end)
-    vpModel.Parent = vpWorld
-    vpHumanoid = vpModel:FindFirstChildOfClass("Humanoid")
-
-    -- Orbit framing (face camera)
-    local _, size = vpModel:GetBoundingBox()
-    local radius = math.max(size.X, size.Y, size.Z)
-    orbit.center = Vector3.new(0, size.Y*0.5, 0)
-    orbit.dist   = math.clamp(radius * 1.8, 6, 20)
-    orbit.min    = math.max(3, radius*0.8)
-    orbit.max    = radius * 4
-    orbit.pitch  = 0.15
-    orbit.yaw    = math.pi -- face user
-
-    vpCam = Instance.new("Camera")
-    vpCam.Parent = viewport
-    viewport.CurrentCamera = vpCam
-    updateVPCamera()
-
-    if not viewport:GetAttribute("_controlsHooked") then
-        hookViewportControls()
-        viewport:SetAttribute("_controlsHooked", true)
-    end
-
-    -- default to idle emote
-    playEmote("Idle")
-end
-BootUI.buildCharacterPreview = buildCharacterPreview
-
-local function updateTabButtonStates()
-    for name,btn in pairs(tabButtons) do
-        btn.BackgroundColor3 = (name == currentTab) and Color3.fromRGB(70,70,72) or Color3.fromRGB(50,50,52)
-    end
-end
-
-    function renderBackpack(tab)
-    if backpackData == nil then return end
-    currentTab = tab or currentTab
-    updateTabButtonStates()
-    clearChildren(list)
-    capBarBG.Visible, capBar.Visible, capLabel.Visible = true, true, true
-    local used = 0
-
-    if currentTab == "Main" then
-        capBarBG.Visible, capBar.Visible, capLabel.Visible = false, false, false
-        addHeader("Currency")
-        addSimpleRow("Coins", backpackData.coins or 0)
-        local elementLevels = backpackData.elements or {}
-        addHeader("Element Levels")
-        for element, lvl in pairs(elementLevels) do
-            if lvl > 0 then addSimpleRow(element, lvl) end
-        end
-        local orbTable = backpackData.orbs or {}
-        local totalOrbs = 0
-        for _, v in pairs(orbTable) do totalOrbs = totalOrbs + v end
-        addHeader(string.format("Orbs (%d)", totalOrbs))
-        for element, v in pairs(orbTable) do
-            if v > 0 then addSimpleRow(element, v) end
-        end
-
-    elseif currentTab == "Weapons" then
-        addHeader("Weapons")
-        for _,it in ipairs(backpackData.weapons or {}) do
-            used = used + it.qty
-            addItemRow(it)
-        end
-        local cap = backpackData.weaponCapacity or backpackData.capacity or 0
-        capBar.Size = UDim2.new(cap>0 and used/cap or 0, 0, 1, 0)
-        capLabel.Text = string.format("Weapon Capacity: %d / %d", used, cap)
-
-    elseif currentTab == "Food" then
-        addHeader("Food")
-        for _,it in ipairs(backpackData.food or {}) do
-            used = used + it.qty
-            addItemRow(it)
-        end
-        local cap = backpackData.foodCapacity or backpackData.capacity or 0
-        capBar.Size = UDim2.new(cap>0 and used/cap or 0, 0, 1, 0)
-        capLabel.Text = string.format("Food Capacity: %d / %d", used, cap)
-
-    elseif currentTab == "Special" then
-        capBarBG.Visible, capBar.Visible, capLabel.Visible = false, false, false
-        local orbTable = backpackData.orbs or {}
-        local totalOrbs = 0
-        for _, v in pairs(orbTable) do totalOrbs = totalOrbs + v end
-        addHeader(string.format("Orbs (%d / 10)", totalOrbs))
-        for element, v in pairs(orbTable) do
-            if v > 0 then addSimpleRow(element, v) end
-        end
-        addHeader("Special")
-        for _,it in ipairs(backpackData.special or {}) do
-            addItemRow(it)
-        end
-    end
-
-    local layout = list:FindFirstChildOfClass("UIListLayout")
-    list.CanvasSize = UDim2.new(0,0,0, layout and layout.AbsoluteContentSize.Y or 0)
-end
-
-for name,btn in pairs(tabButtons) do
-    btn.MouseButton1Click:Connect(function()
-        renderBackpack(name)
-    end)
-end
-
-    function BootUI.populateBackpackUI(bp)
-        backpackData = bp
-        backpackData.elements = currencyService and currencyService.elements or backpackData.elements
-        renderBackpack(currentTab)
-    end
 -- =====================
 btnBack.MouseButton1Click:Connect(function()
     -- Return to picker; snap camera back to start
@@ -904,7 +579,10 @@ btnEnterRealm.MouseButton1Click:Connect(function()
         DojoClient.hide()
         restoreUIBlur()
         TweenService:Create(fade, TweenInfo.new(0.35), {BackgroundTransparency = 1}):Play()
-        task.delay(0.4, function() if ui and ui.Parent then ui:Destroy() end end)
+        task.delay(0.4, function()
+            if ui and ui.Parent then ui:Destroy() end
+            BootUI.destroy()
+        end)
     else
         local placeId = TeleportClient.WorldPlaceIds[realmName]
         if not (placeId and placeId > 0) then
@@ -920,12 +598,11 @@ btnEnterRealm.MouseButton1Click:Connect(function()
             TeleportService:Teleport(placeId, player, {slot = chosenSlot})
         end)
         if not ok then warn("Teleport failed:", err) end
+        BootUI.destroy()
     end
 end)
 
 -- Hook emote buttons once (after UI exists)
-wireEmoteButtons()
-
 -- =====================
 -- FLOW
 -- =====================
@@ -938,6 +615,17 @@ Cosmetics.showDojoPicker()
 Cosmetics.refreshSlots(config.personaData)
 
 
+end
+
+function BootUI.destroy()
+    if BootUI.loadout then
+        BootUI.loadout:Destroy()
+        BootUI.loadout = nil
+    end
+    BootUI.buildCharacterPreview = nil
+    BootUI.currencyService = nil
+    BootUI.shop = nil
+    backpackUI = nil
 end
 
 return BootUI
