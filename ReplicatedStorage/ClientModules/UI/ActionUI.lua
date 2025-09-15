@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
+local GuiService = game:GetService("GuiService")
 
 local Abilities = require(ReplicatedStorage.ClientModules.Abilities)
 local CombatController = require(ReplicatedStorage.ClientModules.CombatController)
@@ -15,6 +16,7 @@ local UI_CONFIG = {
     COMBAT_COLOR = Color3.fromRGB(220, 50, 47),     -- Red for combat actions
     ABILITY_COLOR = Color3.fromRGB(38, 139, 210),   -- Blue for abilities  
     MOVEMENT_COLOR = Color3.fromRGB(133, 153, 0),   -- Yellow-green for movement
+    JUMP_COLOR = Color3.fromRGB(46, 204, 113),      -- Green for jump
     
     -- Gradients
     GRADIENT_OFFSET = Vector2.new(0, 0.3),
@@ -27,28 +29,36 @@ local UI_CONFIG = {
     -- Layout
     BUTTON_SIZE = UDim2.new(0, 80, 0, 80),
     MOBILE_BUTTON_SIZE = UDim2.new(0, 60, 0, 60),
+    JUMP_BUTTON_SIZE = UDim2.new(0, 90, 0, 90),     -- Larger jump button
+    MOBILE_JUMP_SIZE = UDim2.new(0, 70, 0, 70),
     PADDING = UDim.new(0, 8),
     CORNER_RADIUS = UDim.new(0, 12),
 }
 
 -- Button definitions with categories and styling
 local BUTTON_DEFINITIONS = {
+    -- Jump Action (Special green theme) - First for priority positioning
+    {name = "JumpButton", text = "JUMP", action = "Jump", category = "jump", keybind = "Space", priority = 1},
+    
     -- Combat Actions (Red theme)
-    {name = "PunchButton", text = "PUNCH", action = "Punch", category = "combat", keybind = "E/T"},
-    {name = "KickButton", text = "KICK", action = "Kick", category = "combat", keybind = "Q"},
+    {name = "PunchButton", text = "PUNCH", action = "Punch", category = "combat", keybind = "E/T", priority = 2},
+    {name = "KickButton", text = "KICK", action = "Kick", category = "combat", keybind = "Q", priority = 3},
     
     -- Movement Actions (Yellow-green theme)
-    {name = "RollButton", text = "ROLL", action = "Roll", category = "movement", keybind = "R"},
-    {name = "CrouchButton", text = "CROUCH", action = "Crouch", category = "movement", keybind = "C"},
-    {name = "SlideButton", text = "SLIDE", action = "Slide", category = "movement", keybind = "Ctrl"},
+    {name = "RollButton", text = "ROLL", action = "Roll", category = "movement", keybind = "R", priority = 4},
+    {name = "CrouchButton", text = "CROUCH", action = "Crouch", category = "movement", keybind = "C", priority = 5},
+    {name = "SlideButton", text = "SLIDE", action = "Slide", category = "movement", keybind = "Ctrl", priority = 6},
     
     -- Abilities (Blue theme)
-    {name = "TossButton", text = "TOSS", action = "Toss", category = "ability", keybind = "F"},
-    {name = "StarButton", text = "STAR", action = "Star", category = "ability", keybind = "G"},
-    {name = "RainButton", text = "RAIN", action = "Rain", category = "ability", keybind = "Z"},
-    {name = "BeastButton", text = "BEAST", action = "Beast", category = "ability", keybind = "B"},
-    {name = "DragonButton", text = "DRAGON", action = "Dragon", category = "ability", keybind = "X"},
+    {name = "TossButton", text = "TOSS", action = "Toss", category = "ability", keybind = "F", priority = 7},
+    {name = "StarButton", text = "STAR", action = "Star", category = "ability", keybind = "G", priority = 8},
+    {name = "RainButton", text = "RAIN", action = "Rain", category = "ability", keybind = "Z", priority = 9},
+    {name = "BeastButton", text = "BEAST", action = "Beast", category = "ability", keybind = "B", priority = 10},
+    {name = "DragonButton", text = "DRAGON", action = "Dragon", category = "ability", keybind = "X", priority = 11},
 }
+
+local customJumpEnabled = false
+local originalJumpConnection = nil
 
 local function isMobile()
     return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
@@ -87,8 +97,14 @@ local function createStylizedButton(buttonDef)
     button.Text = ""
     button.BackgroundTransparency = 0
     button.BorderSizePixel = 0
-    button.Size = isMobile() and UI_CONFIG.MOBILE_BUTTON_SIZE or UI_CONFIG.BUTTON_SIZE
     button.ZIndex = 2
+    
+    -- Special sizing for jump button
+    if buttonDef.category == "jump" then
+        button.Size = isMobile() and UI_CONFIG.MOBILE_JUMP_SIZE or UI_CONFIG.JUMP_BUTTON_SIZE
+    else
+        button.Size = isMobile() and UI_CONFIG.MOBILE_BUTTON_SIZE or UI_CONFIG.BUTTON_SIZE
+    end
     
     -- Colors based on category
     local color = UI_CONFIG.COMBAT_COLOR
@@ -96,6 +112,8 @@ local function createStylizedButton(buttonDef)
         color = UI_CONFIG.ABILITY_COLOR
     elseif buttonDef.category == "movement" then
         color = UI_CONFIG.MOVEMENT_COLOR
+    elseif buttonDef.category == "jump" then
+        color = UI_CONFIG.JUMP_COLOR
     end
     
     button.BackgroundColor3 = color
@@ -175,6 +193,62 @@ local function setupButtonAnimations(button)
     end)
 end
 
+-- Custom jump function with enhanced features
+local function performCustomJump()
+    local player = Players.LocalPlayer
+    local character = player.Character
+    if not character then return end
+    
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+    
+    -- Enhanced jump logic - you can customize this
+    if humanoid:GetState() ~= Enum.HumanoidStateType.Freefall then
+        -- Basic jump
+        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        
+        -- Optional: Add custom effects, sounds, or enhanced jump mechanics here
+        -- Example: Double jump, air dash, particle effects, etc.
+        
+        print("Custom jump performed!") -- Debug
+    end
+end
+
+-- Function to disable default Roblox jump
+local function disableDefaultJump()
+    local player = Players.LocalPlayer
+    
+    -- Method 1: Hide the default jump button on mobile
+    if isMobile() then
+        pcall(function()
+            GuiService:SetTouchGuiEnabled(Enum.TouchGuiType.Jump, false)
+        end)
+    end
+    
+    -- Method 2: Override space key for PC
+    UserInputService.JumpRequest:Connect(function()
+        -- Prevent default jump by not calling Jump
+        -- The custom jump will be handled by our keybind system
+    end)
+    
+    customJumpEnabled = true
+    print("Default jump disabled - using custom jump system")
+end
+
+-- Function to restore default jump
+local function enableDefaultJump()
+    local player = Players.LocalPlayer
+    
+    if isMobile() then
+        pcall(function()
+            GuiService:SetTouchGuiEnabled(Enum.TouchGuiType.Jump, true)
+        end)
+    end
+    
+    customJumpEnabled = false
+    print("Default jump restored")
+end
+
 local function ensureActions()
     local player = Players.LocalPlayer
     local gui = player.PlayerGui
@@ -198,20 +272,22 @@ local function ensureActions()
         -- Responsive positioning
         if isMobile() then
             -- Mobile: Bottom right corner
-            actions.Size = UDim2.new(0, 200, 0, 300)
-            actions.Position = UDim2.new(1, -210, 1, -310)
+            actions.Size = UDim2.new(0, 220, 0, 350)
+            actions.Position = UDim2.new(1, -230, 1, -360)
         else
             -- PC: Center right
-            actions.Size = UDim2.new(0, 250, 0, 400)
-            actions.Position = UDim2.new(1, -260, 0.5, -200)
+            actions.Size = UDim2.new(0, 280, 0, 450)
+            actions.Position = UDim2.new(1, -290, 0.5, -225)
         end
         
-        -- Grid layout
+        -- Grid layout with flexible sizing
         local gridLayout = Instance.new("UIGridLayout")
         gridLayout.Parent = actions
-        gridLayout.CellSize = isMobile() and UI_CONFIG.MOBILE_BUTTON_SIZE or UI_CONFIG.BUTTON_SIZE
         gridLayout.CellPadding = UDim2.new(0, 8, 0, 8)
         gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        gridLayout.FillDirection = Enum.FillDirection.Vertical
+        gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+        gridLayout.VerticalAlignment = Enum.VerticalAlignment.Top
         
         -- Padding
         local padding = Instance.new("UIPadding")
@@ -229,10 +305,19 @@ local function ensureActions()
         end
     end
 
+    -- Sort buttons by priority
+    local sortedButtons = {}
+    for _, buttonDef in ipairs(BUTTON_DEFINITIONS) do
+        table.insert(sortedButtons, buttonDef)
+    end
+    table.sort(sortedButtons, function(a, b)
+        return (a.priority or 999) < (b.priority or 999)
+    end)
+
     -- Create buttons with enhanced styling
-    for i, buttonDef in ipairs(BUTTON_DEFINITIONS) do
+    for i, buttonDef in ipairs(sortedButtons) do
         local button, def = createStylizedButton(buttonDef)
-        button.LayoutOrder = i
+        button.LayoutOrder = buttonDef.priority or i
         button.Parent = actions
         setupButtonAnimations(button)
     end
@@ -242,6 +327,9 @@ end
 
 function ActionUI.init()
     local actions = ensureActions()
+
+    -- Disable default jump when initializing
+    disableDefaultJump()
 
     -- Combat action connections
     local actionMap = {
@@ -261,6 +349,14 @@ function ActionUI.init()
         end
     end
 
+    -- Jump button connection
+    local jumpBtn = actions:FindFirstChild("JumpButton")
+    if jumpBtn then
+        jumpBtn.Activated:Connect(function()
+            performCustomJump()
+        end)
+    end
+
     -- Ability connections
     local abilityMap = {
         TossButton = Abilities.Toss,
@@ -277,7 +373,7 @@ function ActionUI.init()
         end
     end
 
-    -- Keybind setup (unchanged from original)
+    -- Enhanced keybind setup with custom jump
     local abilityKeybinds = {
         [Enum.KeyCode.F] = Abilities.Toss,
         [Enum.KeyCode.G] = Abilities.Star,
@@ -293,6 +389,7 @@ function ActionUI.init()
         [Enum.KeyCode.R] = "Roll",
         [Enum.KeyCode.C] = "Crouch",
         [Enum.KeyCode.LeftControl] = "Slide",
+        [Enum.KeyCode.Space] = "Jump", -- Custom jump override
     }
 
     local ignoredInputKeys = {
@@ -300,7 +397,6 @@ function ActionUI.init()
         [Enum.KeyCode.A] = true,
         [Enum.KeyCode.S] = true,
         [Enum.KeyCode.D] = true,
-        [Enum.KeyCode.Space] = true,
         [Enum.KeyCode.LeftShift] = true,
         [Enum.KeyCode.Up] = true,
         [Enum.KeyCode.Down] = true,
@@ -330,7 +426,11 @@ function ActionUI.init()
 
         if combatKeybinds[input.KeyCode] then
             local action = combatKeybinds[input.KeyCode]
-            CombatController.perform(action)
+            if action == "Jump" then
+                performCustomJump()
+            else
+                CombatController.perform(action)
+            end
             return
         end
 
@@ -347,14 +447,25 @@ function ActionUI.init()
     end)
 end
 
+-- Utility function to toggle jump mode
+function ActionUI.toggleJumpMode()
+    if customJumpEnabled then
+        enableDefaultJump()
+    else
+        disableDefaultJump()
+    end
+    return customJumpEnabled
+end
+
 -- Utility function to add new buttons dynamically
-function ActionUI.addButton(name, text, category, callback, keybind)
+function ActionUI.addButton(name, text, category, callback, keybind, priority)
     table.insert(BUTTON_DEFINITIONS, {
         name = name,
         text = text,
         action = text:lower(),
         category = category,
-        keybind = keybind
+        keybind = keybind,
+        priority = priority or 999
     })
     
     -- Reinitialize to show new button
@@ -366,6 +477,13 @@ function ActionUI.addButton(name, text, category, callback, keybind)
     local button = actions:FindFirstChild(name)
     if button and callback then
         button.Activated:Connect(callback)
+    end
+end
+
+-- Enhanced jump function that you can customize further
+function ActionUI.setCustomJumpLogic(jumpFunction)
+    if typeof(jumpFunction) == "function" then
+        performCustomJump = jumpFunction
     end
 end
 
