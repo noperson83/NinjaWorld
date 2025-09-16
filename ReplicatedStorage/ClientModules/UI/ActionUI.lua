@@ -35,6 +35,20 @@ local UI_CONFIG = {
 	CORNER_RADIUS = UDim.new(0, 12),
 }
 
+
+local FAN_CONFIG = {
+	START_ANGLE = math.rad(210),
+	END_ANGLE = math.rad(330),
+	MOBILE_RADIUS = 110,
+	DESKTOP_RADIUS = 150,
+	JUMP_MARGIN = 12,
+	TOGGLE_MARGIN = 14,
+	ANIMATION_TIME = 0.25,
+	SPEED_BOOST = 4,
+	TOGGLE_SIZE = UDim2.new(0, 44, 0, 44),
+	MOBILE_TOGGLE_SIZE = UDim2.new(0, 36, 0, 36),
+}
+
 -- Button definitions with categories and styling
 local BUTTON_DEFINITIONS = {
 	-- Jump Action (Special green theme) - First for priority positioning
@@ -61,6 +75,21 @@ local customJumpEnabled = false
 local originalJumpConnection = nil
 local forceActionsVisible = false
 
+local currentActionsFrame = nil
+local jumpButtonRef = nil
+local toggleButtonRef = nil
+local fanButtons = {}
+local fanOpen = true
+local defaultWalkSpeed = nil
+local speedBoostApplied = false
+local characterAddedConnection = nil
+
+local updateFanLayout
+local updateToggleVisual
+local applySpeedState
+local setFanOpen
+local ensureCharacterTracking
+
 local function isMobile()
         return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 end
@@ -68,6 +97,21 @@ end
 -- Determines whether the touch actions UI should be visible/active
 local function shouldDisplayActions()
         return forceActionsVisible or isMobile()
+end
+
+
+local function getHumanoid()
+        local player = Players.LocalPlayer
+        if not player then
+                return nil
+        end
+
+        local character = player.Character
+        if not character then
+                return nil
+        end
+
+        return character:FindFirstChildOfClass("Humanoid")
 end
 
 local function createGradient(color)
@@ -95,6 +139,30 @@ local function createButtonShadow()
 	shadowCorner.Parent = shadow
 
 	return shadow
+end
+
+local function createFanToggleButton()
+        local toggle = Instance.new("TextButton")
+        toggle.Name = "FanToggle"
+        toggle.Text = ""
+        toggle.AutoButtonColor = true
+        toggle.BackgroundTransparency = 0.1
+        toggle.BackgroundColor3 = Color3.fromRGB(45, 52, 54)
+        toggle.BorderSizePixel = 0
+        toggle.AnchorPoint = Vector2.new(0.5, 0.5)
+        toggle.ZIndex = 4
+        toggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+        toggle.TextScaled = true
+        toggle.Font = Enum.Font.GothamBold
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UI_CONFIG.CORNER_RADIUS
+        corner.Parent = toggle
+
+        local shadow = createButtonShadow()
+        shadow.Parent = toggle
+
+        return toggle
 end
 
 local function createStylizedButton(buttonDef)
@@ -199,6 +267,148 @@ local function setupButtonAnimations(button)
 	end)
 end
 
+local function updateToggleVisual()
+        if not toggleButtonRef then
+                return
+        end
+
+        if #fanButtons == 0 then
+                toggleButtonRef.Visible = false
+                return
+        end
+
+        toggleButtonRef.Visible = true
+        toggleButtonRef.Text = fanOpen and "−" or "☰"
+end
+
+local function applySpeedState()
+        local humanoid = getHumanoid()
+        if not humanoid then
+                return
+        end
+
+        if fanOpen then
+                if speedBoostApplied and defaultWalkSpeed then
+                        humanoid.WalkSpeed = defaultWalkSpeed
+                end
+                speedBoostApplied = false
+                return
+        end
+
+        if not speedBoostApplied then
+                defaultWalkSpeed = humanoid.WalkSpeed
+        end
+
+        humanoid.WalkSpeed = (defaultWalkSpeed or humanoid.WalkSpeed) + FAN_CONFIG.SPEED_BOOST
+        speedBoostApplied = true
+end
+
+local function ensureCharacterTracking()
+        local player = Players.LocalPlayer
+        if not player then
+                return
+        end
+
+        if characterAddedConnection then
+                return
+        end
+
+        characterAddedConnection = player.CharacterAdded:Connect(function()
+                defaultWalkSpeed = nil
+                speedBoostApplied = false
+                task.defer(applySpeedState)
+        end)
+
+        if player.Character then
+                task.defer(applySpeedState)
+        end
+end
+
+local function updateFanLayout(animated)
+        if not currentActionsFrame or not jumpButtonRef then
+                return
+        end
+
+        local radius = isMobile() and FAN_CONFIG.MOBILE_RADIUS or FAN_CONFIG.DESKTOP_RADIUS
+        local jumpSize = jumpButtonRef.Size
+        local baseOffsetX = -(jumpSize.X.Offset / 2) - FAN_CONFIG.JUMP_MARGIN
+        local baseOffsetY = -(jumpSize.Y.Offset / 2) - FAN_CONFIG.JUMP_MARGIN
+
+        currentActionsFrame.AnchorPoint = Vector2.new(1, 1)
+        currentActionsFrame.Position = UDim2.new(1, -20, 1, -20)
+        local frameWidth = radius + jumpSize.X.Offset + FAN_CONFIG.JUMP_MARGIN * 2
+        local frameHeight = radius + jumpSize.Y.Offset + FAN_CONFIG.JUMP_MARGIN * 2
+        currentActionsFrame.Size = UDim2.new(0, frameWidth, 0, frameHeight)
+        currentActionsFrame.ClipsDescendants = false
+
+        local totalButtons = #fanButtons
+        for index, button in ipairs(fanButtons) do
+                button.AnchorPoint = Vector2.new(0.5, 0.5)
+
+                local angle
+                if totalButtons <= 1 then
+                        angle = (FAN_CONFIG.START_ANGLE + FAN_CONFIG.END_ANGLE) * 0.5
+                else
+                        angle = FAN_CONFIG.START_ANGLE + (index - 1) / (totalButtons - 1) * (FAN_CONFIG.END_ANGLE - FAN_CONFIG.START_ANGLE)
+                end
+
+                local deltaX = fanOpen and math.cos(angle) * radius or 0
+                local deltaY = fanOpen and math.sin(angle) * radius or 0
+                local targetPosition = UDim2.new(1, baseOffsetX + deltaX, 1, baseOffsetY + deltaY)
+
+                if animated then
+                        button.Visible = true
+                        local tween = TweenService:Create(button, TweenInfo.new(FAN_CONFIG.ANIMATION_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                Position = targetPosition,
+                        })
+                        tween:Play()
+                        if not fanOpen then
+                                tween.Completed:Connect(function()
+                                        if not fanOpen then
+                                                button.Visible = false
+                                        end
+                                end)
+                        end
+                else
+                        button.Position = targetPosition
+                        button.Visible = fanOpen
+                end
+        end
+
+        if toggleButtonRef then
+                local toggleSize = isMobile() and FAN_CONFIG.MOBILE_TOGGLE_SIZE or FAN_CONFIG.TOGGLE_SIZE
+                toggleButtonRef.Size = toggleSize
+                local toggleOffsetX = -(jumpSize.X.Offset / 2) - FAN_CONFIG.JUMP_MARGIN - (toggleSize.X.Offset / 2) - FAN_CONFIG.TOGGLE_MARGIN
+                local toggleOffsetY = -(jumpSize.Y.Offset / 2)
+                toggleButtonRef.Position = UDim2.new(1, toggleOffsetX, 1, toggleOffsetY)
+                toggleButtonRef.Visible = totalButtons > 0
+        end
+
+        if not fanOpen and not animated then
+                for _, button in ipairs(fanButtons) do
+                        button.Visible = false
+                end
+        end
+end
+
+local function setFanOpen(state, animated)
+        local targetState = state ~= false
+        local shouldAnimate = animated
+        if shouldAnimate == nil then
+                shouldAnimate = true
+        end
+
+        if fanOpen ~= targetState then
+                fanOpen = targetState
+        end
+
+        updateToggleVisual()
+        updateFanLayout(shouldAnimate)
+        applySpeedState()
+
+        return fanOpen
+end
+
 -- Custom jump function with enhanced features
 local function performCustomJump()
 	local player = Players.LocalPlayer
@@ -268,6 +478,20 @@ local function ensureActions()
                                 existingActions:Destroy()
                         end
                 end
+
+                if speedBoostApplied and defaultWalkSpeed then
+                        local humanoid = getHumanoid()
+                        if humanoid then
+                                humanoid.WalkSpeed = defaultWalkSpeed
+                        end
+                end
+                speedBoostApplied = false
+                defaultWalkSpeed = nil
+                currentActionsFrame = nil
+                jumpButtonRef = nil
+                toggleButtonRef = nil
+                fanButtons = {}
+
                 return nil
         end
 
@@ -284,39 +508,22 @@ local function ensureActions()
                 actions = Instance.new("Frame")
                 actions.Name = "Actions"
                 actions.BackgroundTransparency = 1
+                actions.AnchorPoint = Vector2.new(1, 1)
+                actions.Position = UDim2.new(1, -20, 1, -20)
+                actions.ClipsDescendants = false
                 actions.Parent = screenGui
-
-                -- Responsive positioning
-                -- Mobile/forced: Bottom right corner
-                actions.Size = UDim2.new(0, 220, 0, 350)
-                actions.Position = UDim2.new(1, -230, 1, -360)
-
-                -- Grid layout with flexible sizing
-                local gridLayout = Instance.new("UIGridLayout")
-                gridLayout.Parent = actions
-                gridLayout.CellPadding = UDim2.new(0, 8, 0, 8)
-                gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
-                gridLayout.FillDirection = Enum.FillDirection.Vertical
-                gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-                gridLayout.VerticalAlignment = Enum.VerticalAlignment.Top
-
-                -- Padding
-                local padding = Instance.new("UIPadding")
-                padding.Parent = actions
-                padding.PaddingTop = UI_CONFIG.PADDING
-                padding.PaddingBottom = UI_CONFIG.PADDING
-                padding.PaddingLeft = UI_CONFIG.PADDING
-                padding.PaddingRight = UI_CONFIG.PADDING
+        else
+                actions:ClearAllChildren()
+                actions.AnchorPoint = Vector2.new(1, 1)
+                actions.Position = UDim2.new(1, -20, 1, -20)
+                actions.ClipsDescendants = false
         end
 
-        -- Clear existing buttons and recreate with new styling
-        for _, child in pairs(actions:GetChildren()) do
-                if child:IsA("TextButton") then
-                        child:Destroy()
-                end
-        end
+        currentActionsFrame = actions
+        jumpButtonRef = nil
+        toggleButtonRef = nil
+        fanButtons = {}
 
-        -- Sort buttons by priority
         local sortedButtons = {}
         for _, buttonDef in ipairs(BUTTON_DEFINITIONS) do
                 table.insert(sortedButtons, buttonDef)
@@ -325,34 +532,61 @@ local function ensureActions()
                 return (a.priority or 999) < (b.priority or 999)
         end)
 
-        -- Create buttons with absolute positioning - properly spaced
-        local yOffset = 10
-        local buttonSpacing = 15
-        local onMobile = isMobile()
+        local allowJumpButton = isMobile() or forceActionsVisible
 
         for _, buttonDef in ipairs(sortedButtons) do
                 local isJumpButton = buttonDef.category == "jump"
-                if not (isJumpButton and not onMobile) then
+                if not (isJumpButton and not allowJumpButton) then
                         local button = createStylizedButton(buttonDef)
-
-                        -- Absolute positioning
-                        button.Position = UDim2.new(0, 10, 0, yOffset)
+                        button.AnchorPoint = Vector2.new(0.5, 0.5)
                         button.Parent = actions
                         setupButtonAnimations(button)
 
-                        -- Calculate next Y position based on actual button size plus spacing
                         if isJumpButton then
-                                yOffset = yOffset + (shouldDisplayActions() and 70 or 90) + buttonSpacing
+                                jumpButtonRef = button
                         else
-                                yOffset = yOffset + (shouldDisplayActions() and 60 or 80) + buttonSpacing
+                                table.insert(fanButtons, button)
                         end
                 end
         end
+
+        if jumpButtonRef then
+                local margin = FAN_CONFIG.JUMP_MARGIN
+                local jumpSize = jumpButtonRef.Size
+                jumpButtonRef.Position = UDim2.new(
+                        1,
+                        -(jumpSize.X.Offset / 2) - margin,
+                        1,
+                        -(jumpSize.Y.Offset / 2) - margin
+                )
+        end
+
+        for _, button in ipairs(fanButtons) do
+                if jumpButtonRef then
+                        button.Position = jumpButtonRef.Position
+                else
+                        button.Position = UDim2.new(1, -button.Size.X.Offset / 2, 1, -button.Size.Y.Offset / 2)
+                end
+        end
+
+        if #fanButtons > 0 then
+                toggleButtonRef = createFanToggleButton()
+                toggleButtonRef.Parent = actions
+                toggleButtonRef.Activated:Connect(function()
+                        setFanOpen(not fanOpen)
+                end)
+        else
+                toggleButtonRef = nil
+        end
+
+        setFanOpen(fanOpen, false)
 
         return actions
 end
 
 function ActionUI.init()
+        ensureCharacterTracking()
+
         local actions = ensureActions()
 
         if not actions then
@@ -482,6 +716,18 @@ function ActionUI.init()
 		wait(0.1) -- Small delay to ensure proper sizing
 		ActionUI.init() -- Reinitialize with new sizing
 	end)
+end
+
+function ActionUI.toggleFanOpen(animated)
+        return setFanOpen(not fanOpen, animated)
+end
+
+function ActionUI.setFanOpen(open, animated)
+        return setFanOpen(open, animated)
+end
+
+function ActionUI.isFanOpen()
+        return fanOpen
 end
 
 -- Utility function to toggle jump mode
