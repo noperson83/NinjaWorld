@@ -328,20 +328,24 @@ local function ensureActions()
         -- Create buttons with absolute positioning - properly spaced
         local yOffset = 10
         local buttonSpacing = 15
+        local onMobile = isMobile()
 
         for _, buttonDef in ipairs(sortedButtons) do
-                local button = createStylizedButton(buttonDef)
+                local isJumpButton = buttonDef.category == "jump"
+                if not (isJumpButton and not onMobile) then
+                        local button = createStylizedButton(buttonDef)
 
-                -- Absolute positioning
-                button.Position = UDim2.new(0, 10, 0, yOffset)
-                button.Parent = actions
-                setupButtonAnimations(button)
+                        -- Absolute positioning
+                        button.Position = UDim2.new(0, 10, 0, yOffset)
+                        button.Parent = actions
+                        setupButtonAnimations(button)
 
-                -- Calculate next Y position based on actual button size plus spacing
-                if buttonDef.category == "jump" then
-                        yOffset = yOffset + (shouldDisplayActions() and 70 or 90) + buttonSpacing
-                else
-                        yOffset = yOffset + (shouldDisplayActions() and 60 or 80) + buttonSpacing
+                        -- Calculate next Y position based on actual button size plus spacing
+                        if isJumpButton then
+                                yOffset = yOffset + (shouldDisplayActions() and 70 or 90) + buttonSpacing
+                        else
+                                yOffset = yOffset + (shouldDisplayActions() and 60 or 80) + buttonSpacing
+                        end
                 end
         end
 
@@ -354,8 +358,12 @@ function ActionUI.init()
         if not actions then
                 enableDefaultJump()
         else
-                -- Disable default jump when initializing
-                disableDefaultJump()
+                if isMobile() then
+                        -- Disable default jump when initializing on mobile
+                        disableDefaultJump()
+                else
+                        enableDefaultJump()
+                end
 
                 -- Combat action connections
                 local actionMap = {
@@ -451,15 +459,17 @@ function ActionUI.init()
 			return
 		end
 
-		if combatKeybinds[input.KeyCode] then
-			local action = combatKeybinds[input.KeyCode]
-			if action == "Jump" then
-				performCustomJump()
-			else
-				CombatController.perform(action)
-			end
-			return
-		end
+                if combatKeybinds[input.KeyCode] then
+                        local action = combatKeybinds[input.KeyCode]
+                        if action == "Jump" then
+                                if customJumpEnabled then
+                                        performCustomJump()
+                                end
+                        else
+                                CombatController.perform(action)
+                        end
+                        return
+                end
 
 		if debugInputLogging and not ignoredInputKeys[input.KeyCode] then
 			print("Unmapped key pressed:", input.KeyCode.Name)
@@ -476,12 +486,19 @@ end
 
 -- Utility function to toggle jump mode
 function ActionUI.toggleJumpMode()
-	if customJumpEnabled then
-		enableDefaultJump()
-	else
-		disableDefaultJump()
-	end
-	return customJumpEnabled
+        if not isMobile() then
+                if customJumpEnabled then
+                        enableDefaultJump()
+                end
+                return customJumpEnabled
+        end
+
+        if customJumpEnabled then
+                enableDefaultJump()
+        else
+                disableDefaultJump()
+        end
+        return customJumpEnabled
 end
 
 -- Utility function to add new buttons dynamically
