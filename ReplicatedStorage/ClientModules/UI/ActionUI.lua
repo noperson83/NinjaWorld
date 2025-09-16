@@ -59,9 +59,15 @@ local BUTTON_DEFINITIONS = {
 
 local customJumpEnabled = false
 local originalJumpConnection = nil
+local forceActionsVisible = false
 
 local function isMobile()
-	return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+        return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+end
+
+-- Determines whether the touch actions UI should be visible/active
+local function shouldDisplayActions()
+        return forceActionsVisible or isMobile()
 end
 
 local function createGradient(color)
@@ -100,11 +106,11 @@ local function createStylizedButton(buttonDef)
 	button.ZIndex = 2
 
 	-- Special sizing for jump button
-	if buttonDef.category == "jump" then
-		button.Size = isMobile() and UI_CONFIG.MOBILE_JUMP_SIZE or UI_CONFIG.JUMP_BUTTON_SIZE
-	else
-		button.Size = isMobile() and UI_CONFIG.MOBILE_BUTTON_SIZE or UI_CONFIG.BUTTON_SIZE
-	end
+        if buttonDef.category == "jump" then
+                button.Size = shouldDisplayActions() and UI_CONFIG.MOBILE_JUMP_SIZE or UI_CONFIG.JUMP_BUTTON_SIZE
+        else
+                button.Size = shouldDisplayActions() and UI_CONFIG.MOBILE_BUTTON_SIZE or UI_CONFIG.BUTTON_SIZE
+        end
 
 	-- Colors based on category
 	local color = UI_CONFIG.COMBAT_COLOR
@@ -172,17 +178,17 @@ end
 local function setupButtonAnimations(button)
 	local originalSize = button.Size
 
-	button.MouseEnter:Connect(function()
-		if not isMobile() then
-			animateButton(button, UI_CONFIG.HOVER_SCALE)
-		end
-	end)
+        button.MouseEnter:Connect(function()
+                if not shouldDisplayActions() then
+                        animateButton(button, UI_CONFIG.HOVER_SCALE)
+                end
+        end)
 
-	button.MouseLeave:Connect(function()
-		if not isMobile() then
-			button.Size = originalSize
-		end
-	end)
+        button.MouseLeave:Connect(function()
+                if not shouldDisplayActions() then
+                        button.Size = originalSize
+                end
+        end)
 
 	button.MouseButton1Down:Connect(function()
 		animateButton(button, UI_CONFIG.PRESS_SCALE, 0.08)
@@ -250,143 +256,152 @@ local function enableDefaultJump()
 end
 
 local function ensureActions()
-	local player = Players.LocalPlayer
-	local gui = player.PlayerGui
+        local player = Players.LocalPlayer
+        local gui = player.PlayerGui
 
-	local screenGui = gui:FindFirstChild("ScreenGui")
-	if not screenGui then
-		screenGui = Instance.new("ScreenGui")
-		screenGui.Name = "ScreenGui"
-		screenGui.ResetOnSpawn = false
-		screenGui.IgnoreGuiInset = true
-		screenGui.Parent = gui
-	end
+        local screenGui = gui:FindFirstChild("ScreenGui")
 
-	local actions = screenGui:FindFirstChild("Actions")
-	if not actions then
-		actions = Instance.new("Frame")
-		actions.Name = "Actions"
-		actions.BackgroundTransparency = 1
-		actions.Parent = screenGui
+        if not shouldDisplayActions() then
+                if screenGui then
+                        local existingActions = screenGui:FindFirstChild("Actions")
+                        if existingActions then
+                                existingActions:Destroy()
+                        end
+                end
+                return nil
+        end
 
-		-- Responsive positioning
-		if isMobile() then
-			-- Mobile: Bottom right corner
-			actions.Size = UDim2.new(0, 220, 0, 350)
-			actions.Position = UDim2.new(1, -230, 1, -360)
-		else
-			-- PC: Center right
-			actions.Size = UDim2.new(0, 280, 0, 450)
-			actions.Position = UDim2.new(1, -290, 0.5, -225)
-		end
+        if not screenGui then
+                screenGui = Instance.new("ScreenGui")
+                screenGui.Name = "ScreenGui"
+                screenGui.ResetOnSpawn = false
+                screenGui.IgnoreGuiInset = true
+                screenGui.Parent = gui
+        end
 
-		-- Grid layout with flexible sizing
-		local gridLayout = Instance.new("UIGridLayout")
-		gridLayout.Parent = actions
-		gridLayout.CellPadding = UDim2.new(0, 8, 0, 8)
-		gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
-		gridLayout.FillDirection = Enum.FillDirection.Vertical
-		gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-		gridLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+        local actions = screenGui:FindFirstChild("Actions")
+        if not actions then
+                actions = Instance.new("Frame")
+                actions.Name = "Actions"
+                actions.BackgroundTransparency = 1
+                actions.Parent = screenGui
 
-		-- Padding
-		local padding = Instance.new("UIPadding")
-		padding.Parent = actions
-		padding.PaddingTop = UI_CONFIG.PADDING
-		padding.PaddingBottom = UI_CONFIG.PADDING
-		padding.PaddingLeft = UI_CONFIG.PADDING
-		padding.PaddingRight = UI_CONFIG.PADDING
-	end
+                -- Responsive positioning
+                -- Mobile/forced: Bottom right corner
+                actions.Size = UDim2.new(0, 220, 0, 350)
+                actions.Position = UDim2.new(1, -230, 1, -360)
 
-	-- Clear existing buttons and recreate with new styling
-	for _, child in pairs(actions:GetChildren()) do
-		if child:IsA("TextButton") then
-			child:Destroy()
-		end
-	end
+                -- Grid layout with flexible sizing
+                local gridLayout = Instance.new("UIGridLayout")
+                gridLayout.Parent = actions
+                gridLayout.CellPadding = UDim2.new(0, 8, 0, 8)
+                gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                gridLayout.FillDirection = Enum.FillDirection.Vertical
+                gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+                gridLayout.VerticalAlignment = Enum.VerticalAlignment.Top
 
-	-- Sort buttons by priority
-	local sortedButtons = {}
-	for _, buttonDef in ipairs(BUTTON_DEFINITIONS) do
-		table.insert(sortedButtons, buttonDef)
-	end
-	table.sort(sortedButtons, function(a, b)
-		return (a.priority or 999) < (b.priority or 999)
-	end)
+                -- Padding
+                local padding = Instance.new("UIPadding")
+                padding.Parent = actions
+                padding.PaddingTop = UI_CONFIG.PADDING
+                padding.PaddingBottom = UI_CONFIG.PADDING
+                padding.PaddingLeft = UI_CONFIG.PADDING
+                padding.PaddingRight = UI_CONFIG.PADDING
+        end
 
-	-- Create buttons with absolute positioning - properly spaced
-	local yOffset = 10
-	local buttonSpacing = 15
+        -- Clear existing buttons and recreate with new styling
+        for _, child in pairs(actions:GetChildren()) do
+                if child:IsA("TextButton") then
+                        child:Destroy()
+                end
+        end
 
-	for i, buttonDef in ipairs(sortedButtons) do
-		local button, def = createStylizedButton(buttonDef)
+        -- Sort buttons by priority
+        local sortedButtons = {}
+        for _, buttonDef in ipairs(BUTTON_DEFINITIONS) do
+                table.insert(sortedButtons, buttonDef)
+        end
+        table.sort(sortedButtons, function(a, b)
+                return (a.priority or 999) < (b.priority or 999)
+        end)
 
-		-- Absolute positioning
-		button.Position = UDim2.new(0, 10, 0, yOffset)
-		button.Parent = actions
-		setupButtonAnimations(button)
+        -- Create buttons with absolute positioning - properly spaced
+        local yOffset = 10
+        local buttonSpacing = 15
 
-		-- Calculate next Y position based on actual button size plus spacing
-		if buttonDef.category == "jump" then
-			yOffset = yOffset + (isMobile() and 70 or 90) + buttonSpacing
-		else
-			yOffset = yOffset + (isMobile() and 60 or 80) + buttonSpacing
-		end
-	end
+        for _, buttonDef in ipairs(sortedButtons) do
+                local button = createStylizedButton(buttonDef)
 
-	return actions
+                -- Absolute positioning
+                button.Position = UDim2.new(0, 10, 0, yOffset)
+                button.Parent = actions
+                setupButtonAnimations(button)
+
+                -- Calculate next Y position based on actual button size plus spacing
+                if buttonDef.category == "jump" then
+                        yOffset = yOffset + (shouldDisplayActions() and 70 or 90) + buttonSpacing
+                else
+                        yOffset = yOffset + (shouldDisplayActions() and 60 or 80) + buttonSpacing
+                end
+        end
+
+        return actions
 end
 
 function ActionUI.init()
-	local actions = ensureActions()
+        local actions = ensureActions()
 
-	-- Disable default jump when initializing
-	disableDefaultJump()
+        if not actions then
+                enableDefaultJump()
+        else
+                -- Disable default jump when initializing
+                disableDefaultJump()
 
-	-- Combat action connections
-	local actionMap = {
-		PunchButton = "Punch",
-		KickButton = "Kick",
-		RollButton = "Roll",
-		CrouchButton = "Crouch",
-		SlideButton = "Slide",
-	}
+                -- Combat action connections
+                local actionMap = {
+                        PunchButton = "Punch",
+                        KickButton = "Kick",
+                        RollButton = "Roll",
+                        CrouchButton = "Crouch",
+                        SlideButton = "Slide",
+                }
 
-	for buttonName, action in pairs(actionMap) do
-		local btn = actions:FindFirstChild(buttonName)
-		if btn then
-			btn.Activated:Connect(function()
-				CombatController.perform(action)
-			end)
-		end
-	end
+                for buttonName, action in pairs(actionMap) do
+                        local btn = actions:FindFirstChild(buttonName)
+                        if btn then
+                                btn.Activated:Connect(function()
+                                        CombatController.perform(action)
+                                end)
+                        end
+                end
 
-	-- Jump button connection
-	local jumpBtn = actions:FindFirstChild("JumpButton")
-	if jumpBtn then
-		jumpBtn.Activated:Connect(function()
-			performCustomJump()
-		end)
-	end
+                -- Jump button connection
+                local jumpBtn = actions:FindFirstChild("JumpButton")
+                if jumpBtn then
+                        jumpBtn.Activated:Connect(function()
+                                performCustomJump()
+                        end)
+                end
 
-	-- Ability connections
-	local abilityMap = {
-		TossButton = Abilities.Toss,
-		StarButton = Abilities.Star,
-		RainButton = Abilities.Rain,
-		BeastButton = Abilities.Beast,
-		DragonButton = Abilities.Dragon,
-	}
+                -- Ability connections
+                local abilityMap = {
+                        TossButton = Abilities.Toss,
+                        StarButton = Abilities.Star,
+                        RainButton = Abilities.Rain,
+                        BeastButton = Abilities.Beast,
+                        DragonButton = Abilities.Dragon,
+                }
 
-	for buttonName, abilityFunc in pairs(abilityMap) do
-		local btn = actions:FindFirstChild(buttonName)
-		if btn then
-			btn.Activated:Connect(abilityFunc)
-		end
-	end
+                for buttonName, abilityFunc in pairs(abilityMap) do
+                        local btn = actions:FindFirstChild(buttonName)
+                        if btn then
+                                btn.Activated:Connect(abilityFunc)
+                        end
+                end
+        end
 
-	-- Enhanced keybind setup with custom jump
-	local abilityKeybinds = {
+        -- Enhanced keybind setup with custom jump
+        local abilityKeybinds = {
 		[Enum.KeyCode.F] = Abilities.Toss,
 		[Enum.KeyCode.G] = Abilities.Star,
 		[Enum.KeyCode.Z] = Abilities.Rain,
@@ -471,32 +486,47 @@ end
 
 -- Utility function to add new buttons dynamically
 function ActionUI.addButton(name, text, category, callback, keybind, priority)
-	table.insert(BUTTON_DEFINITIONS, {
-		name = name,
-		text = text,
-		action = text:lower(),
-		category = category,
-		keybind = keybind,
-		priority = priority or 999
-	})
+        table.insert(BUTTON_DEFINITIONS, {
+                name = name,
+                text = text,
+                action = text:lower(),
+                category = category,
+                keybind = keybind,
+                priority = priority or 999
+        })
 
-	-- Reinitialize to show new button
-	ActionUI.init()
+        -- Reinitialize to show new button
+        ActionUI.init()
 
-	-- Connect the callback
-	local player = Players.LocalPlayer
-	local actions = player.PlayerGui.ScreenGui.Actions
-	local button = actions:FindFirstChild(name)
-	if button and callback then
-		button.Activated:Connect(callback)
-	end
+        -- Connect the callback
+        local player = Players.LocalPlayer
+        local gui = player.PlayerGui
+        local screenGui = gui:FindFirstChild("ScreenGui")
+        local actions = screenGui and screenGui:FindFirstChild("Actions")
+        if actions then
+                local button = actions:FindFirstChild(name)
+                if button and callback then
+                        button.Activated:Connect(callback)
+                end
+        end
 end
 
 -- Enhanced jump function that you can customize further
 function ActionUI.setCustomJumpLogic(jumpFunction)
-	if typeof(jumpFunction) == "function" then
-		performCustomJump = jumpFunction
-	end
+        if typeof(jumpFunction) == "function" then
+                performCustomJump = jumpFunction
+        end
+end
+
+-- Developer helper to force the mobile actions UI even on desktop for testing
+function ActionUI.setForceActionsVisible(enabled)
+        forceActionsVisible = not not enabled
+        ActionUI.init()
+        return forceActionsVisible
+end
+
+function ActionUI.isForceActionsVisible()
+        return forceActionsVisible
 end
 
 return ActionUI
