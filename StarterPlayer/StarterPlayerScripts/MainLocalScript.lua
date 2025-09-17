@@ -35,12 +35,17 @@ local UI_CONFIG = {
 	BOUNCE_EASING = Enum.EasingStyle.Bounce,
 
 	-- Layout
-	BUTTON_SIZE = UDim2.new(0, 85, 0, 85),
-	MOBILE_BUTTON_SIZE = UDim2.new(0, 65, 0, 65),
-	JUMP_BUTTON_SIZE = UDim2.new(0, 95, 0, 95),
-	MOBILE_JUMP_SIZE = UDim2.new(0, 75, 0, 75),
-	PADDING = UDim.new(0, 10),
-	CORNER_RADIUS = UDim.new(0, 16),  -- Softer corners
+        BUTTON_SIZE = UDim2.new(0, 110, 0, 110),
+        MOBILE_BUTTON_SIZE = UDim2.new(0, 90, 0, 90),
+        JUMP_BUTTON_SIZE = UDim2.new(0, 130, 0, 130),
+        MOBILE_JUMP_SIZE = UDim2.new(0, 110, 0, 110),
+        PADDING = UDim.new(0, 12),
+        CORNER_RADIUS = UDim.new(0, 16),  -- Softer corners
+
+        -- Responsive scaling
+        SCALE_REFERENCE_MIN_AXIS = 1080,
+        SCALE_MIN = 0.7,
+        SCALE_MAX = 1.25,
 
 	-- Platform visibility
 	SHOW_ON_DESKTOP = true,
@@ -58,16 +63,20 @@ local UI_CONFIG = {
 }
 
 local FAN_CONFIG = {
-	START_ANGLE = math.rad(200),
-	END_ANGLE = math.rad(340),
-	MOBILE_RADIUS = 120,
-	DESKTOP_RADIUS = 160,
-	JUMP_MARGIN = 14,
-	TOGGLE_MARGIN = 16,
-	ANIMATION_TIME = 0.28,
-	SPEED_BOOST = 5,  -- Slightly increased
-	TOGGLE_SIZE = UDim2.new(0, 48, 0, 48),
-	MOBILE_TOGGLE_SIZE = UDim2.new(0, 40, 0, 40),
+        START_ANGLE = math.rad(205),
+        END_ANGLE = math.rad(335),
+        MOBILE_RADIUS = 210,
+        DESKTOP_RADIUS = 270,
+        JUMP_MARGIN = 90,
+        MOBILE_JUMP_MARGIN = 70,
+        DESKTOP_JUMP_MARGIN = 95,
+        TOGGLE_MARGIN = 36,
+        MOBILE_TOGGLE_MARGIN = 30,
+        DESKTOP_TOGGLE_MARGIN = 40,
+        ANIMATION_TIME = 0.28,
+        SPEED_BOOST = 5,  -- Slightly increased
+        TOGGLE_SIZE = UDim2.new(0, 52, 0, 52),
+        MOBILE_TOGGLE_SIZE = UDim2.new(0, 44, 0, 44),
 }
 
 -- Button definitions (Added icons placeholders, you can replace with actual ImageIds)
@@ -125,6 +134,84 @@ local playButtonSound
 local triggerHapticFeedback
 local updateCooldownVisuals
 
+local currentUIScale = 1
+
+local function round(value)
+        return math.floor(value + 0.5)
+end
+
+local function updateUIScale()
+        local camera = workspace.CurrentCamera
+        if not camera then
+                currentUIScale = 1
+                return currentUIScale
+        end
+
+        local minAxis = math.min(camera.ViewportSize.X, camera.ViewportSize.Y)
+        local reference = UI_CONFIG.SCALE_REFERENCE_MIN_AXIS or 1080
+        local minScale = UI_CONFIG.SCALE_MIN or 0.75
+        local maxScale = UI_CONFIG.SCALE_MAX or 1.35
+        local scale = minAxis / reference
+        currentUIScale = math.clamp(scale, minScale, maxScale)
+        return currentUIScale
+end
+
+local function scaleNumber(value)
+        return round(value * currentUIScale)
+end
+
+local function scaleUDim2(size)
+        if not size then
+                return nil
+        end
+        return UDim2.new(
+                size.X.Scale,
+                round(size.X.Offset * currentUIScale),
+                size.Y.Scale,
+                round(size.Y.Offset * currentUIScale)
+        )
+end
+
+local function scaleUDim(udim)
+        if not udim then
+                return nil
+        end
+        return UDim.new(
+                udim.Scale,
+                round(udim.Offset * currentUIScale)
+        )
+end
+
+local function getJumpMargin(mobileLayout)
+        local baseMargin
+        if mobileLayout then
+                baseMargin = FAN_CONFIG.MOBILE_JUMP_MARGIN or FAN_CONFIG.JUMP_MARGIN or 0
+        else
+                baseMargin = FAN_CONFIG.DESKTOP_JUMP_MARGIN or FAN_CONFIG.JUMP_MARGIN or 0
+        end
+        return scaleNumber(baseMargin)
+end
+
+local function getToggleMargin(mobileLayout)
+        local baseMargin
+        if mobileLayout then
+                baseMargin = FAN_CONFIG.MOBILE_TOGGLE_MARGIN or FAN_CONFIG.TOGGLE_MARGIN or 0
+        else
+                baseMargin = FAN_CONFIG.DESKTOP_TOGGLE_MARGIN or FAN_CONFIG.TOGGLE_MARGIN or 0
+        end
+        return scaleNumber(baseMargin)
+end
+
+local function getToggleSize(mobileLayout)
+        local baseSize = mobileLayout and (FAN_CONFIG.MOBILE_TOGGLE_SIZE or FAN_CONFIG.TOGGLE_SIZE) or FAN_CONFIG.TOGGLE_SIZE
+        return scaleUDim2(baseSize)
+end
+
+local function getFanRadius(mobileLayout)
+        local baseRadius = mobileLayout and FAN_CONFIG.MOBILE_RADIUS or FAN_CONFIG.DESKTOP_RADIUS
+        return scaleNumber(baseRadius or 0)
+end
+
 local function isMobile()
 	return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 end
@@ -137,13 +224,17 @@ local function isDesktop()
 end
 
 local function shouldUseMobileLayout()
-	return isMobile() or forceActionsVisible
+        return isMobile() or forceActionsVisible
+end
+
+local function shouldOverrideDefaultJump()
+        return isMobile()
 end
 
 local function registerConnection(container, connection)
-	if connection then
-		table.insert(container, connection)
-	end
+        if connection then
+                table.insert(container, connection)
+        end
 	return connection
 end
 
@@ -256,47 +347,50 @@ local function createGradient(color)
 end
 
 local function createButtonShadow()
-	local shadow = Instance.new("Frame")
-	shadow.Name = "Shadow"
-	shadow.AnchorPoint = Vector2.new(0.5, 0.5)
-	shadow.Position = UDim2.new(0.5, 4, 0.5, 4)  -- Slightly larger offset for depth
-	shadow.Size = UDim2.new(1, 4, 1, 4)  -- Expanded size for softer shadow
-	shadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-	shadow.BackgroundTransparency = 0.75
-	shadow.ZIndex = -1
+        local shadow = Instance.new("Frame")
+        shadow.Name = "Shadow"
+        shadow.AnchorPoint = Vector2.new(0.5, 0.5)
+        local shadowOffset = scaleNumber(4)
+        shadow.Position = UDim2.new(0.5, shadowOffset, 0.5, shadowOffset)
+        shadow.Size = UDim2.new(1, shadowOffset, 1, shadowOffset)
+        shadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        shadow.BackgroundTransparency = 0.75
+        shadow.ZIndex = -1
 
-	local shadowCorner = Instance.new("UICorner")
-	shadowCorner.CornerRadius = UI_CONFIG.CORNER_RADIUS
-	shadowCorner.Parent = shadow
+        local shadowCorner = Instance.new("UICorner")
+        shadowCorner.CornerRadius = scaleUDim(UI_CONFIG.CORNER_RADIUS)
+        shadowCorner.Parent = shadow
 
-	return shadow
+        return shadow
 end
 
 local function createFanToggleButton()
-	local toggle = Instance.new("TextButton")
-	toggle.Name = "FanToggle"
-	toggle.Text = ""
-	toggle.AutoButtonColor = true
-	toggle.BackgroundTransparency = 0.15
-	toggle.BackgroundColor3 = UI_CONFIG.BACKGROUND_COLOR
-	toggle.BorderSizePixel = 0
-	toggle.AnchorPoint = Vector2.new(0.5, 0.5)
-	toggle.ZIndex = 4
-	toggle.TextColor3 = UI_CONFIG.TEXT_COLOR
-	toggle.TextScaled = true
-	toggle.Font = Enum.Font.GothamBold
+        local toggle = Instance.new("TextButton")
+        toggle.Name = "FanToggle"
+        toggle.Text = ""
+        toggle.AutoButtonColor = true
+        toggle.BackgroundTransparency = 0.15
+        toggle.BackgroundColor3 = UI_CONFIG.BACKGROUND_COLOR
+        toggle.BorderSizePixel = 0
+        toggle.AnchorPoint = Vector2.new(0.5, 0.5)
+        toggle.ZIndex = 4
+        toggle.TextColor3 = UI_CONFIG.TEXT_COLOR
+        toggle.TextScaled = true
+        toggle.Font = Enum.Font.GothamBold
 
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UI_CONFIG.CORNER_RADIUS
-	corner.Parent = toggle
+        toggle.Size = getToggleSize(shouldUseMobileLayout()) or scaleUDim2(FAN_CONFIG.TOGGLE_SIZE)
 
-	local stroke = Instance.new("UIStroke")
-	stroke.Thickness = 1.5
-	stroke.Color = Color3.fromRGB(80, 80, 80)
-	stroke.Transparency = 0.5
-	stroke.Parent = toggle
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = scaleUDim(UI_CONFIG.CORNER_RADIUS)
+        corner.Parent = toggle
 
-	local shadow = createButtonShadow()
+        local stroke = Instance.new("UIStroke")
+        stroke.Thickness = math.max(1, scaleNumber(1.5))
+        stroke.Color = Color3.fromRGB(80, 80, 80)
+        stroke.Transparency = 0.5
+        stroke.Parent = toggle
+
+        local shadow = createButtonShadow()
 	shadow.Parent = toggle
 
 	return toggle
@@ -314,11 +408,13 @@ local function createStylizedButton(buttonDef)
 
 	local mobileLayout = shouldUseMobileLayout()
 
-	if buttonDef.category == "jump" then
-		button.Size = mobileLayout and UI_CONFIG.MOBILE_JUMP_SIZE or UI_CONFIG.JUMP_BUTTON_SIZE
-	else
-		button.Size = mobileLayout and UI_CONFIG.MOBILE_BUTTON_SIZE or UI_CONFIG.BUTTON_SIZE
-	end
+        local baseSize
+        if buttonDef.category == "jump" then
+                baseSize = mobileLayout and UI_CONFIG.MOBILE_JUMP_SIZE or UI_CONFIG.JUMP_BUTTON_SIZE
+        else
+                baseSize = mobileLayout and UI_CONFIG.MOBILE_BUTTON_SIZE or UI_CONFIG.BUTTON_SIZE
+        end
+        button.Size = scaleUDim2(baseSize)
 
 	local color = UI_CONFIG.COMBAT_COLOR
 	if buttonDef.category == "ability" then
@@ -331,23 +427,24 @@ local function createStylizedButton(buttonDef)
 
 	button.BackgroundColor3 = color
 
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UI_CONFIG.CORNER_RADIUS
-	corner.Parent = button
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = scaleUDim(UI_CONFIG.CORNER_RADIUS)
+        corner.Parent = button
 
-	local stroke = Instance.new("UIStroke")
-	stroke.Thickness = 2
-	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	stroke.Color = color:Lerp(Color3.new(1, 1, 1), 0.4)
-	stroke.Transparency = 0.2
-	stroke.Parent = button
+        local stroke = Instance.new("UIStroke")
+        stroke.Thickness = math.max(1, scaleNumber(2))
+        stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        stroke.Color = color:Lerp(Color3.new(1, 1, 1), 0.4)
+        stroke.Transparency = 0.2
+        stroke.Parent = button
 
-	local padding = Instance.new("UIPadding")
-	padding.PaddingTop = UI_CONFIG.PADDING
-	padding.PaddingBottom = UI_CONFIG.PADDING
-	padding.PaddingLeft = UI_CONFIG.PADDING
-	padding.PaddingRight = UI_CONFIG.PADDING
-	padding.Parent = button
+        local padding = Instance.new("UIPadding")
+        local paddingValue = scaleUDim(UI_CONFIG.PADDING)
+        padding.PaddingTop = paddingValue
+        padding.PaddingBottom = paddingValue
+        padding.PaddingLeft = paddingValue
+        padding.PaddingRight = paddingValue
+        padding.Parent = button
 
 	local gradient = createGradient(color)
 	gradient.Parent = button
@@ -403,8 +500,8 @@ local function createStylizedButton(buttonDef)
 	cooldownOverlay.BackgroundColor3 = UI_CONFIG.COOLDOWN_OVERLAY_COLOR
 	cooldownOverlay.BackgroundTransparency = 1  -- Start hidden
 	cooldownOverlay.ZIndex = 4
-	local cooldownCorner = Instance.new("UICorner")
-	cooldownCorner.CornerRadius = UI_CONFIG.CORNER_RADIUS
+        local cooldownCorner = Instance.new("UICorner")
+        cooldownCorner.CornerRadius = scaleUDim(UI_CONFIG.CORNER_RADIUS)
 	cooldownCorner.Parent = cooldownOverlay
 	local cooldownGradient = Instance.new("UIGradient")
 	cooldownGradient.Rotation = 90
@@ -566,18 +663,21 @@ local function updateFanLayout(animated)
 		return
 	end
 
-	local mobileLayout = shouldUseMobileLayout()
-	local radius = mobileLayout and FAN_CONFIG.MOBILE_RADIUS or FAN_CONFIG.DESKTOP_RADIUS
-	local jumpSize = jumpButtonRef.Size
-	local baseOffsetX = -(jumpSize.X.Offset / 2) - FAN_CONFIG.JUMP_MARGIN
-	local baseOffsetY = -(jumpSize.Y.Offset / 2) - FAN_CONFIG.JUMP_MARGIN
+        local mobileLayout = shouldUseMobileLayout()
+        local radius = getFanRadius(mobileLayout)
+        local jumpSize = jumpButtonRef.Size
+        local margin = getJumpMargin(mobileLayout)
+        local baseOffsetX = -(jumpSize.X.Offset / 2) - margin
+        local baseOffsetY = -(jumpSize.Y.Offset / 2) - margin
 
-	currentActionsFrame.AnchorPoint = Vector2.new(1, 1)
-	currentActionsFrame.Position = UDim2.new(1, -25, 1, -25)  -- Slightly more padding from edge
-	local frameWidth = radius + jumpSize.X.Offset + FAN_CONFIG.JUMP_MARGIN * 2 + 20
-	local frameHeight = radius + jumpSize.Y.Offset + FAN_CONFIG.JUMP_MARGIN * 2 + 20
-	currentActionsFrame.Size = UDim2.new(0, frameWidth, 0, frameHeight)
-	currentActionsFrame.ClipsDescendants = false
+        currentActionsFrame.AnchorPoint = Vector2.new(1, 1)
+        local edgePadding = scaleNumber(25)
+        currentActionsFrame.Position = UDim2.new(1, -edgePadding, 1, -edgePadding)
+        local extraPadding = scaleNumber(20)
+        local frameWidth = radius + jumpSize.X.Offset + margin * 2 + extraPadding
+        local frameHeight = radius + jumpSize.Y.Offset + margin * 2 + extraPadding
+        currentActionsFrame.Size = UDim2.new(0, frameWidth, 0, frameHeight)
+        currentActionsFrame.ClipsDescendants = false
 
 	local totalButtons = #fanButtons
 	for index, button in ipairs(fanButtons) do
@@ -615,14 +715,19 @@ local function updateFanLayout(animated)
 		end
 	end
 
-	if toggleButtonRef then
-		local toggleSize = mobileLayout and FAN_CONFIG.MOBILE_TOGGLE_SIZE or FAN_CONFIG.TOGGLE_SIZE
-		toggleButtonRef.Size = toggleSize
-		local toggleOffsetX = -(jumpSize.X.Offset / 2) - FAN_CONFIG.JUMP_MARGIN - (toggleSize.X.Offset / 2) - FAN_CONFIG.TOGGLE_MARGIN
-		local toggleOffsetY = -(jumpSize.Y.Offset / 2)
-		toggleButtonRef.Position = UDim2.new(1, toggleOffsetX, 1, toggleOffsetY)
-		toggleButtonRef.Visible = totalButtons > 0
-	end
+        if toggleButtonRef then
+                local toggleSize = getToggleSize(mobileLayout)
+                if toggleSize then
+                        toggleButtonRef.Size = toggleSize
+                else
+                        toggleSize = toggleButtonRef.Size
+                end
+                local toggleMargin = getToggleMargin(mobileLayout)
+                local toggleOffsetX = -(jumpSize.X.Offset / 2) - margin - (toggleSize.X.Offset / 2) - toggleMargin
+                local toggleOffsetY = -(jumpSize.Y.Offset / 2)
+                toggleButtonRef.Position = UDim2.new(1, toggleOffsetX, 1, toggleOffsetY)
+                toggleButtonRef.Visible = totalButtons > 0
+        end
 
 	if not fanOpen and not animated then
 		for _, button in ipairs(fanButtons) do
@@ -785,13 +890,16 @@ local function ensureActions()
 		existing:Destroy()
 	end
 
-	local actions = Instance.new("Frame")
-	actions.Name = "Actions"
-	actions.BackgroundTransparency = 1
-	actions.AnchorPoint = Vector2.new(1, 1)
-	actions.Position = UDim2.new(1, -20, 1, -20)
-	actions.ClipsDescendants = false
-	actions.Parent = screenGui
+        updateUIScale()
+
+        local actions = Instance.new("Frame")
+        actions.Name = "Actions"
+        actions.BackgroundTransparency = 1
+        actions.AnchorPoint = Vector2.new(1, 1)
+        local actionInset = scaleNumber(20)
+        actions.Position = UDim2.new(1, -actionInset, 1, -actionInset)
+        actions.ClipsDescendants = false
+        actions.Parent = screenGui
 
 	currentActionsFrame = actions
 	jumpButtonRef = nil
@@ -831,12 +939,12 @@ local function ensureActions()
 		end
 	end
 
-	if jumpButtonRef then
-		local margin = FAN_CONFIG.JUMP_MARGIN
-		local jumpSize = jumpButtonRef.Size
-		jumpButtonRef.Position = UDim2.new(
-			1,
-			-(jumpSize.X.Offset / 2) - margin,
+        if jumpButtonRef then
+                local margin = getJumpMargin(mobileLayout)
+                local jumpSize = jumpButtonRef.Size
+                jumpButtonRef.Position = UDim2.new(
+                        1,
+                        -(jumpSize.X.Offset / 2) - margin,
 			1,
 			-(jumpSize.Y.Offset / 2) - margin
 		)
@@ -866,15 +974,16 @@ local function ensureActions()
 end
 
 function ActionUI.init()
-	ensureCharacterTracking()
+        updateUIScale()
+        ensureCharacterTracking()
 
-	local actions = ensureActions()
+        local actions = ensureActions()
 
-	if actions then
-		disableDefaultJump()
-	else
-		enableDefaultJump()
-	end
+        if actions and shouldOverrideDefaultJump() then
+                disableDefaultJump()
+        else
+                enableDefaultJump()
+        end
 
 	if actions then
 		-- Combat actions
