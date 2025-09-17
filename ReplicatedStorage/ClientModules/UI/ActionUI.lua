@@ -360,8 +360,6 @@ local function createStylizedButton(buttonDef)
         keybindLabel.ZIndex = 3
         keybindLabel.TextWrapped = true
         keybindLabel.Visible = not mobileLayout
-
-        return button, buttonDef
 end
 
 local function setupButtonAnimations(button)
@@ -882,7 +880,7 @@ function ActionUI.init()
                 end))
                 registerConnection(deviceChangeConnections, UserInputService:GetPropertyChangedSignal("KeyboardEnabled"):Connect(function()
                         task.defer(ActionUI.init)
-                end))
+                end)) 
                 registerConnection(deviceChangeConnections, UserInputService:GetPropertyChangedSignal("GamepadEnabled"):Connect(function()
                         task.defer(ActionUI.init)
                 end))
