@@ -1225,7 +1225,15 @@ end
 
 -- New: Function to start cooldown from external scripts
 function ActionUI.startCooldown(buttonName, duration)
-	startCooldown(buttonName, duration)
+        startCooldown(buttonName, duration)
 end
+
+task.spawn(function()
+        if not game:IsLoaded() then
+                game.Loaded:Wait()
+        end
+
+        ActionUI.init()
+end)
 
 return ActionUI
