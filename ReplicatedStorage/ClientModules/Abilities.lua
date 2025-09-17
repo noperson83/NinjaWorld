@@ -141,8 +141,19 @@ function Abilities.Rain()
         local offset = Vector3.new(0, 12, 0)
 	local caster = CharacterManager.character
 	local humanoidRoot = CharacterManager.humanoidRoot
-    local rainTemplate = ReplicatedStorage.Elements.WaterElem:FindFirstChild("WaterRain")
-	if not rainTemplate then warn("?? Missing WaterRain template") return end
+        local elements = ReplicatedStorage:FindFirstChild("Elements")
+        local waterElem = elements and elements:FindFirstChild("WaterElem")
+        local rainTemplate = waterElem and waterElem:FindFirstChild("WaterRain")
+        if not rainTemplate then
+                if not elements then
+                        warn("?? Elements folder missing: cannot load WaterRain template")
+                elseif not waterElem then
+                        warn("?? WaterElem folder missing: cannot load WaterRain template")
+                else
+                        warn("?? Missing WaterRain template")
+                end
+                return
+        end
 
 	local target = nil -- insert your enemy targeting logic here
 	for i = 1, math.random(3, 5) do

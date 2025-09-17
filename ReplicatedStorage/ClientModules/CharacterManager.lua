@@ -19,12 +19,18 @@ function CharacterManager.setup(player)
         CharacterManager.animator = CharacterManager.humanoid:FindFirstChild("Animator")
         CharacterManager.rightArm = CharacterManager.character.RightUpperArm
 
-        local elements = ReplicatedStorage.Elements
-        local waterElem = elements and elements.WaterElem
-        CharacterManager.starModel = waterElem:FindFirstChild("WaterStar")
+        local elements = ReplicatedStorage:FindFirstChild("Elements")
+        local waterElem = elements and elements:FindFirstChild("WaterElem")
+        CharacterManager.starModel = waterElem and waterElem:FindFirstChild("WaterStar") or nil
 
         if not CharacterManager.starModel then
-            warn("?? WaterStar not found in WaterElem")
+            if not elements then
+                warn("?? Elements folder missing: cannot locate WaterStar")
+            elseif not waterElem then
+                warn("?? WaterElem folder missing: cannot locate WaterStar")
+            else
+                warn("?? WaterStar not found in WaterElem")
+            end
         end
 
         -- ? Init animations only after character + animator are ready
