@@ -32,7 +32,11 @@ local UI_CONFIG = {
 	JUMP_BUTTON_SIZE = UDim2.new(0, 90, 0, 90),     -- Larger jump button
 	MOBILE_JUMP_SIZE = UDim2.new(0, 70, 0, 70),
 	PADDING = UDim.new(0, 8),
-	CORNER_RADIUS = UDim.new(0, 12),
+        CORNER_RADIUS = UDim.new(0, 12),
+
+        -- Platform visibility
+        SHOW_ON_DESKTOP = true,
+        SHOW_DESKTOP_JUMP = true,
 }
 
 
@@ -101,6 +105,14 @@ local performCustomJump
 
 local function isMobile()
         return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+end
+
+local function isDesktop()
+        return UserInputService.KeyboardEnabled or UserInputService.GamepadEnabled
+end
+
+local function shouldUseMobileLayout()
+        return isMobile() or forceActionsVisible
 end
 
 local function registerConnection(container, connection)
@@ -184,7 +196,15 @@ end
 
 -- Determines whether the touch actions UI should be visible/active
 local function shouldDisplayActions()
-        return forceActionsVisible or isMobile()
+        if shouldUseMobileLayout() then
+                return true
+        end
+
+        if UI_CONFIG.SHOW_ON_DESKTOP then
+                return isDesktop()
+        end
+
+        return false
 end
 
 
@@ -263,11 +283,13 @@ local function createStylizedButton(buttonDef)
         button.ZIndex = 2
         button.ClipsDescendants = false
 
+        local mobileLayout = shouldUseMobileLayout()
+
         -- Special sizing for jump button
         if buttonDef.category == "jump" then
-                button.Size = shouldDisplayActions() and UI_CONFIG.MOBILE_JUMP_SIZE or UI_CONFIG.JUMP_BUTTON_SIZE
+                button.Size = mobileLayout and UI_CONFIG.MOBILE_JUMP_SIZE or UI_CONFIG.JUMP_BUTTON_SIZE
         else
-                button.Size = shouldDisplayActions() and UI_CONFIG.MOBILE_BUTTON_SIZE or UI_CONFIG.BUTTON_SIZE
+                button.Size = mobileLayout and UI_CONFIG.MOBILE_BUTTON_SIZE or UI_CONFIG.BUTTON_SIZE
         end
 
         -- Colors based on category
@@ -337,9 +359,7 @@ local function createStylizedButton(buttonDef)
         keybindLabel.Font = Enum.Font.Gotham
         keybindLabel.ZIndex = 3
         keybindLabel.TextWrapped = true
-        keybindLabel.Visible = not isMobile()
-
-        return button, buttonDef
+        keybindLabel.Visible = not mobileLayout
 end
 
 local function setupButtonAnimations(button)
@@ -363,13 +383,13 @@ local function setupButtonAnimations(button)
         end
 
         registerConnection(buttonConnections, button.MouseEnter:Connect(function()
-                if not shouldDisplayActions() then
+                if not shouldUseMobileLayout() then
                         tweenScale(UI_CONFIG.HOVER_SCALE)
                 end
         end))
 
         registerConnection(buttonConnections, button.MouseLeave:Connect(function()
-                if not shouldDisplayActions() then
+                if not shouldUseMobileLayout() then
                         tweenScale(1)
                 end
         end))
@@ -379,7 +399,7 @@ local function setupButtonAnimations(button)
         end
 
         local function handleRelease()
-                tweenScale(shouldDisplayActions() and 1 or 1, 0.12)
+                tweenScale(1, 0.12)
         end
 
         registerConnection(buttonConnections, button.InputBegan:Connect(function(input)
@@ -461,7 +481,8 @@ local function updateFanLayout(animated)
                 return
         end
 
-        local radius = isMobile() and FAN_CONFIG.MOBILE_RADIUS or FAN_CONFIG.DESKTOP_RADIUS
+        local mobileLayout = shouldUseMobileLayout()
+        local radius = mobileLayout and FAN_CONFIG.MOBILE_RADIUS or FAN_CONFIG.DESKTOP_RADIUS
         local jumpSize = jumpButtonRef.Size
         local baseOffsetX = -(jumpSize.X.Offset / 2) - FAN_CONFIG.JUMP_MARGIN
         local baseOffsetY = -(jumpSize.Y.Offset / 2) - FAN_CONFIG.JUMP_MARGIN
@@ -508,7 +529,7 @@ local function updateFanLayout(animated)
         end
 
         if toggleButtonRef then
-                local toggleSize = isMobile() and FAN_CONFIG.MOBILE_TOGGLE_SIZE or FAN_CONFIG.TOGGLE_SIZE
+                local toggleSize = mobileLayout and FAN_CONFIG.MOBILE_TOGGLE_SIZE or FAN_CONFIG.TOGGLE_SIZE
                 toggleButtonRef.Size = toggleSize
                 local toggleOffsetX = -(jumpSize.X.Offset / 2) - FAN_CONFIG.JUMP_MARGIN - (toggleSize.X.Offset / 2) - FAN_CONFIG.TOGGLE_MARGIN
                 local toggleOffsetY = -(jumpSize.Y.Offset / 2)
@@ -663,7 +684,12 @@ local function ensureActions()
                 return (a.priority or 999) < (b.priority or 999)
         end)
 
-        local allowJumpButton = isMobile() or forceActionsVisible
+        local mobileLayout = shouldUseMobileLayout()
+        local allowJumpButton = mobileLayout
+
+        if not allowJumpButton and UI_CONFIG.SHOW_ON_DESKTOP and UI_CONFIG.SHOW_DESKTOP_JUMP and isDesktop() then
+                allowJumpButton = true
+        end
 
         for _, buttonDef in ipairs(sortedButtons) do
                 local isJumpButton = buttonDef.category == "jump"
@@ -853,6 +879,9 @@ function ActionUI.init()
                         task.defer(ActionUI.init)
                 end))
                 registerConnection(deviceChangeConnections, UserInputService:GetPropertyChangedSignal("KeyboardEnabled"):Connect(function()
+                        task.defer(ActionUI.init)
+                end)) 
+                registerConnection(deviceChangeConnections, UserInputService:GetPropertyChangedSignal("GamepadEnabled"):Connect(function()
                         task.defer(ActionUI.init)
                 end))
                 registerConnection(deviceChangeConnections, UserInputService.LastInputTypeChanged:Connect(function()
