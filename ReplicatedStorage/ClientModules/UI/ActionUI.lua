@@ -4,8 +4,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
-local GuiService = game:GetService("GuiService")
+local StarterGui = game:GetService("StarterGui")
+local ContextActionService = game:GetService("ContextActionService")
 
 local Abilities = require(ReplicatedStorage.ClientModules.Abilities)
 local CombatController = require(ReplicatedStorage.ClientModules.CombatController)
@@ -72,7 +72,10 @@ local BUTTON_DEFINITIONS = {
 }
 
 local customJumpEnabled = false
-local originalJumpConnection = nil
+local jumpRequestConnection = nil
+local jumpActionBound = false
+local jumpActionName = "ActionUI_CustomJump"
+local lastJumpTime = 0
 local forceActionsVisible = false
 
 local currentActionsFrame = nil
@@ -83,15 +86,100 @@ local fanOpen = true
 local defaultWalkSpeed = nil
 local speedBoostApplied = false
 local characterAddedConnection = nil
+local viewportConnection = nil
+
+local buttonConnections = {}
+local inputConnections = {}
+local deviceChangeConnections = {}
 
 local updateFanLayout
 local updateToggleVisual
 local applySpeedState
 local setFanOpen
 local ensureCharacterTracking
+local performCustomJump
 
 local function isMobile()
         return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+end
+
+local function registerConnection(container, connection)
+        if connection then
+                table.insert(container, connection)
+        end
+        return connection
+end
+
+local function disconnectConnections(container)
+        for index = #container, 1, -1 do
+                local connection = container[index]
+                if connection then
+                        connection:Disconnect()
+                end
+                container[index] = nil
+        end
+end
+
+local function setJumpButtonEnabled(enabled)
+        if not game:IsLoaded() then
+                game.Loaded:Wait()
+        end
+
+        local attempts = 0
+        local success = false
+        local lastError
+
+        repeat
+                attempts += 1
+                success, lastError = pcall(function()
+                        StarterGui:SetCore("JumpButtonEnabled", enabled)
+                end)
+                if success then
+                        break
+                end
+                task.wait(0.1 * attempts)
+        until success or attempts >= 5
+
+        if not success and lastError then
+                warn("ActionUI failed to toggle JumpButtonEnabled:", lastError)
+        end
+end
+
+local function bindJumpOverride()
+        if jumpActionBound then
+                return
+        end
+
+        ContextActionService:BindAction(jumpActionName, function(_, inputState)
+                if inputState == Enum.UserInputState.Begin and customJumpEnabled then
+                        performCustomJump()
+                end
+                return Enum.ContextActionResult.Sink
+        end, false, Enum.KeyCode.Space, Enum.KeyCode.ButtonA)
+
+        if jumpRequestConnection then
+                jumpRequestConnection:Disconnect()
+        end
+
+        jumpRequestConnection = UserInputService.JumpRequest:Connect(function()
+                if customJumpEnabled and (os.clock() - lastJumpTime) > 0.05 then
+                        performCustomJump()
+                end
+        end)
+
+        jumpActionBound = true
+end
+
+local function unbindJumpOverride()
+        if jumpActionBound then
+                ContextActionService:UnbindAction(jumpActionName)
+                jumpActionBound = false
+        end
+
+        if jumpRequestConnection then
+                jumpRequestConnection:Disconnect()
+                jumpRequestConnection = nil
+        end
 end
 
 -- Determines whether the touch actions UI should be visible/active
@@ -166,40 +254,57 @@ local function createFanToggleButton()
 end
 
 local function createStylizedButton(buttonDef)
-	local button = Instance.new("TextButton")
-	button.Name = buttonDef.name
-	button.Text = ""
-	button.BackgroundTransparency = 0
-	button.BorderSizePixel = 0
-	button.ZIndex = 2
+        local button = Instance.new("TextButton")
+        button.Name = buttonDef.name
+        button.Text = ""
+        button.AutoButtonColor = false
+        button.BackgroundTransparency = 0
+        button.BorderSizePixel = 0
+        button.ZIndex = 2
+        button.ClipsDescendants = false
 
-	-- Special sizing for jump button
+        -- Special sizing for jump button
         if buttonDef.category == "jump" then
                 button.Size = shouldDisplayActions() and UI_CONFIG.MOBILE_JUMP_SIZE or UI_CONFIG.JUMP_BUTTON_SIZE
         else
                 button.Size = shouldDisplayActions() and UI_CONFIG.MOBILE_BUTTON_SIZE or UI_CONFIG.BUTTON_SIZE
         end
 
-	-- Colors based on category
-	local color = UI_CONFIG.COMBAT_COLOR
-	if buttonDef.category == "ability" then
-		color = UI_CONFIG.ABILITY_COLOR
-	elseif buttonDef.category == "movement" then
-		color = UI_CONFIG.MOVEMENT_COLOR
-	elseif buttonDef.category == "jump" then
-		color = UI_CONFIG.JUMP_COLOR
-	end
+        -- Colors based on category
+        local color = UI_CONFIG.COMBAT_COLOR
+        if buttonDef.category == "ability" then
+                color = UI_CONFIG.ABILITY_COLOR
+        elseif buttonDef.category == "movement" then
+                color = UI_CONFIG.MOVEMENT_COLOR
+        elseif buttonDef.category == "jump" then
+                color = UI_CONFIG.JUMP_COLOR
+        end
 
-	button.BackgroundColor3 = color
+        button.BackgroundColor3 = color
 
-	-- Corner radius
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UI_CONFIG.CORNER_RADIUS
-	corner.Parent = button
+        -- Corner radius
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UI_CONFIG.CORNER_RADIUS
+        corner.Parent = button
 
-	-- Gradient
-	local gradient = createGradient(color)
-	gradient.Parent = button
+        -- Accent border
+        local stroke = Instance.new("UIStroke")
+        stroke.Thickness = 2
+        stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        stroke.Color = color:Lerp(Color3.new(1, 1, 1), 0.35)
+        stroke.Transparency = 0.25
+        stroke.Parent = button
+
+        local padding = Instance.new("UIPadding")
+        padding.PaddingTop = UDim.new(0, 6)
+        padding.PaddingBottom = UDim.new(0, 6)
+        padding.PaddingLeft = UDim.new(0, 8)
+        padding.PaddingRight = UDim.new(0, 8)
+        padding.Parent = button
+
+        -- Gradient
+        local gradient = createGradient(color)
+        gradient.Parent = button
 
 	-- Shadow
 	local shadow = createButtonShadow()
@@ -215,56 +320,83 @@ local function createStylizedButton(buttonDef)
 	textLabel.Text = buttonDef.text
 	textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	textLabel.TextScaled = true
-	textLabel.Font = Enum.Font.GothamBold
-	textLabel.ZIndex = 3
+        textLabel.Font = Enum.Font.GothamBold
+        textLabel.ZIndex = 3
+        textLabel.TextWrapped = true
 
-	-- Keybind label
-	local keybindLabel = Instance.new("TextLabel")
-	keybindLabel.Name = "Keybind"
-	keybindLabel.Parent = button
+        -- Keybind label
+        local keybindLabel = Instance.new("TextLabel")
+        keybindLabel.Name = "Keybind"
+        keybindLabel.Parent = button
 	keybindLabel.Size = UDim2.new(1, 0, 0.3, 0)
 	keybindLabel.Position = UDim2.new(0, 0, 0.7, 0)
 	keybindLabel.BackgroundTransparency = 1
-	keybindLabel.Text = buttonDef.keybind or ""
-	keybindLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-	keybindLabel.TextScaled = true
-	keybindLabel.Font = Enum.Font.Gotham
-	keybindLabel.ZIndex = 3
+        keybindLabel.Text = buttonDef.keybind or ""
+        keybindLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+        keybindLabel.TextScaled = true
+        keybindLabel.Font = Enum.Font.Gotham
+        keybindLabel.ZIndex = 3
+        keybindLabel.TextWrapped = true
+        keybindLabel.Visible = not isMobile()
 
-	return button, buttonDef
-end
-
-local function animateButton(button, scale, duration)
-	local tween = TweenService:Create(
-		button,
-		TweenInfo.new(duration or UI_CONFIG.TWEEN_TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-		{Size = button.Size * scale}
-	)
-	tween:Play()
+        return button, buttonDef
 end
 
 local function setupButtonAnimations(button)
-	local originalSize = button.Size
+        local scaleObject = button:FindFirstChildOfClass("UIScale")
+        if not scaleObject then
+                scaleObject = Instance.new("UIScale")
+                scaleObject.Scale = 1
+                scaleObject.Parent = button
+        else
+                scaleObject.Scale = 1
+        end
 
-        button.MouseEnter:Connect(function()
+        local function tweenScale(target, duration)
+                local tween = TweenService:Create(
+                        scaleObject,
+                        TweenInfo.new(duration or UI_CONFIG.TWEEN_TIME, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                        {Scale = target}
+                )
+                tween:Play()
+                return tween
+        end
+
+        registerConnection(buttonConnections, button.MouseEnter:Connect(function()
                 if not shouldDisplayActions() then
-                        animateButton(button, UI_CONFIG.HOVER_SCALE)
+                        tweenScale(UI_CONFIG.HOVER_SCALE)
                 end
-        end)
+        end))
 
-        button.MouseLeave:Connect(function()
+        registerConnection(buttonConnections, button.MouseLeave:Connect(function()
                 if not shouldDisplayActions() then
-                        button.Size = originalSize
+                        tweenScale(1)
                 end
-        end)
+        end))
 
-	button.MouseButton1Down:Connect(function()
-		animateButton(button, UI_CONFIG.PRESS_SCALE, 0.08)
-	end)
+        local function handlePress()
+                tweenScale(UI_CONFIG.PRESS_SCALE, 0.08)
+        end
 
-	button.MouseButton1Up:Connect(function()
-		button.Size = originalSize
-	end)
+        local function handleRelease()
+                tweenScale(shouldDisplayActions() and 1 or 1, 0.12)
+        end
+
+        registerConnection(buttonConnections, button.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1
+                        or input.UserInputType == Enum.UserInputType.Touch
+                        or input.UserInputType == Enum.UserInputType.Gamepad1 then
+                        handlePress()
+                end
+        end))
+
+        registerConnection(buttonConnections, button.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1
+                        or input.UserInputType == Enum.UserInputType.Touch
+                        or input.UserInputType == Enum.UserInputType.Gamepad1 then
+                        handleRelease()
+                end
+        end))
 end
 
 local function updateToggleVisual()
@@ -415,54 +547,53 @@ local function performCustomJump()
 	local character = player.Character
 	if not character then return end
 
-	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	if not humanoid then return end
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if not humanoid then return end
 
-	-- Enhanced jump logic - you can customize this
-	if humanoid:GetState() ~= Enum.HumanoidStateType.Freefall then
-		-- Basic jump
-		humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        -- Enhanced jump logic - you can customize this
+        if humanoid:GetState() ~= Enum.HumanoidStateType.Freefall then
+                -- Basic jump
+                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                lastJumpTime = os.clock()
 
-		-- Optional: Add custom effects, sounds, or enhanced jump mechanics here
-		-- Example: Double jump, air dash, particle effects, etc.
+                -- Optional: Add custom effects, sounds, or enhanced jump mechanics here
+                -- Example: Double jump, air dash, particle effects, etc.
 
-		print("Custom jump performed!") -- Debug
+                print("Custom jump performed!") -- Debug
 	end
 end
 
 -- Function to disable default Roblox jump
 local function disableDefaultJump()
-	local player = Players.LocalPlayer
+        if customJumpEnabled then
+                return
+        end
 
-	-- Method 1: Hide the default jump button on mobile
-	if isMobile() then
-		pcall(function()
-			GuiService:SetTouchGuiEnabled(Enum.TouchGuiType.Jump, false)
-		end)
-	end
+        customJumpEnabled = true
 
-	-- Method 2: Override space key for PC
-	UserInputService.JumpRequest:Connect(function()
-		-- Prevent default jump by not calling Jump
-		-- The custom jump will be handled by our keybind system
-	end)
+        if isMobile() or forceActionsVisible then
+                setJumpButtonEnabled(false)
+        end
 
-	customJumpEnabled = true
-	print("Default jump disabled - using custom jump system")
+        bindJumpOverride()
+
+        print("Default jump disabled - using custom jump system")
 end
 
 -- Function to restore default jump
 local function enableDefaultJump()
-	local player = Players.LocalPlayer
+        if not customJumpEnabled then
+                return
+        end
 
-	if isMobile() then
-		pcall(function()
-			GuiService:SetTouchGuiEnabled(Enum.TouchGuiType.Jump, true)
-		end)
-	end
+        unbindJumpOverride()
 
-	customJumpEnabled = false
-	print("Default jump restored")
+        if isMobile() or forceActionsVisible then
+                setJumpButtonEnabled(true)
+        end
+
+        customJumpEnabled = false
+        print("Default jump restored")
 end
 
 local function ensureActions()
@@ -472,6 +603,7 @@ local function ensureActions()
         local screenGui = gui:FindFirstChild("ScreenGui")
 
         if not shouldDisplayActions() then
+                disconnectConnections(buttonConnections)
                 if screenGui then
                         local existingActions = screenGui:FindFirstChild("Actions")
                         if existingActions then
@@ -490,10 +622,12 @@ local function ensureActions()
                 currentActionsFrame = nil
                 jumpButtonRef = nil
                 toggleButtonRef = nil
-                fanButtons = {}
+                table.clear(fanButtons)
 
                 return nil
         end
+
+        disconnectConnections(buttonConnections)
 
         if not screenGui then
                 screenGui = Instance.new("ScreenGui")
@@ -503,26 +637,23 @@ local function ensureActions()
                 screenGui.Parent = gui
         end
 
-        local actions = screenGui:FindFirstChild("Actions")
-        if not actions then
-                actions = Instance.new("Frame")
-                actions.Name = "Actions"
-                actions.BackgroundTransparency = 1
-                actions.AnchorPoint = Vector2.new(1, 1)
-                actions.Position = UDim2.new(1, -20, 1, -20)
-                actions.ClipsDescendants = false
-                actions.Parent = screenGui
-        else
-                actions:ClearAllChildren()
-                actions.AnchorPoint = Vector2.new(1, 1)
-                actions.Position = UDim2.new(1, -20, 1, -20)
-                actions.ClipsDescendants = false
+        local existing = screenGui:FindFirstChild("Actions")
+        if existing then
+                existing:Destroy()
         end
+
+        local actions = Instance.new("Frame")
+        actions.Name = "Actions"
+        actions.BackgroundTransparency = 1
+        actions.AnchorPoint = Vector2.new(1, 1)
+        actions.Position = UDim2.new(1, -20, 1, -20)
+        actions.ClipsDescendants = false
+        actions.Parent = screenGui
 
         currentActionsFrame = actions
         jumpButtonRef = nil
         toggleButtonRef = nil
-        fanButtons = {}
+        table.clear(fanButtons)
 
         local sortedButtons = {}
         for _, buttonDef in ipairs(BUTTON_DEFINITIONS) do
@@ -572,9 +703,9 @@ local function ensureActions()
         if #fanButtons > 0 then
                 toggleButtonRef = createFanToggleButton()
                 toggleButtonRef.Parent = actions
-                toggleButtonRef.Activated:Connect(function()
+                registerConnection(buttonConnections, toggleButtonRef.Activated:Connect(function()
                         setFanOpen(not fanOpen)
-                end)
+                end))
         else
                 toggleButtonRef = nil
         end
@@ -591,62 +722,59 @@ function ActionUI.init()
 
         if not actions then
                 enableDefaultJump()
-        else
-                if isMobile() then
-                        -- Disable default jump when initializing on mobile
-                        disableDefaultJump()
-                else
-                        enableDefaultJump()
+                disconnectConnections(inputConnections)
+                return
+        end
+
+        disableDefaultJump()
+
+        -- Combat action connections
+        local actionMap = {
+                PunchButton = "Punch",
+                KickButton = "Kick",
+                RollButton = "Roll",
+                CrouchButton = "Crouch",
+                SlideButton = "Slide",
+        }
+
+        for buttonName, action in pairs(actionMap) do
+                local btn = actions:FindFirstChild(buttonName)
+                if btn then
+                        registerConnection(buttonConnections, btn.Activated:Connect(function()
+                                CombatController.perform(action)
+                        end))
                 end
+        end
 
-                -- Combat action connections
-                local actionMap = {
-                        PunchButton = "Punch",
-                        KickButton = "Kick",
-                        RollButton = "Roll",
-                        CrouchButton = "Crouch",
-                        SlideButton = "Slide",
-                }
+        -- Jump button connection
+        local jumpBtn = actions:FindFirstChild("JumpButton")
+        if jumpBtn then
+                registerConnection(buttonConnections, jumpBtn.Activated:Connect(function()
+                        performCustomJump()
+                end))
+        end
 
-                for buttonName, action in pairs(actionMap) do
-                        local btn = actions:FindFirstChild(buttonName)
-                        if btn then
-                                btn.Activated:Connect(function()
-                                        CombatController.perform(action)
-                                end)
-                        end
-                end
+        -- Ability connections
+        local abilityMap = {
+                TossButton = Abilities.Toss,
+                StarButton = Abilities.Star,
+                RainButton = Abilities.Rain,
+                BeastButton = Abilities.Beast,
+                DragonButton = Abilities.Dragon,
+        }
 
-                -- Jump button connection
-                local jumpBtn = actions:FindFirstChild("JumpButton")
-                if jumpBtn then
-                        jumpBtn.Activated:Connect(function()
-                                performCustomJump()
-                        end)
-                end
-
-                -- Ability connections
-                local abilityMap = {
-                        TossButton = Abilities.Toss,
-                        StarButton = Abilities.Star,
-                        RainButton = Abilities.Rain,
-                        BeastButton = Abilities.Beast,
-                        DragonButton = Abilities.Dragon,
-                }
-
-                for buttonName, abilityFunc in pairs(abilityMap) do
-                        local btn = actions:FindFirstChild(buttonName)
-                        if btn then
-                                btn.Activated:Connect(abilityFunc)
-                        end
+        for buttonName, abilityFunc in pairs(abilityMap) do
+                local btn = actions:FindFirstChild(buttonName)
+                if btn then
+                        registerConnection(buttonConnections, btn.Activated:Connect(abilityFunc))
                 end
         end
 
         -- Enhanced keybind setup with custom jump
         local abilityKeybinds = {
-		[Enum.KeyCode.F] = Abilities.Toss,
-		[Enum.KeyCode.G] = Abilities.Star,
-		[Enum.KeyCode.Z] = Abilities.Rain,
+                [Enum.KeyCode.F] = Abilities.Toss,
+                [Enum.KeyCode.G] = Abilities.Star,
+                [Enum.KeyCode.Z] = Abilities.Rain,
 		[Enum.KeyCode.B] = Abilities.Beast,
 		[Enum.KeyCode.X] = Abilities.Dragon,
 	}
@@ -676,15 +804,17 @@ function ActionUI.init()
 		[Enum.KeyCode.Return] = true,
 	}
 
-	local debugInputLogging = false
-	local LOG_TOGGLE_KEY = Enum.KeyCode.F8
+        local debugInputLogging = false
+        local LOG_TOGGLE_KEY = Enum.KeyCode.F8
 
-	UserInputService.InputBegan:Connect(function(input, processed)
-		if input.KeyCode == LOG_TOGGLE_KEY then
-			debugInputLogging = not debugInputLogging
-			warn("Raw input logging " .. (debugInputLogging and "enabled" or "disabled"))
-			return
-		end
+        disconnectConnections(inputConnections)
+
+        registerConnection(inputConnections, UserInputService.InputBegan:Connect(function(input, processed)
+                if input.KeyCode == LOG_TOGGLE_KEY then
+                        debugInputLogging = not debugInputLogging
+                        warn("Raw input logging " .. (debugInputLogging and "enabled" or "disabled"))
+                        return
+                end
 
 		if processed then return end
 
@@ -705,17 +835,37 @@ function ActionUI.init()
                         return
                 end
 
-		if debugInputLogging and not ignoredInputKeys[input.KeyCode] then
-			print("Unmapped key pressed:", input.KeyCode.Name)
-		end
-	end)
+                if debugInputLogging and not ignoredInputKeys[input.KeyCode] then
+                        print("Unmapped key pressed:", input.KeyCode.Name)
+                end
+        end))
 
-	-- Auto-resize on screen size changes
-	local camera = workspace.CurrentCamera
-	camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
-		wait(0.1) -- Small delay to ensure proper sizing
-		ActionUI.init() -- Reinitialize with new sizing
-	end)
+        -- Auto-resize on screen size changes
+        local camera = workspace.CurrentCamera
+        if camera and (not viewportConnection or not viewportConnection.Connected) then
+                viewportConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+                        task.delay(0.1, ActionUI.init)
+                end)
+        end
+
+        if #deviceChangeConnections == 0 then
+                registerConnection(deviceChangeConnections, UserInputService:GetPropertyChangedSignal("TouchEnabled"):Connect(function()
+                        task.defer(ActionUI.init)
+                end))
+                registerConnection(deviceChangeConnections, UserInputService:GetPropertyChangedSignal("KeyboardEnabled"):Connect(function()
+                        task.defer(ActionUI.init)
+                end))
+                registerConnection(deviceChangeConnections, UserInputService.LastInputTypeChanged:Connect(function()
+                        task.defer(ActionUI.init)
+                end))
+                registerConnection(deviceChangeConnections, workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+                        if viewportConnection then
+                                viewportConnection:Disconnect()
+                                viewportConnection = nil
+                        end
+                        task.defer(ActionUI.init)
+                end))
+        end
 end
 
 function ActionUI.toggleFanOpen(animated)
@@ -732,13 +882,6 @@ end
 
 -- Utility function to toggle jump mode
 function ActionUI.toggleJumpMode()
-        if not isMobile() then
-                if customJumpEnabled then
-                        enableDefaultJump()
-                end
-                return customJumpEnabled
-        end
-
         if customJumpEnabled then
                 enableDefaultJump()
         else
@@ -769,7 +912,7 @@ function ActionUI.addButton(name, text, category, callback, keybind, priority)
         if actions then
                 local button = actions:FindFirstChild(name)
                 if button and callback then
-                        button.Activated:Connect(callback)
+                        registerConnection(buttonConnections, button.Activated:Connect(callback))
                 end
         end
 end
@@ -777,7 +920,10 @@ end
 -- Enhanced jump function that you can customize further
 function ActionUI.setCustomJumpLogic(jumpFunction)
         if typeof(jumpFunction) == "function" then
-                performCustomJump = jumpFunction
+                performCustomJump = function(...)
+                        lastJumpTime = os.clock()
+                        jumpFunction(...)
+                end
         end
 end
 
