@@ -108,7 +108,14 @@ local function isMobile()
 end
 
 local function isDesktop()
-        return UserInputService.KeyboardEnabled or UserInputService.GamepadEnabled
+        if UserInputService.KeyboardEnabled or UserInputService.GamepadEnabled then
+                return true
+        end
+
+        -- Fallback for desktop environments where KeyboardEnabled can start false
+        -- (such as in Studio before any input is detected). In those cases we
+        -- treat any non-touch device as desktop so the actions UI stays visible.
+        return not UserInputService.TouchEnabled
 end
 
 local function shouldUseMobileLayout()
@@ -619,7 +626,16 @@ end
 
 local function ensureActions()
         local player = Players.LocalPlayer
-        local gui = player.PlayerGui
+        if not player then
+                return nil
+        end
+
+        local gui = player:FindFirstChildOfClass("PlayerGui")
+                or player:WaitForChild("PlayerGui", 5)
+        if not gui then
+                warn("ActionUI could not locate PlayerGui")
+                return nil
+        end
 
         local screenGui = gui:FindFirstChild("ScreenGui")
 
@@ -746,54 +762,57 @@ function ActionUI.init()
 
         local actions = ensureActions()
 
-        if not actions then
+        if actions then
+                disableDefaultJump()
+        else
                 enableDefaultJump()
-                disconnectConnections(inputConnections)
-                return
         end
 
-        disableDefaultJump()
+        if actions then
+                -- Combat action connections
+                local actionMap = {
+                        PunchButton = "Punch",
+                        KickButton = "Kick",
+                        RollButton = "Roll",
+                        CrouchButton = "Crouch",
+                        SlideButton = "Slide",
+                }
 
-        -- Combat action connections
-        local actionMap = {
-                PunchButton = "Punch",
-                KickButton = "Kick",
-                RollButton = "Roll",
-                CrouchButton = "Crouch",
-                SlideButton = "Slide",
-        }
+                for buttonName, action in pairs(actionMap) do
+                        local btn = actions:FindFirstChild(buttonName)
+                        if btn then
+                                registerConnection(buttonConnections, btn.Activated:Connect(function()
+                                        CombatController.perform(action)
+                                end))
+                        end
+                end
 
-        for buttonName, action in pairs(actionMap) do
-                local btn = actions:FindFirstChild(buttonName)
-                if btn then
-                        registerConnection(buttonConnections, btn.Activated:Connect(function()
-                                CombatController.perform(action)
+                -- Jump button connection
+                local jumpBtn = actions:FindFirstChild("JumpButton")
+                if jumpBtn then
+                        registerConnection(buttonConnections, jumpBtn.Activated:Connect(function()
+                                performCustomJump()
                         end))
                 end
-        end
 
-        -- Jump button connection
-        local jumpBtn = actions:FindFirstChild("JumpButton")
-        if jumpBtn then
-                registerConnection(buttonConnections, jumpBtn.Activated:Connect(function()
-                        performCustomJump()
-                end))
-        end
+                -- Ability connections
+                local abilityMap = {
+                        TossButton = Abilities.Toss,
+                        StarButton = Abilities.Star,
+                        RainButton = Abilities.Rain,
+                        BeastButton = Abilities.Beast,
+                        DragonButton = Abilities.Dragon,
+                }
 
-        -- Ability connections
-        local abilityMap = {
-                TossButton = Abilities.Toss,
-                StarButton = Abilities.Star,
-                RainButton = Abilities.Rain,
-                BeastButton = Abilities.Beast,
-                DragonButton = Abilities.Dragon,
-        }
-
-        for buttonName, abilityFunc in pairs(abilityMap) do
-                local btn = actions:FindFirstChild(buttonName)
-                if btn then
-                        registerConnection(buttonConnections, btn.Activated:Connect(abilityFunc))
+                for buttonName, abilityFunc in pairs(abilityMap) do
+                        local btn = actions:FindFirstChild(buttonName)
+                        if btn then
+                                registerConnection(buttonConnections, btn.Activated:Connect(abilityFunc))
+                        end
                 end
+        else
+                -- No UI frame, ensure any lingering button connections are cleared
+                disconnectConnections(buttonConnections)
         end
 
         -- Enhanced keybind setup with custom jump
