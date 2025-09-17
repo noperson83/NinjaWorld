@@ -98,18 +98,28 @@ end
 
 -- Attach WaterStar to character
 local function onCharacterAdded(character)
-        local elements = ReplicatedStorage.Elements
-        local waterElem = elements and elements.WaterElem
-	local waterStarTemplate = waterElem:FindFirstChild("WaterStar")
+        local elements = ReplicatedStorage:FindFirstChild("Elements")
+        if not elements then
+                warn("WaterStar template not found: Elements folder missing")
+                return
+        end
 
-	if not waterStarTemplate then
-		warn("WaterStar template not found in WaterElem!")
-		return
-	end
+        local waterElem = elements:FindFirstChild("WaterElem")
+        if not waterElem then
+                warn("WaterStar template not found: WaterElem folder missing")
+                return
+        end
 
-	local waterStarClone = waterStarTemplate:Clone()
-	waterStarClone.Name = "WaterStarClone"
-	waterStarClone.Parent = character
+        local waterStarTemplate = waterElem:FindFirstChild("WaterStar")
+
+        if not waterStarTemplate then
+                warn("WaterStar template not found in WaterElem!")
+                return
+        end
+
+        local waterStarClone = waterStarTemplate:Clone()
+        waterStarClone.Name = "WaterStarClone"
+        waterStarClone.Parent = character
 end
 
 if player.Character then
