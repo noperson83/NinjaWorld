@@ -35,10 +35,10 @@ local UI_CONFIG = {
 	BOUNCE_EASING = Enum.EasingStyle.Bounce,
 
 	-- Layout
-        BUTTON_SIZE = UDim2.new(0, 110, 0, 110),
-        MOBILE_BUTTON_SIZE = UDim2.new(0, 90, 0, 90),
-        JUMP_BUTTON_SIZE = UDim2.new(0, 130, 0, 130),
-        MOBILE_JUMP_SIZE = UDim2.new(0, 110, 0, 110),
+        BUTTON_SIZE = UDim2.new(0, 110, 0, 90),
+        MOBILE_BUTTON_SIZE = UDim2.new(0, 90, 0, 70),
+        JUMP_BUTTON_SIZE = UDim2.new(0, 130, 0, 110),
+        MOBILE_JUMP_SIZE = UDim2.new(0, 110, 0, 90),
         PADDING = UDim.new(0, 12),
         CORNER_RADIUS = UDim.new(0, 16),  -- Softer corners
 
@@ -528,9 +528,9 @@ local function createStylizedButton(buttonDef)
 end
 
 local function setupButtonAnimations(button)
-	local scaleObject = button:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
-	scaleObject.Scale = 1
-	scaleObject.Parent = button
+        local scaleObject = button:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
+        scaleObject.Scale = 1
+        scaleObject.Parent = button
 
 	local function tweenScale(target, duration, easing)
 		local tween = TweenService:Create(
@@ -570,19 +570,46 @@ local function setupButtonAnimations(button)
 		end
 	end))
 
-	registerConnection(buttonConnections, button.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1
-			or input.UserInputType == Enum.UserInputType.Touch
-			or input.UserInputType == Enum.UserInputType.Gamepad1 then
-			handleRelease()
-		end
-	end))
+        registerConnection(buttonConnections, button.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1
+                        or input.UserInputType == Enum.UserInputType.Touch
+                        or input.UserInputType == Enum.UserInputType.Gamepad1 then
+                        handleRelease()
+                end
+        end))
+end
+
+local function connectButtonActivation(button, callback)
+        if not button or not callback then
+                return
+        end
+
+        local lastActivation = 0
+
+        local function handleActivation(...)
+                local now = os.clock()
+                if now - lastActivation < 0.05 then
+                        return
+                end
+                lastActivation = now
+                callback(...)
+        end
+
+        if button:IsA("GuiButton") then
+                if typeof(button.Activated) == "RBXScriptSignal" then
+                        registerConnection(buttonConnections, button.Activated:Connect(handleActivation))
+                end
+
+                if typeof(button.MouseButton1Click) == "RBXScriptSignal" then
+                        registerConnection(buttonConnections, button.MouseButton1Click:Connect(handleActivation))
+                end
+        end
 end
 
 local function playButtonSound(soundId)
-	if UI_CONFIG.ENABLE_SOUNDS then
-		local sound = Instance.new("Sound")
-		sound.SoundId = soundId or UI_CONFIG.BUTTON_SOUND_ID
+        if UI_CONFIG.ENABLE_SOUNDS then
+                local sound = Instance.new("Sound")
+                sound.SoundId = soundId or UI_CONFIG.BUTTON_SOUND_ID
 		sound.Volume = 0.5
 		sound.Parent = SoundService
 		sound:Play()
@@ -958,15 +985,15 @@ local function ensureActions()
 		end
 	end
 
-	if #fanButtons > 0 then
-		toggleButtonRef = createFanToggleButton()
-		toggleButtonRef.Parent = actions
-		registerConnection(buttonConnections, toggleButtonRef.Activated:Connect(function()
-			setFanOpen(not fanOpen)
-			playButtonSound()
-			triggerHapticFeedback()
-		end))
-	end
+        if #fanButtons > 0 then
+                toggleButtonRef = createFanToggleButton()
+                toggleButtonRef.Parent = actions
+                connectButtonActivation(toggleButtonRef, function()
+                        setFanOpen(not fanOpen)
+                        playButtonSound()
+                        triggerHapticFeedback()
+                end)
+        end
 
 	setFanOpen(fanOpen, false)
 
@@ -995,31 +1022,29 @@ function ActionUI.init()
 			SlideButton = {func = CombatController.perform, param = "Slide", cooldown = 4},
 		}
 
-		for buttonName, data in pairs(actionMap) do
-			local btn = actions:FindFirstChild(buttonName)
-			if btn then
-				registerConnection(buttonConnections, btn.Activated:Connect(function()
-					if cooldowns[buttonName] then return end
-					data.func(data.param)
-					playButtonSound()
-					triggerHapticFeedback()
-					if data.cooldown > 0 then
-						startCooldown(buttonName, data.cooldown)
-					end
-				end))
-			end
-		end
+                for buttonName, data in pairs(actionMap) do
+                        local btn = actions:FindFirstChild(buttonName)
+                        if btn then
+                                connectButtonActivation(btn, function()
+                                        if cooldowns[buttonName] then return end
+                                        data.func(data.param)
+                                        playButtonSound()
+                                        triggerHapticFeedback()
+                                        if data.cooldown > 0 then
+                                                startCooldown(buttonName, data.cooldown)
+                                        end
+                                end)
+                        end
+                end
 
-		-- Jump
-		local jumpBtn = actions:FindFirstChild("JumpButton")
-		if jumpBtn then
-			registerConnection(buttonConnections, jumpBtn.Activated:Connect(function()
-				performCustomJump()
-			end))
-		end
+                -- Jump
+                local jumpBtn = actions:FindFirstChild("JumpButton")
+                if jumpBtn then
+                        connectButtonActivation(jumpBtn, performCustomJump)
+                end
 
-		-- Abilities (with example cooldowns)
-		local abilityMap = {
+                -- Abilities (with example cooldowns)
+                local abilityMap = {
 			TossButton = {func = Abilities.Toss, cooldown = 5},
 			StarButton = {func = Abilities.Star, cooldown = 10},
 			RainButton = {func = Abilities.Rain, cooldown = 15},
@@ -1027,21 +1052,21 @@ function ActionUI.init()
 			DragonButton = {func = Abilities.Dragon, cooldown = 25},
 		}
 
-		for buttonName, data in pairs(abilityMap) do
-			local btn = actions:FindFirstChild(buttonName)
-			if btn then
-				registerConnection(buttonConnections, btn.Activated:Connect(function()
-					if cooldowns[buttonName] then return end
-					data.func()
-					playButtonSound()
-					triggerHapticFeedback()
-					if data.cooldown > 0 then
-						startCooldown(buttonName, data.cooldown)
-					end
-				end))
-			end
-		end
-	end
+                for buttonName, data in pairs(abilityMap) do
+                        local btn = actions:FindFirstChild(buttonName)
+                        if btn then
+                                connectButtonActivation(btn, function()
+                                        if cooldowns[buttonName] then return end
+                                        data.func()
+                                        playButtonSound()
+                                        triggerHapticFeedback()
+                                        if data.cooldown > 0 then
+                                                startCooldown(buttonName, data.cooldown)
+                                        end
+                                end)
+                        end
+                end
+        end
 
 	-- Keybinds (updated to check cooldowns)
 	local abilityKeybinds = {
@@ -1188,20 +1213,20 @@ function ActionUI.addButton(name, text, category, callback, keybind, priority, i
 	local gui = player.PlayerGui
 	local screenGui = gui:FindFirstChild("ScreenGui")
 	local actions = screenGui and screenGui:FindFirstChild("Actions")
-	if actions then
-		local button = actions:FindFirstChild(name)
-		if button and callback then
-			registerConnection(buttonConnections, button.Activated:Connect(function()
-				if cooldowns[name] then return end
-				callback()
-				playButtonSound()
-				triggerHapticFeedback()
-				if cooldown and cooldown > 0 then
-					startCooldown(name, cooldown)
-				end
-			end))
-		end
-	end
+        if actions then
+                local button = actions:FindFirstChild(name)
+                if button and callback then
+                        connectButtonActivation(button, function()
+                                if cooldowns[name] then return end
+                                callback()
+                                playButtonSound()
+                                triggerHapticFeedback()
+                                if cooldown and cooldown > 0 then
+                                        startCooldown(name, cooldown)
+                                end
+                        end)
+                end
+        end
 end
 
 function ActionUI.setCustomJumpLogic(jumpFunction)
