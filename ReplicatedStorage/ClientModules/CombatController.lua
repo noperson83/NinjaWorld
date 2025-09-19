@@ -106,7 +106,6 @@ function CombatController.perform(actionName)
                         if CharacterManager.isCrouching then
                                 track:AdjustSpeed(1)
                                 track:Play()
-                                humanoid.WalkSpeed = 24
                                 task.delay(0.23, function()
                                         track:Stop()
                                 end)
@@ -115,7 +114,6 @@ function CombatController.perform(actionName)
                                 track.TimePosition = 0.1
                                 track:Play()
                                 track:AdjustSpeed(0)
-                                humanoid.WalkSpeed = 8
                                 CharacterManager.isCrouching = true
                         end
                 end

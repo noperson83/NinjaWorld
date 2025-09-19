@@ -12,6 +12,7 @@ local HapticService = game:GetService("HapticService")
 
 local Abilities = require(ReplicatedStorage.ClientModules.Abilities)
 local CombatController = require(ReplicatedStorage.ClientModules.CombatController)
+local GameSettings = require(ReplicatedStorage.GameSettings)
 
 -- UI Configuration (Expanded with more options)
 local UI_CONFIG = {
@@ -155,6 +156,17 @@ local triggerHapticFeedback
 local updateCooldownVisuals
 
 local currentUIScale = 1
+
+local MOVEMENT_REMOTE_NAME = "MovementModeEvent"
+local MOVEMENT_MODES = GameSettings.movementModes or {RunDance = "RunDance", Battle = "Battle"}
+local RUN_MODE = MOVEMENT_MODES.RunDance or "RunDance"
+local BATTLE_MODE = MOVEMENT_MODES.Battle or "Battle"
+local movementModeRemote = ReplicatedStorage:FindFirstChild(MOVEMENT_REMOTE_NAME)
+local remoteMissingWarned = false
+local lastSentMode = nil
+local currentMovementMode = BATTLE_MODE
+local statsAddedConnection = nil
+local levelChangedConnection = nil
 
 local function round(value)
         return math.floor(value + 0.5)
@@ -522,24 +534,111 @@ local function shouldDisplayActions()
 end
 
 local function getHumanoid()
-	local player = Players.LocalPlayer
-	if not player then
-		return nil
-	end
+        local player = Players.LocalPlayer
+        if not player then
+                return nil
+        end
 
 	local character = player.Character
 	if not character then
 		return nil
 	end
 
-	return character:FindFirstChildOfClass("Humanoid")
+        return character:FindFirstChildOfClass("Humanoid")
+end
+
+local function resolveMovementRemote()
+        if movementModeRemote then
+                return movementModeRemote
+        end
+
+        local ok, remote = pcall(function()
+                return ReplicatedStorage:WaitForChild(MOVEMENT_REMOTE_NAME, 5)
+        end)
+
+        if ok and remote then
+                movementModeRemote = remote
+        elseif not remoteMissingWarned then
+                warn("MovementModeEvent remote not found; movement speed sync disabled")
+                remoteMissingWarned = true
+        end
+
+        return movementModeRemote
+end
+
+local function sendMovementMode(mode, force)
+        if not mode then
+                return
+        end
+
+        local remote = resolveMovementRemote()
+        if not remote then
+                return
+        end
+
+        if force or mode ~= lastSentMode then
+                lastSentMode = mode
+                remote:FireServer(mode)
+        end
+end
+
+local function getPlayerStats()
+        local player = Players.LocalPlayer
+        if not player then
+                return nil
+        end
+
+        return player:FindFirstChild("Stats")
+end
+
+local function getCurrentLevel()
+        local stats = getPlayerStats()
+        local levelValue = stats and stats:FindFirstChild("Level")
+        if levelValue then
+                return levelValue.Value
+        end
+        return 1
+end
+
+local function calculateSpeedForMode(level, mode)
+        if GameSettings.movementSpeedForMode then
+                return GameSettings.movementSpeedForMode(level, mode)
+        end
+
+        local baseSpeed = GameSettings.movementSpeed(level)
+        local runSpeed = baseSpeed + (GameSettings.runSpeedBonus or 0)
+
+        if mode == RUN_MODE then
+                return runSpeed
+        elseif mode == BATTLE_MODE then
+                return math.max(0, runSpeed - (GameSettings.battleSpeedPenalty or 0))
+        end
+
+        return runSpeed
+end
+
+local function putAwayWeapons()
+        local player = Players.LocalPlayer
+        if not player then
+                return
+        end
+
+        local character = player.Character
+        if not character then
+                return
+        end
+
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+                humanoid:UnequipTools()
+        end
 end
 
 local function createGradient(color)
-	local gradient = Instance.new("UIGradient")
-	gradient.Color = ColorSequence.new{
-		ColorSequenceKeypoint.new(0, color),
-		ColorSequenceKeypoint.new(1, Color3.new(color.R * 0.65, color.G * 0.65, color.B * 0.65))
+        local gradient = Instance.new("UIGradient")
+        gradient.Color = ColorSequence.new{
+                ColorSequenceKeypoint.new(0, color),
+                ColorSequenceKeypoint.new(1, Color3.new(color.R * 0.65, color.G * 0.65, color.B * 0.65))
 	}
 	gradient.Offset = UI_CONFIG.GRADIENT_OFFSET
 	return gradient
@@ -841,47 +940,87 @@ local function updateToggleVisual()
 	toggleButtonRef.Text = fanOpen and "−" or "☰"
 end
 
-local function applySpeedState()
-	local humanoid = getHumanoid()
-	if not humanoid then
-		return
-	end
+local function applySpeedState(forceRemote)
+        local humanoid = getHumanoid()
+        if not humanoid then
+                return
+        end
 
-	if fanOpen then
-		if speedBoostApplied and defaultWalkSpeed then
-			humanoid.WalkSpeed = defaultWalkSpeed
-		end
-		speedBoostApplied = false
-		return
-	end
+        local level = getCurrentLevel()
+        defaultWalkSpeed = GameSettings.movementSpeed(level)
 
-	if not speedBoostApplied then
-		defaultWalkSpeed = humanoid.WalkSpeed
-	end
+        local desiredMode = fanOpen and BATTLE_MODE or RUN_MODE
+        local targetSpeed = calculateSpeedForMode(level, desiredMode)
 
-	humanoid.WalkSpeed = (defaultWalkSpeed or humanoid.WalkSpeed) + FAN_CONFIG.SPEED_BOOST
-	speedBoostApplied = true
+        humanoid.WalkSpeed = targetSpeed
+        speedBoostApplied = (desiredMode == RUN_MODE)
+
+        local previousMode = currentMovementMode
+        currentMovementMode = desiredMode
+
+        local shouldForce = forceRemote or (previousMode ~= currentMovementMode)
+        sendMovementMode(currentMovementMode, shouldForce)
+end
+
+local function connectStatListeners()
+        local player = Players.LocalPlayer
+        if not player then
+                return
+        end
+
+        if not statsAddedConnection then
+                statsAddedConnection = player.ChildAdded:Connect(function(child)
+                        if child.Name == "Stats" then
+                                if levelChangedConnection then
+                                        levelChangedConnection:Disconnect()
+                                        levelChangedConnection = nil
+                                end
+                                connectStatListeners()
+                                applySpeedState(true)
+                        end
+                end)
+        end
+
+        local stats = player:FindFirstChild("Stats")
+        if not stats then
+                return
+        end
+
+        local levelValue = stats:FindFirstChild("Level")
+        if levelValue and not levelChangedConnection then
+                levelChangedConnection = levelValue:GetPropertyChangedSignal("Value"):Connect(function()
+                        applySpeedState(true)
+                end)
+        end
+
+        applySpeedState(true)
 end
 
 local function ensureCharacterTracking()
-	local player = Players.LocalPlayer
-	if not player then
-		return
-	end
+        local player = Players.LocalPlayer
+        if not player then
+                return
+        end
 
-	if characterAddedConnection then
-		return
-	end
+        connectStatListeners()
 
-	characterAddedConnection = player.CharacterAdded:Connect(function()
-		defaultWalkSpeed = nil
-		speedBoostApplied = false
-		task.defer(applySpeedState)
-	end)
+        if characterAddedConnection then
+                return
+        end
 
-	if player.Character then
-		task.defer(applySpeedState)
-	end
+        characterAddedConnection = player.CharacterAdded:Connect(function()
+                defaultWalkSpeed = nil
+                speedBoostApplied = false
+                task.defer(function()
+                        applySpeedState(true)
+                end)
+        end)
+
+        if player.Character then
+                task.defer(function()
+                        applySpeedState(true)
+                end)
+        end
 end
 
 local function updateFanLayout(animated)
@@ -1046,18 +1185,22 @@ local function updateFanLayout(animated)
 end
 
 local function setFanOpen(state, animated)
-	local targetState = state ~= false
-	local shouldAnimate = animated ~= false
+        local targetState = state ~= false
+        local shouldAnimate = animated ~= false
+        local stateChanged = fanOpen ~= targetState
 
-	if fanOpen ~= targetState then
-		fanOpen = targetState
-	end
+        if stateChanged then
+                fanOpen = targetState
+                if not fanOpen then
+                        putAwayWeapons()
+                end
+        end
 
-	updateToggleVisual()
-	updateFanLayout(shouldAnimate)
-	applySpeedState()
+        updateToggleVisual()
+        updateFanLayout(shouldAnimate)
+        applySpeedState(stateChanged)
 
-	return fanOpen
+        return fanOpen
 end
 
 local function performCustomJump()
@@ -1162,28 +1305,24 @@ local function ensureActions()
 
 	local screenGui = gui:FindFirstChild("ScreenGui")
 
-	if not shouldDisplayActions() then
-		disconnectConnections(buttonConnections)
-		if screenGui then
-			local existingActions = screenGui:FindFirstChild("Actions")
-			if existingActions then
-				existingActions:Destroy()
-			end
-		end
+        if not shouldDisplayActions() then
+                disconnectConnections(buttonConnections)
+                if screenGui then
+                        local existingActions = screenGui:FindFirstChild("Actions")
+                        if existingActions then
+                                existingActions:Destroy()
+                        end
+                end
 
-		if speedBoostApplied and defaultWalkSpeed then
-			local humanoid = getHumanoid()
-			if humanoid then
-				humanoid.WalkSpeed = defaultWalkSpeed
-			end
-		end
-		speedBoostApplied = false
-		defaultWalkSpeed = nil
-		currentActionsFrame = nil
-		jumpButtonRef = nil
-		toggleButtonRef = nil
-		table.clear(fanButtons)
-		table.clear(cooldowns)
+                fanOpen = true
+                speedBoostApplied = false
+                defaultWalkSpeed = nil
+                applySpeedState(true)
+                currentActionsFrame = nil
+                jumpButtonRef = nil
+                toggleButtonRef = nil
+                table.clear(fanButtons)
+                table.clear(cooldowns)
 
 		return nil
 	end
@@ -1412,21 +1551,28 @@ function ActionUI.init()
 			data = combatKeybinds[input.KeyCode]
 		end
 
-		if data then
-			if cooldowns[data.button] then return end
-			if data.param then
-				data.func(data.param)
-			else
-				data.func()
-			end
-			-- No cooldown start here, assume handled in func or button
-			return
-		end
+                if data then
+                        if cooldowns[data.button] then return end
+                        if data.param then
+                                data.func(data.param)
+                        else
+                                data.func()
+                        end
+                        -- No cooldown start here, assume handled in func or button
+                        return
+                end
 
-		if debugInputLogging and not ignoredInputKeys[input.KeyCode] then
-			print("Unmapped key pressed:", input.KeyCode.Name)
-		end
-	end))
+                if input.KeyCode == Enum.KeyCode.Minus or input.KeyCode == Enum.KeyCode.KeypadMinus then
+                        setFanOpen(not fanOpen)
+                        playButtonSound()
+                        triggerHapticFeedback()
+                        return
+                end
+
+                if debugInputLogging and not ignoredInputKeys[input.KeyCode] then
+                        print("Unmapped key pressed:", input.KeyCode.Name)
+                end
+        end))
 
 	-- Auto-resize
 	local camera = workspace.CurrentCamera
