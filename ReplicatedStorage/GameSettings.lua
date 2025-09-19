@@ -41,6 +41,14 @@ local healthBoostPerLevel = 10
 -- Base health
 local startHealth = 100
 
+GameSettings.runSpeedBonus = 10
+GameSettings.battleSpeedPenalty = 10
+
+GameSettings.movementModes = {
+        RunDance = "RunDance",
+        Battle = "Battle",
+}
+
 function GameSettings.upgradeCost(upgrades)
 	return (40 * growthModifier) * growthModifier^upgrades
 end
@@ -54,11 +62,25 @@ function GameSettings.jumpPower(level)
 end
 
 function GameSettings.health(level)
-	return (healthBoostPerLevel * level) + startHealth
+        return (healthBoostPerLevel * level) + startHealth
 end
 
 function GameSettings.staminaUpgradeCost(upgrades)
-	return (30 * growthModifier) * growthModifier^upgrades
+        return (30 * growthModifier) * growthModifier^upgrades
+end
+
+function GameSettings.movementSpeedForMode(level, mode)
+        local baseSpeed = GameSettings.movementSpeed(level)
+        local runSpeed = baseSpeed + (GameSettings.runSpeedBonus or 0)
+
+        if mode == (GameSettings.movementModes and GameSettings.movementModes.RunDance) then
+                return runSpeed
+        elseif mode == (GameSettings.movementModes and GameSettings.movementModes.Battle) then
+                local penalty = GameSettings.battleSpeedPenalty or 0
+                return math.max(0, runSpeed - penalty)
+        end
+
+        return runSpeed
 end
 
 -- Codes used to redeem for in-game badges

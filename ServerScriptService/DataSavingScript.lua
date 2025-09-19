@@ -68,6 +68,84 @@ local rebirthFunction = Instance.new("BindableFunction")
 rebirthFunction.Name = "RebirthFunction"
 rebirthFunction.Parent = script
 
+local movementModeEvent = ReplicatedStorage:FindFirstChild("MovementModeEvent")
+if movementModeEvent and not movementModeEvent:IsA("RemoteEvent") then
+    movementModeEvent:Destroy()
+    movementModeEvent = nil
+end
+if not movementModeEvent then
+    movementModeEvent = Instance.new("RemoteEvent")
+    movementModeEvent.Name = "MovementModeEvent"
+    movementModeEvent.Parent = ReplicatedStorage
+end
+
+local MOVEMENT_MODES = GameSettings.movementModes or {RunDance = "RunDance", Battle = "Battle"}
+local RUN_MODE = MOVEMENT_MODES.RunDance or "RunDance"
+local BATTLE_MODE = MOVEMENT_MODES.Battle or "Battle"
+
+local function computeModeSpeed(level, mode)
+    if GameSettings.movementSpeedForMode then
+        return GameSettings.movementSpeedForMode(level, mode)
+    end
+
+    local baseSpeed = GameSettings.movementSpeed(level)
+    local runSpeed = baseSpeed + (GameSettings.runSpeedBonus or 0)
+
+    if mode == RUN_MODE then
+        return runSpeed
+    elseif mode == BATTLE_MODE then
+        return math.max(0, runSpeed - (GameSettings.battleSpeedPenalty or 0))
+    end
+
+    return runSpeed
+end
+
+local function applyMovementSpeed(player, stats, humanoid)
+    stats = stats or (player and player:FindFirstChild("Stats"))
+    if not stats then
+        return
+    end
+
+    local levelValue = stats:FindFirstChild("Level")
+    local walkSpeedValue = stats:FindFirstChild("WalkSpeed")
+    local modeValue = stats:FindFirstChild("MovementMode")
+
+    if not (levelValue and walkSpeedValue and modeValue) then
+        return
+    end
+
+    local speed = computeModeSpeed(levelValue.Value, modeValue.Value)
+    walkSpeedValue.Value = speed
+
+    if humanoid then
+        humanoid.WalkSpeed = speed
+    end
+end
+
+movementModeEvent.OnServerEvent:Connect(function(player, requestedMode)
+    if typeof(requestedMode) ~= "string" then
+        return
+    end
+
+    if requestedMode ~= RUN_MODE and requestedMode ~= BATTLE_MODE then
+        return
+    end
+
+    local stats = player:FindFirstChild("Stats")
+    if not stats then
+        return
+    end
+
+    local movementModeValue = stats:FindFirstChild("MovementMode")
+    if not movementModeValue then
+        return
+    end
+
+    movementModeValue.Value = requestedMode
+    local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
+    applyMovementSpeed(player, stats, humanoid)
+end)
+
 local function decodeInventory(value)
     if typeof(value) ~= "string" then return nil end
     local ok, data = pcall(HttpService.JSONDecode, HttpService, value)
@@ -328,15 +406,26 @@ local function playerAdded(player)
         sessionData[player.UserId].rebirths = rebirthsValue.Value
     end)
 
+    local movementModeValue = Instance.new("StringValue")
+    movementModeValue.Name = "MovementMode"
+    movementModeValue.Value = BATTLE_MODE
+    movementModeValue.Parent = statsFolder
+
+    movementModeValue:GetPropertyChangedSignal("Value"):Connect(function()
+        local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
+        applyMovementSpeed(player, statsFolder, humanoid)
+    end)
+
     local walkSpeedValue = Instance.new("NumberValue")
     walkSpeedValue.Name = "WalkSpeed"
-    walkSpeedValue.Value = GameSettings.movementSpeed(levelValue.Value)
     walkSpeedValue.Parent = statsFolder
 
     local jumpPowerValue = Instance.new("NumberValue")
     jumpPowerValue.Name = "JumpPower"
     jumpPowerValue.Value = GameSettings.jumpPower(levelValue.Value)
     jumpPowerValue.Parent = statsFolder
+
+    applyMovementSpeed(player, statsFolder, player.Character and player.Character:FindFirstChild("Humanoid"))
 
     local leaderSpeed = Instance.new("IntValue")
     leaderSpeed.Name = "WalkSpeed"
@@ -374,15 +463,13 @@ local function playerAdded(player)
             leaderLevel.Value = levelValue.Value
         end
 
-        local speed = GameSettings.movementSpeed(levelValue.Value)
         local jump = GameSettings.jumpPower(levelValue.Value)
-        walkSpeedValue.Value = speed
         jumpPowerValue.Value = jump
         local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
         if humanoid then
-            humanoid.WalkSpeed = speed
             humanoid.JumpPower = jump
         end
+        applyMovementSpeed(player, statsFolder, humanoid)
     end)
 
     local abilitiesFolder = Instance.new("Folder")
@@ -436,14 +523,12 @@ local function playerAdded(player)
             end
         end
 
-        local speed = GameSettings.movementSpeed(levelValue.Value)
         local jump = GameSettings.jumpPower(levelValue.Value)
-        walkSpeedValue.Value = speed
         jumpPowerValue.Value = jump
         if humanoid then
-            humanoid.WalkSpeed = speed
             humanoid.JumpPower = jump
         end
+        applyMovementSpeed(player, statsFolder, humanoid)
     end)
 
     player.CharacterAdded:Connect(function(character)
@@ -452,8 +537,8 @@ local function playerAdded(player)
             return
         end
 
-        humanoid.WalkSpeed = walkSpeedValue.Value
         humanoid.JumpPower = jumpPowerValue.Value
+        applyMovementSpeed(player, statsFolder, humanoid)
 
         humanoid.Died:Connect(function()
             local creator = humanoid:FindFirstChild("creator")
@@ -471,8 +556,8 @@ local function playerAdded(player)
     if player.Character then
         local humanoid = player.Character:FindFirstChild("Humanoid")
         if humanoid then
-            humanoid.WalkSpeed = walkSpeedValue.Value
             humanoid.JumpPower = jumpPowerValue.Value
+            applyMovementSpeed(player, statsFolder, humanoid)
         end
     end
 end
