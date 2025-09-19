@@ -63,16 +63,28 @@ local UI_CONFIG = {
 }
 
 local FAN_CONFIG = {
-        START_ANGLE = math.rad(205),
-        END_ANGLE = math.rad(335),
-        MOBILE_RADIUS = 210,
-        DESKTOP_RADIUS = 270,
+        START_ANGLE = math.rad(215),
+        END_ANGLE = math.rad(305),
+        OUTER_START_ANGLE = math.rad(185),
+        OUTER_END_ANGLE = math.rad(300),
+        MOBILE_RADIUS = 180,
+        DESKTOP_RADIUS = 230,
+        OUTER_RADIUS_OFFSET = 60,
+        MOBILE_OUTER_RADIUS_OFFSET = 50,
         JUMP_MARGIN = 90,
         MOBILE_JUMP_MARGIN = 70,
         DESKTOP_JUMP_MARGIN = 95,
         TOGGLE_MARGIN = 36,
         MOBILE_TOGGLE_MARGIN = 30,
         DESKTOP_TOGGLE_MARGIN = 40,
+        MIN_HORIZONTAL_MARGIN = 18,
+        MOBILE_MIN_HORIZONTAL_MARGIN = 14,
+        OUTER_MIN_HORIZONTAL_MARGIN = 28,
+        MOBILE_OUTER_MIN_HORIZONTAL_MARGIN = 22,
+        VERTICAL_SHIFT = 12,
+        MOBILE_VERTICAL_SHIFT = 10,
+        OUTER_VERTICAL_SHIFT = 44,
+        MOBILE_OUTER_VERTICAL_SHIFT = 36,
         ANIMATION_TIME = 0.28,
         SPEED_BOOST = 5,  -- Slightly increased
         TOGGLE_SIZE = UDim2.new(0, 52, 0, 52),
@@ -81,8 +93,8 @@ local FAN_CONFIG = {
 
 -- Button definitions (Added icons placeholders, you can replace with actual ImageIds)
 local BUTTON_DEFINITIONS = {
-	-- Jump (Priority 1)
-	{name = "JumpButton", text = "JUMP", icon = "rbxassetid://1234567890", action = "Jump", category = "jump", keybind = "Space", priority = 1},
+        -- Jump (Priority 1)
+        {name = "JumpButton", text = "JUMP", icon = "rbxassetid://1234567890", action = "Jump", category = "jump", keybind = "Space", priority = 1},
 
 	-- Combat (Red, grouped together)
 	{name = "PunchButton", text = "PUNCH", icon = "rbxassetid://1234567890", action = "Punch", category = "combat", keybind = "E/T", priority = 2},
@@ -98,7 +110,14 @@ local BUTTON_DEFINITIONS = {
 	{name = "StarButton", text = "STAR", icon = "rbxassetid://1234567890", action = "Star", category = "ability", keybind = "G", priority = 8},
 	{name = "RainButton", text = "RAIN", icon = "rbxassetid://1234567890", action = "Rain", category = "ability", keybind = "Z", priority = 9},
 	{name = "BeastButton", text = "BEAST", icon = "rbxassetid://1234567890", action = "Beast", category = "ability", keybind = "B", priority = 10},
-	{name = "DragonButton", text = "DRAGON", icon = "rbxassetid://1234567890", action = "Dragon", category = "ability", keybind = "X", priority = 11},
+        {name = "DragonButton", text = "DRAGON", icon = "rbxassetid://1234567890", action = "Dragon", category = "ability", keybind = "X", priority = 11},
+}
+
+local ABILITY_FAN_ORDER = {
+        DragonButton = 1,
+        BeastButton = 2,
+        StarButton = 3,
+        TossButton = 4,
 }
 
 -- Global variables (Added cooldown tracking)
@@ -123,6 +142,7 @@ local buttonConnections = {}
 local inputConnections = {}
 local deviceChangeConnections = {}
 local cooldowns = {}  -- New: Table to track cooldowns {buttonName = {endTime = tick, duration = seconds}}
+local touchGuiConnections = {}
 
 local updateFanLayout
 local updateToggleVisual
@@ -212,8 +232,120 @@ local function getFanRadius(mobileLayout)
         return scaleNumber(baseRadius or 0)
 end
 
+local function getOuterFanRadius(baseRadius, mobileLayout)
+        local offset
+        if mobileLayout then
+                offset = FAN_CONFIG.MOBILE_OUTER_RADIUS_OFFSET or FAN_CONFIG.OUTER_RADIUS_OFFSET or 0
+        else
+                offset = FAN_CONFIG.OUTER_RADIUS_OFFSET or 0
+        end
+        return baseRadius + scaleNumber(offset or 0)
+end
+
+local function getHorizontalMargin(mobileLayout, isOuter)
+        local baseMargin
+        if isOuter then
+                if mobileLayout then
+                        baseMargin = FAN_CONFIG.MOBILE_OUTER_MIN_HORIZONTAL_MARGIN
+                                or FAN_CONFIG.OUTER_MIN_HORIZONTAL_MARGIN
+                                or FAN_CONFIG.MIN_HORIZONTAL_MARGIN
+                else
+                        baseMargin = FAN_CONFIG.OUTER_MIN_HORIZONTAL_MARGIN or FAN_CONFIG.MIN_HORIZONTAL_MARGIN
+                end
+        else
+                if mobileLayout then
+                        baseMargin = FAN_CONFIG.MOBILE_MIN_HORIZONTAL_MARGIN or FAN_CONFIG.MIN_HORIZONTAL_MARGIN
+                else
+                        baseMargin = FAN_CONFIG.MIN_HORIZONTAL_MARGIN
+                end
+        end
+        return scaleNumber(baseMargin or 0)
+end
+
+local function getVerticalShift(mobileLayout, isOuter)
+        local baseShift
+        if isOuter then
+                if mobileLayout then
+                        baseShift = FAN_CONFIG.MOBILE_OUTER_VERTICAL_SHIFT
+                                or FAN_CONFIG.OUTER_VERTICAL_SHIFT
+                                or FAN_CONFIG.VERTICAL_SHIFT
+                else
+                        baseShift = FAN_CONFIG.OUTER_VERTICAL_SHIFT or FAN_CONFIG.VERTICAL_SHIFT
+                end
+        else
+                if mobileLayout then
+                        baseShift = FAN_CONFIG.MOBILE_VERTICAL_SHIFT or FAN_CONFIG.VERTICAL_SHIFT
+                else
+                        baseShift = FAN_CONFIG.VERTICAL_SHIFT
+                end
+        end
+        return -scaleNumber(baseShift or 0)
+end
+
+local function computeFanAngles(count, startAngle, endAngle)
+        local angles = {}
+        if count <= 0 then
+                return angles
+        end
+
+        if count == 1 then
+                angles[1] = (startAngle + endAngle) * 0.5
+        else
+                local step = (endAngle - startAngle) / (count - 1)
+                for index = 1, count do
+                        angles[index] = startAngle + (index - 1) * step
+                end
+        end
+
+        return angles
+end
+
+local function computeHorizontalShift(angles, radius, margin)
+        if not angles or #angles == 0 then
+                return 0
+        end
+
+        local maxCos
+        for _, angle in ipairs(angles) do
+                local cosValue = math.cos(angle)
+                if not maxCos or cosValue > maxCos then
+                        maxCos = cosValue
+                end
+        end
+
+        local effectiveMargin = margin or 0
+        if maxCos and maxCos > 0 then
+                return -(maxCos * radius + effectiveMargin)
+        end
+
+        return -effectiveMargin
+end
+
+local function updateFanExtents(angles, radius, shiftX, shiftY, extents)
+        if not angles or #angles == 0 or not extents then
+                return
+        end
+
+        for _, angle in ipairs(angles) do
+                local offsetX = math.cos(angle) * radius + (shiftX or 0)
+                local offsetY = math.sin(angle) * radius + (shiftY or 0)
+                if offsetX < extents.minX then
+                        extents.minX = offsetX
+                end
+                if offsetX > extents.maxX then
+                        extents.maxX = offsetX
+                end
+                if offsetY < extents.minY then
+                        extents.minY = offsetY
+                end
+                if offsetY > extents.maxY then
+                        extents.maxY = offsetY
+                end
+        end
+end
+
 local function isMobile()
-	return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+        return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 end
 
 local function isDesktop()
@@ -249,9 +381,9 @@ local function disconnectConnections(container)
 end
 
 local function setJumpButtonEnabled(enabled)
-	if not game:IsLoaded() then
-		game.Loaded:Wait()
-	end
+        if not game:IsLoaded() then
+                game.Loaded:Wait()
+        end
 
 	local attempts = 0
 	local success = false
@@ -268,15 +400,82 @@ local function setJumpButtonEnabled(enabled)
 		task.wait(0.1 * attempts)
 	until success or attempts >= 5
 
-	if not success and lastError then
-		warn("ActionUI failed to toggle JumpButtonEnabled:", lastError)
-	end
+        if not success and lastError then
+                warn("ActionUI failed to toggle JumpButtonEnabled:", lastError)
+        end
+end
+
+local function applyTouchJumpVisibility(frame, visible)
+        if not frame then
+                return
+        end
+
+        local jumpButton = frame:FindFirstChild("JumpButton")
+        if jumpButton then
+                jumpButton.Visible = visible
+                jumpButton.Active = visible
+        end
+end
+
+local function monitorTouchControlFrame(frame, visible)
+        if not frame then
+                return
+        end
+
+        applyTouchJumpVisibility(frame, visible)
+        registerConnection(touchGuiConnections, frame.ChildAdded:Connect(function(child)
+                if child.Name == "JumpButton" then
+                        applyTouchJumpVisibility(frame, visible)
+                end
+        end))
+end
+
+local function monitorTouchGui(touchGui, visible)
+        if not touchGui then
+                return
+        end
+
+        monitorTouchControlFrame(touchGui:FindFirstChild("TouchControlFrame"), visible)
+        registerConnection(touchGuiConnections, touchGui.ChildAdded:Connect(function(child)
+                if child.Name == "TouchControlFrame" then
+                        monitorTouchControlFrame(child, visible)
+                end
+        end))
+end
+
+local function enforceTouchJumpVisibility(visible)
+        disconnectConnections(touchGuiConnections)
+
+        local player = Players.LocalPlayer
+        if not player then
+                return
+        end
+
+        local playerGui = player:FindFirstChildOfClass("PlayerGui") or player:FindFirstChild("PlayerGui")
+        if not playerGui then
+                task.delay(0.2, function()
+                        enforceTouchJumpVisibility(visible)
+                end)
+                return
+        end
+
+        for _, child in ipairs(playerGui:GetChildren()) do
+                if child.Name == "TouchGui" then
+                        monitorTouchGui(child, visible)
+                end
+        end
+
+        registerConnection(touchGuiConnections, playerGui.ChildAdded:Connect(function(child)
+                if child.Name == "TouchGui" then
+                        monitorTouchGui(child, visible)
+                end
+        end))
 end
 
 local function bindJumpOverride()
-	if jumpActionBound then
-		return
-	end
+        if jumpActionBound then
+                return
+        end
 
 	ContextActionService:BindAction(jumpActionName, function(_, inputState)
 		if inputState == Enum.UserInputState.Begin and customJumpEnabled then
@@ -686,9 +885,9 @@ local function ensureCharacterTracking()
 end
 
 local function updateFanLayout(animated)
-	if not currentActionsFrame or not jumpButtonRef then
-		return
-	end
+        if not currentActionsFrame or not jumpButtonRef then
+                return
+        end
 
         local mobileLayout = shouldUseMobileLayout()
         local radius = getFanRadius(mobileLayout)
@@ -700,47 +899,130 @@ local function updateFanLayout(animated)
         currentActionsFrame.AnchorPoint = Vector2.new(1, 1)
         local edgePadding = scaleNumber(25)
         currentActionsFrame.Position = UDim2.new(1, -edgePadding, 1, -edgePadding)
+
+        local abilityEntries = {}
+        local otherEntries = {}
+
+        for _, button in ipairs(fanButtons) do
+                if button and button.Parent == currentActionsFrame then
+                        local category = button:GetAttribute("ButtonCategory")
+                        local priority = button.LayoutOrder or button:GetAttribute("ActionPriority") or 999
+                        if category == "ability" then
+                                local order = ABILITY_FAN_ORDER[button.Name]
+                                if order then
+                                        table.insert(abilityEntries, {button = button, order = order})
+                                else
+                                        table.insert(otherEntries, {button = button, order = priority})
+                                end
+                        else
+                                table.insert(otherEntries, {button = button, order = priority})
+                        end
+                end
+        end
+
+        table.sort(abilityEntries, function(a, b)
+                if a.order == b.order then
+                        local aPriority = a.button.LayoutOrder or a.button:GetAttribute("ActionPriority") or 999
+                        local bPriority = b.button.LayoutOrder or b.button:GetAttribute("ActionPriority") or 999
+                        if aPriority == bPriority then
+                                return a.button.Name < b.button.Name
+                        end
+                        return aPriority < bPriority
+                end
+                return a.order < b.order
+        end)
+
+        table.sort(otherEntries, function(a, b)
+                if a.order == b.order then
+                        return a.button.Name < b.button.Name
+                end
+                return a.order < b.order
+        end)
+
+        local abilityButtons = {}
+        for _, entry in ipairs(abilityEntries) do
+                table.insert(abilityButtons, entry.button)
+        end
+
+        local innerButtons = {}
+        for _, entry in ipairs(otherEntries) do
+                table.insert(innerButtons, entry.button)
+        end
+
+        local innerAngles = computeFanAngles(#innerButtons, FAN_CONFIG.START_ANGLE, FAN_CONFIG.END_ANGLE)
+        local outerStart = FAN_CONFIG.OUTER_START_ANGLE or FAN_CONFIG.START_ANGLE
+        local outerEnd = FAN_CONFIG.OUTER_END_ANGLE or FAN_CONFIG.END_ANGLE
+        local abilityAngles = computeFanAngles(#abilityButtons, outerStart, outerEnd)
+
+        local abilityRadius = radius
+        if #abilityButtons > 0 then
+                abilityRadius = getOuterFanRadius(radius, mobileLayout)
+        end
+
+        local innerMargin = getHorizontalMargin(mobileLayout, false)
+        local abilityMargin = getHorizontalMargin(mobileLayout, true)
+        local innerShiftX = computeHorizontalShift(innerAngles, radius, innerMargin)
+        local abilityShiftX = computeHorizontalShift(abilityAngles, abilityRadius, abilityMargin)
+
+        local innerShiftY = getVerticalShift(mobileLayout, false)
+        local abilityShiftY = getVerticalShift(mobileLayout, true)
+
+        local extents = {minX = 0, maxX = 0, minY = 0, maxY = 0}
+        updateFanExtents(innerAngles, radius, innerShiftX, innerShiftY, extents)
+        updateFanExtents(abilityAngles, abilityRadius, abilityShiftX, abilityShiftY, extents)
+
+        local maxRadius = math.max(radius, abilityRadius)
         local extraPadding = scaleNumber(20)
-        local frameWidth = radius + jumpSize.X.Offset + margin * 2 + extraPadding
-        local frameHeight = radius + jumpSize.Y.Offset + margin * 2 + extraPadding
+        local horizontalExtent = math.max(maxRadius, math.abs(extents.minX), math.abs(extents.maxX))
+        local verticalExtent = math.max(maxRadius, math.abs(extents.minY), math.abs(extents.maxY))
+        local frameWidth = jumpSize.X.Offset + margin * 2 + horizontalExtent + extraPadding
+        local frameHeight = jumpSize.Y.Offset + margin * 2 + verticalExtent + extraPadding
         currentActionsFrame.Size = UDim2.new(0, frameWidth, 0, frameHeight)
         currentActionsFrame.ClipsDescendants = false
 
-	local totalButtons = #fanButtons
-	for index, button in ipairs(fanButtons) do
-		button.AnchorPoint = Vector2.new(0.5, 0.5)
+        local layoutIndex = 0
+        local function layoutGroup(buttons, angles, targetRadius, shiftX, shiftY)
+                if #buttons == 0 then
+                        return
+                end
 
-		local angle
-		if totalButtons <= 1 then
-			angle = (FAN_CONFIG.START_ANGLE + FAN_CONFIG.END_ANGLE) * 0.5
-		else
-			angle = FAN_CONFIG.START_ANGLE + (index - 1) / (totalButtons - 1) * (FAN_CONFIG.END_ANGLE - FAN_CONFIG.START_ANGLE)
-		end
+                local openShiftX = fanOpen and (shiftX or 0) or 0
+                local openShiftY = fanOpen and (shiftY or 0) or 0
 
-		local deltaX = fanOpen and math.cos(angle) * radius or 0
-		local deltaY = fanOpen and math.sin(angle) * radius or 0
-		local targetPosition = UDim2.new(1, baseOffsetX + deltaX, 1, baseOffsetY + deltaY)
+                for idx, button in ipairs(buttons) do
+                        layoutIndex += 1
+                        button.AnchorPoint = Vector2.new(0.5, 0.5)
+                        local angle = angles[idx] or angles[1] or 0
+                        local deltaX = fanOpen and math.cos(angle) * targetRadius or 0
+                        local deltaY = fanOpen and math.sin(angle) * targetRadius or 0
+                        deltaX += openShiftX
+                        deltaY += openShiftY
+                        local targetPosition = UDim2.new(1, baseOffsetX + deltaX, 1, baseOffsetY + deltaY)
 
-		if animated then
-			button.Visible = true
-			local tween = TweenService:Create(button, TweenInfo.new(FAN_CONFIG.ANIMATION_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-				Position = targetPosition,
-				Rotation = fanOpen and 0 or 5 * (index % 2 == 0 and 1 or -1)  -- Slight rotation animation for flair
-			})
-			tween:Play()
-			if not fanOpen then
-				tween.Completed:Connect(function()
-					if not fanOpen then
-						button.Visible = false
-					end
-				end)
-			end
-		else
-			button.Position = targetPosition
-			button.Rotation = 0
-			button.Visible = fanOpen
-		end
-	end
+                        if animated then
+                                button.Visible = true
+                                local tween = TweenService:Create(button, TweenInfo.new(FAN_CONFIG.ANIMATION_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                        Position = targetPosition,
+                                        Rotation = fanOpen and 0 or 5 * (layoutIndex % 2 == 0 and 1 or -1),
+                                })
+                                tween:Play()
+                                if not fanOpen then
+                                        tween.Completed:Connect(function()
+                                                if not fanOpen then
+                                                        button.Visible = false
+                                                end
+                                        end)
+                                end
+                        else
+                                button.Position = targetPosition
+                                button.Rotation = 0
+                                button.Visible = fanOpen
+                        end
+                end
+        end
+
+        layoutGroup(innerButtons, innerAngles, radius, innerShiftX, innerShiftY)
+        layoutGroup(abilityButtons, abilityAngles, abilityRadius, abilityShiftX, abilityShiftY)
 
         if toggleButtonRef then
                 local toggleSize = getToggleSize(mobileLayout)
@@ -753,14 +1035,14 @@ local function updateFanLayout(animated)
                 local toggleOffsetX = -(jumpSize.X.Offset / 2) - margin - (toggleSize.X.Offset / 2) - toggleMargin
                 local toggleOffsetY = -(jumpSize.Y.Offset / 2)
                 toggleButtonRef.Position = UDim2.new(1, toggleOffsetX, 1, toggleOffsetY)
-                toggleButtonRef.Visible = totalButtons > 0
+                toggleButtonRef.Visible = #fanButtons > 0
         end
 
-	if not fanOpen and not animated then
-		for _, button in ipairs(fanButtons) do
-			button.Visible = false
-		end
-	end
+        if not fanOpen and not animated then
+                for _, button in ipairs(fanButtons) do
+                        button.Visible = false
+                end
+        end
 end
 
 local function setFanOpen(state, animated)
@@ -805,13 +1087,14 @@ local function disableDefaultJump()
 		return
 	end
 
-	customJumpEnabled = true
+        customJumpEnabled = true
 
-	if isMobile() or forceActionsVisible then
-		setJumpButtonEnabled(false)
-	end
+        if isMobile() or forceActionsVisible then
+                setJumpButtonEnabled(false)
+                enforceTouchJumpVisibility(false)
+        end
 
-	bindJumpOverride()
+        bindJumpOverride()
 
 	print("Default jump disabled - using custom jump system")
 end
@@ -821,13 +1104,16 @@ local function enableDefaultJump()
 		return
 	end
 
-	unbindJumpOverride()
+        unbindJumpOverride()
 
-	if isMobile() or forceActionsVisible then
-		setJumpButtonEnabled(true)
-	end
+        if isMobile() or forceActionsVisible then
+                enforceTouchJumpVisibility(true)
+                setJumpButtonEnabled(true)
+        else
+                enforceTouchJumpVisibility(true)
+        end
 
-	customJumpEnabled = false
+        customJumpEnabled = false
 	print("Default jump restored")
 end
 
@@ -949,16 +1235,19 @@ local function ensureActions()
 		allowJumpButton = true
 	end
 
-	for _, buttonDef in ipairs(sortedButtons) do
-		local isJumpButton = buttonDef.category == "jump"
-		if not (isJumpButton and not allowJumpButton) then
-			local button = createStylizedButton(buttonDef)
-			button:SetAttribute("OriginalColor", button.BackgroundColor3)
-			button.AnchorPoint = Vector2.new(0.5, 0.5)
-			button.Parent = actions
-			setupButtonAnimations(button)
+        for _, buttonDef in ipairs(sortedButtons) do
+                local isJumpButton = buttonDef.category == "jump"
+                if not (isJumpButton and not allowJumpButton) then
+                        local button = createStylizedButton(buttonDef)
+                        button:SetAttribute("OriginalColor", button.BackgroundColor3)
+                        button:SetAttribute("ButtonCategory", buttonDef.category or "misc")
+                        button:SetAttribute("ActionPriority", buttonDef.priority or 999)
+                        button.LayoutOrder = buttonDef.priority or 999
+                        button.AnchorPoint = Vector2.new(0.5, 0.5)
+                        button.Parent = actions
+                        setupButtonAnimations(button)
 
-			if isJumpButton then
+                        if isJumpButton then
 				jumpButtonRef = button
 			else
 				table.insert(fanButtons, button)
