@@ -232,26 +232,41 @@ refreshSlots = function(data)
 end
 
 local function showDojoPicker()
-	if dojo then dojo.Visible = true end
-	if boot then
-		if boot.loadout then boot.loadout.Visible = false end
-		if boot.shopBtn then boot.shopBtn.Visible = false end
-	end
+        if dojo then dojo.Visible = true end
+        if boot then
+                if boot.hideLoadout then
+                        boot.hideLoadout()
+                elseif boot.loadout then
+                        boot.loadout.Visible = false
+                end
+                if boot.setShopButtonVisible then
+                        boot.setShopButtonVisible(false)
+                elseif boot.shopBtn then
+                        boot.shopBtn.Visible = false
+                end
+        end
 end
 
 local function showLoadout(personaType)
-	if dojo then dojo.Visible = false end
-	if boot then
-		if boot.shopBtn then boot.shopBtn.Visible = true end
-		if boot.loadout then
-			boot.loadout.Visible = true
-			if boot.buildCharacterPreview then boot.buildCharacterPreview(personaType) end
-			if boot.populateBackpackUI then
-				local saved = player:GetAttribute("Inventory")
-				if typeof(saved) == "string" then
-					local ok, data = pcall(HttpService.JSONDecode, HttpService, saved)
-					if ok then
-						boot.populateBackpackUI(data)
+        if dojo then dojo.Visible = false end
+        if boot then
+                if boot.setShopButtonVisible then
+                        boot.setShopButtonVisible(true)
+                elseif boot.shopBtn then
+                        boot.shopBtn.Visible = true
+                end
+                if boot.showLoadout then
+                        boot.showLoadout()
+                elseif boot.loadout then
+                        boot.loadout.Visible = true
+                end
+                if boot.buildCharacterPreview then boot.buildCharacterPreview(personaType) end
+                if boot.populateBackpackUI then
+                                local saved = player:GetAttribute("Inventory")
+                                if typeof(saved) == "string" then
+                                        local ok, data = pcall(HttpService.JSONDecode, HttpService, saved)
+                                        if ok then
+                                                boot.populateBackpackUI(data)
 					end
 				elseif boot.StarterBackpack then
 					boot.populateBackpackUI(boot.StarterBackpack)
@@ -266,10 +281,9 @@ local function showLoadout(personaType)
 							end
 						end
 					end)
-				end
-			end
-		end
-	end
+                end
+        end
+end
 end
 
 function Cosmetics.getSelectedPersona()
