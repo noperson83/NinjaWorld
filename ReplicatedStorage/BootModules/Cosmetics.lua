@@ -317,7 +317,6 @@ local function showLoadout(personaType)
                 end
         end
 end
-end
 
 function Cosmetics.getSelectedPersona()
 	local personaType = currentChoiceType

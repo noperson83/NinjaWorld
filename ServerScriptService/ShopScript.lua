@@ -8,19 +8,21 @@ if not shopEvent then
     shopEvent.Parent = ReplicatedStorage
 end
 
-local bootModules = ReplicatedStorage:WaitForChild("BootModules", 5)
-if not bootModules then
-    warn("BootModules folder missing")
-    return
-end
+local bootModules = ReplicatedStorage:WaitForChild("BootModules")
 
 -- Load ShopItems if available; otherwise continue with an empty list so the
 -- server script doesn't abort during startup.
 local ShopItems = {}
-local shopItemsModule = bootModules and (bootModules:FindFirstChild("ShopItems")
-    or bootModules:WaitForChild("ShopItems", 5))
-if shopItemsModule then
-    ShopItems = require(shopItemsModule)
+local ok, shopItemsModule = pcall(function()
+    return bootModules:WaitForChild("ShopItems", 10)
+end)
+if ok and shopItemsModule then
+    local success, items = pcall(require, shopItemsModule)
+    if success and typeof(items) == "table" then
+        ShopItems = items
+    else
+        warn("Failed to load ShopItems module:", items)
+    end
 else
     warn("ShopItems module missing")
 end
