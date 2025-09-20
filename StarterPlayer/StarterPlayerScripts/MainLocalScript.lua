@@ -13,6 +13,8 @@ local HapticService = game:GetService("HapticService")
 local Abilities = require(ReplicatedStorage.ClientModules.Abilities)
 local CombatController = require(ReplicatedStorage.ClientModules.CombatController)
 local GameSettings = require(ReplicatedStorage.GameSettings)
+local WorldHUD = require(ReplicatedStorage.ClientModules.UI.WorldHUD)
+local hud = WorldHUD.get()
 
 -- UI Configuration (Expanded with more options)
 local UI_CONFIG = {
