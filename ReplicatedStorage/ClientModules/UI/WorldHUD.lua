@@ -91,6 +91,7 @@ function WorldHUD.new(config, dependencies)
     self._connections = {}
     self._flagConnections = {}
     self._destroyed = false
+    self.backButtonEnabled = true
 
     local playerGui = ensureParent()
 
@@ -130,51 +131,6 @@ function WorldHUD.new(config, dependencies)
         self:toggleShop()
     end))
 
-    -- Teleport UI placeholders
-    local teleFrame = Instance.new("Frame")
-    teleFrame.Name = "TeleFrame"
-    teleFrame.Size = UDim2.fromScale(1,1)
-    teleFrame.BackgroundTransparency = 1
-    teleFrame.Visible = false
-    teleFrame.Parent = root
-
-    local zoneButtons = {"Atom","Fire","Grow","Ice","Light","Metal","Water","Wind","Dojo","Starter"}
-    for _, zone in ipairs(zoneButtons) do
-        local button = Instance.new("TextButton")
-        button.Name = zone .. "Button"
-        button.Size = UDim2.new(0,0,0,0)
-        button.Visible = false
-        button.Text = zone
-        button.Parent = teleFrame
-    end
-
-    local worldFrame = Instance.new("Frame")
-    worldFrame.Name = "WorldTeleFrame"
-    worldFrame.Size = UDim2.fromScale(1,1)
-    worldFrame.BackgroundTransparency = 1
-    worldFrame.Visible = false
-    worldFrame.Parent = root
-
-    local enterRealmButton = Instance.new("TextButton")
-    enterRealmButton.Name = "EnterRealmButton"
-    enterRealmButton.Size = UDim2.new(0,0,0,0)
-    enterRealmButton.Visible = false
-    enterRealmButton.Text = "Enter"
-    enterRealmButton.Parent = worldFrame
-    self.enterRealmButton = enterRealmButton
-
-    for realmName, _ in pairs(TeleportClient.worldSpawnIds) do
-        local button = Instance.new("TextButton")
-        button.Name = realmName .. "Button"
-        button.Size = UDim2.new(0,0,0,0)
-        button.Visible = false
-        button.Text = realmName
-        button.Parent = worldFrame
-    end
-
-    TeleportClient.bindZoneButtons(root)
-    TeleportClient.bindWorldButtons(root)
-
     -- Loadout UI
     local loadout = Instance.new("Frame")
     loadout.Name = "Loadout"
@@ -200,11 +156,177 @@ function WorldHUD.new(config, dependencies)
     loadTitle.TextColor3 = Color3.fromRGB(255,200,120)
     loadTitle.Parent = loadout
 
+    -- Teleport UI placeholders
+    local teleportContainer = Instance.new("Frame")
+    teleportContainer.Name = "TeleportContainer"
+    teleportContainer.Size = UDim2.fromScale(1,1)
+    teleportContainer.BackgroundTransparency = 1
+    teleportContainer.Visible = false
+    teleportContainer.ZIndex = 25
+    teleportContainer.Parent = loadout
+
+    local teleFrame = Instance.new("Frame")
+    teleFrame.Name = "TeleFrame"
+    teleFrame.Size = UDim2.fromScale(1,1)
+    teleFrame.BackgroundTransparency = 1
+    teleFrame.Visible = false
+    teleFrame.Parent = teleportContainer
+
+    local zoneButtons = {"Atom","Fire","Grow","Ice","Light","Metal","Water","Wind","Dojo","Starter"}
+    for _, zone in ipairs(zoneButtons) do
+        local button = Instance.new("TextButton")
+        button.Name = zone .. "Button"
+        button.Size = UDim2.new(0,0,0,0)
+        button.Visible = false
+        button.Text = zone
+        button.Parent = teleFrame
+    end
+
+    local worldFrame = Instance.new("Frame")
+    worldFrame.Name = "WorldTeleFrame"
+    worldFrame.Size = UDim2.fromScale(1,1)
+    worldFrame.BackgroundTransparency = 1
+    worldFrame.Visible = false
+    worldFrame.Parent = teleportContainer
+
+    local enterRealmButton = Instance.new("TextButton")
+    enterRealmButton.Name = "EnterRealmButton"
+    enterRealmButton.Size = UDim2.new(0,0,0,0)
+    enterRealmButton.Visible = false
+    enterRealmButton.Text = "Enter"
+    enterRealmButton.Parent = worldFrame
+    self.enterRealmButton = enterRealmButton
+
+    for realmName, _ in pairs(TeleportClient.worldSpawnIds) do
+        local button = Instance.new("TextButton")
+        button.Name = realmName .. "Button"
+        button.Size = UDim2.new(0,0,0,0)
+        button.Visible = false
+        button.Text = realmName
+        button.Parent = worldFrame
+    end
+
+    TeleportClient.bindZoneButtons(root)
+    TeleportClient.bindWorldButtons(root)
+
+    local teleportCloseButton = Instance.new("TextButton")
+    teleportCloseButton.Name = "TeleportCloseButton"
+    teleportCloseButton.Size = UDim2.new(0,32,0,32)
+    teleportCloseButton.AnchorPoint = Vector2.new(1,0)
+    teleportCloseButton.Position = UDim2.new(1,-20,0, baseY + 20)
+    teleportCloseButton.BackgroundColor3 = Color3.fromRGB(120,40,40)
+    teleportCloseButton.TextColor3 = Color3.new(1,1,1)
+    teleportCloseButton.Text = "X"
+    teleportCloseButton.Font = Enum.Font.GothamBold
+    teleportCloseButton.TextScaled = true
+    teleportCloseButton.AutoButtonColor = true
+    teleportCloseButton.Visible = false
+    teleportCloseButton.ZIndex = 30
+    teleportCloseButton.Parent = teleportContainer
+    self.teleportContainer = teleportContainer
+    self.teleportCloseButton = teleportCloseButton
+
     local quest = QuestUI.init(loadout, baseY)
     self.quest = quest
 
     local backpack = BackpackUI.init(loadout, baseY)
     self.backpack = backpack
+
+    local togglePanel = Instance.new("Frame")
+    togglePanel.Name = "PanelToggleButtons"
+    togglePanel.Size = UDim2.new(0,180,0,120)
+    togglePanel.AnchorPoint = Vector2.new(0,1)
+    togglePanel.Position = UDim2.new(0,20,1,-220)
+    togglePanel.BackgroundTransparency = 1
+    togglePanel.ZIndex = 40
+    togglePanel.Parent = loadout
+    self.togglePanel = togglePanel
+
+    local toggleLayout = Instance.new("UIListLayout")
+    toggleLayout.FillDirection = Enum.FillDirection.Vertical
+    toggleLayout.Padding = UDim.new(0,6)
+    toggleLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+    toggleLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+    toggleLayout.Parent = togglePanel
+
+    local function createOpenButton(label)
+        local btn = Instance.new("TextButton")
+        btn.Name = label .. "OpenButton"
+        btn.Size = UDim2.new(1,0,0,36)
+        btn.BackgroundColor3 = Color3.fromRGB(50,120,255)
+        btn.TextColor3 = Color3.new(1,1,1)
+        btn.Font = Enum.Font.GothamSemibold
+        btn.TextScaled = true
+        btn.AutoButtonColor = true
+        btn.Text = label
+        btn.Visible = false
+        btn.ZIndex = 41
+        btn.Parent = togglePanel
+        return btn
+    end
+
+    local questOpenButton = createOpenButton("Quests")
+    local backpackOpenButton = createOpenButton("Backpack")
+    local teleOpenButton = createOpenButton("Teleports")
+    self.questOpenButton = questOpenButton
+    self.backpackOpenButton = backpackOpenButton
+    self.teleportOpenButton = teleOpenButton
+
+    local function setTeleportsVisible(visible)
+        teleportContainer.Visible = visible and true or false
+        teleportCloseButton.Visible = visible and true or false
+        teleOpenButton.Visible = not visible
+    end
+
+    if quest and quest.closeButton then
+        track(self, quest.closeButton.MouseButton1Click:Connect(function()
+            if quest.setVisible then
+                quest:setVisible(false)
+            end
+            questOpenButton.Visible = true
+        end))
+    end
+
+    track(self, questOpenButton.MouseButton1Click:Connect(function()
+        if quest and quest.setVisible then
+            quest:setVisible(true)
+        end
+        questOpenButton.Visible = false
+    end))
+
+    if quest and quest.isVisible and not quest:isVisible() then
+        questOpenButton.Visible = true
+    end
+
+    if backpack and backpack.closeButton then
+        track(self, backpack.closeButton.MouseButton1Click:Connect(function()
+            if backpack.setVisible then
+                backpack:setVisible(false)
+            end
+            backpackOpenButton.Visible = true
+        end))
+    end
+
+    track(self, backpackOpenButton.MouseButton1Click:Connect(function()
+        if backpack and backpack.setVisible then
+            backpack:setVisible(true)
+        end
+        backpackOpenButton.Visible = false
+    end))
+
+    if backpack and backpack.isVisible and not backpack:isVisible() then
+        backpackOpenButton.Visible = true
+    end
+
+    track(self, teleportCloseButton.MouseButton1Click:Connect(function()
+        setTeleportsVisible(false)
+    end))
+
+    track(self, teleOpenButton.MouseButton1Click:Connect(function()
+        setTeleportsVisible(true)
+    end))
+
+    setTeleportsVisible(false)
 
     local btnRow = Instance.new("Frame")
     btnRow.Size = UDim2.new(1,-40,0,60)
@@ -385,6 +507,11 @@ function WorldHUD:showLoadout()
     if self.loadout then
         self.loadout.Visible = true
     end
+    if self.backButton then
+        local showBack = self.backButtonEnabled ~= false
+        self.backButton.Visible = showBack
+        self.backButton.Active = showBack
+    end
     self:setShopButtonVisible(true)
 end
 
@@ -392,7 +519,20 @@ function WorldHUD:hideLoadout()
     if self.loadout then
         self.loadout.Visible = false
     end
+    if self.backButton then
+        self.backButton.Visible = false
+        self.backButton.Active = false
+    end
     self:setShopButtonVisible(false)
+end
+
+function WorldHUD:setBackButtonEnabled(enabled)
+    self.backButtonEnabled = enabled and true or false
+    if self.backButton then
+        local showBack = self.backButtonEnabled and self.loadout and self.loadout.Visible
+        self.backButton.Visible = showBack
+        self.backButton.Active = showBack
+    end
 end
 
 function WorldHUD:toggleShop(defaultTab)
@@ -461,6 +601,13 @@ function WorldHUD:destroy()
     self.enterRealmButton = nil
     self.quest = nil
     self.backpack = nil
+    self.togglePanel = nil
+    self.questOpenButton = nil
+    self.backpackOpenButton = nil
+    self.teleportOpenButton = nil
+    self.teleportContainer = nil
+    self.teleportCloseButton = nil
+    self.backButtonEnabled = nil
     self._setSelectedRealm = nil
     if currentHud == self then
         currentHud = nil

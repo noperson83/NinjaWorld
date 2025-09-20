@@ -5,13 +5,21 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ContentProvider = game:GetService("ContentProvider")
 
 function QuestUI.init(parent, baseY)
+    local questRoot = Instance.new("Frame")
+    questRoot.Name = "QuestUIRoot"
+    questRoot.Size = UDim2.fromScale(1,1)
+    questRoot.BackgroundTransparency = 1
+    questRoot.ZIndex = 5
+    questRoot.Parent = parent
+
     local emoteBar = Instance.new("Frame")
+    emoteBar.Name = "QuestEmoteBar"
     emoteBar.Size = UDim2.new(1,-40,0,38)
     emoteBar.Position = UDim2.fromOffset(20, baseY + 60)
     emoteBar.BackgroundColor3 = Color3.fromRGB(24,26,28)
     emoteBar.BackgroundTransparency = 0.6
     emoteBar.BorderSizePixel = 0
-    emoteBar.Parent = parent
+    emoteBar.Parent = questRoot
     local emoteLayout = Instance.new("UIListLayout", emoteBar)
     emoteLayout.FillDirection = Enum.FillDirection.Horizontal
     emoteLayout.Padding = UDim.new(0,6)
@@ -30,13 +38,27 @@ function QuestUI.init(parent, baseY)
         return b
     end
 
+    local closeButton = Instance.new("TextButton")
+    closeButton.Name = "QuestCloseButton"
+    closeButton.Size = UDim2.new(0,32,0,32)
+    closeButton.AnchorPoint = Vector2.new(1,0.5)
+    closeButton.Position = UDim2.new(1,-6,0.5,0)
+    closeButton.BackgroundColor3 = Color3.fromRGB(120,40,40)
+    closeButton.TextColor3 = Color3.new(1,1,1)
+    closeButton.Font = Enum.Font.GothamBold
+    closeButton.TextScaled = true
+    closeButton.Text = "X"
+    closeButton.AutoButtonColor = true
+    closeButton.ZIndex = 6
+    closeButton.Parent = emoteBar
+
     local vpCard = Instance.new("Frame")
     vpCard.BackgroundTransparency = 0.6
     vpCard.Size = UDim2.new(0.48,-30,0.62,0)
     vpCard.Position = UDim2.fromOffset(20, baseY + 92)
     vpCard.BackgroundColor3 = Color3.fromRGB(24,26,28)
     vpCard.BorderSizePixel = 0
-    vpCard.Parent = parent
+    vpCard.Parent = questRoot
 
     local viewport = Instance.new("ViewportFrame")
     viewport.Size = UDim2.fromScale(1,1)
@@ -127,7 +149,23 @@ function QuestUI.init(parent, baseY)
         end
     end
 
-    function QuestUI.buildCharacterPreview(personaType)
+    local questController = {}
+    questController.root = questRoot
+    questController.closeButton = closeButton
+
+    local function setVisible(visible)
+        questRoot.Visible = visible and true or false
+    end
+
+    function questController:setVisible(visible)
+        setVisible(visible)
+    end
+
+    function questController:isVisible()
+        return questRoot.Visible
+    end
+
+    local function buildCharacterPreview(personaType)
         clearChildren(viewport)
         vpWorld, vpModel, vpCam, vpHumanoid = nil, nil, nil, nil
         vpWorld = Instance.new("WorldModel")
@@ -179,7 +217,13 @@ function QuestUI.init(parent, baseY)
 
     wireEmoteButtons()
 
-    return {buildCharacterPreview = QuestUI.buildCharacterPreview}
+    questController.buildCharacterPreview = buildCharacterPreview
+
+    closeButton.MouseButton1Click:Connect(function()
+        setVisible(false)
+    end)
+
+    return questController
 end
 
 return QuestUI
