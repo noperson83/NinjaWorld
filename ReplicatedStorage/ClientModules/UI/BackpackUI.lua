@@ -33,6 +33,19 @@ function BackpackUI.init(parent, baseY)
     title.TextColor3 = Color3.new(1,1,1)
     title.Parent = card
 
+    local closeButton = Instance.new("TextButton")
+    closeButton.Name = "BackpackCloseButton"
+    closeButton.Size = UDim2.new(0,32,0,32)
+    closeButton.AnchorPoint = Vector2.new(1,0)
+    closeButton.Position = UDim2.new(1,-6,0,6)
+    closeButton.Text = "X"
+    closeButton.Font = Enum.Font.GothamBold
+    closeButton.TextScaled = true
+    closeButton.TextColor3 = Color3.new(1,1,1)
+    closeButton.BackgroundColor3 = Color3.fromRGB(120,40,40)
+    closeButton.AutoButtonColor = true
+    closeButton.Parent = card
+
     local capBarBG = Instance.new("Frame")
     capBarBG.Size = UDim2.new(1,-20,0,10)
     capBarBG.Position = UDim2.new(0.02,0,0.12,0)
@@ -197,6 +210,21 @@ function BackpackUI.init(parent, baseY)
         self.data.elements = elements
         self:render(self.currentTab)
     end
+
+    function self:setVisible(visible)
+        card.Visible = visible and true or false
+    end
+
+    function self:isVisible()
+        return card.Visible
+    end
+
+    self.closeButton = closeButton
+    self.root = card
+
+    closeButton.MouseButton1Click:Connect(function()
+        self:setVisible(false)
+    end)
 
     for name,btn in pairs(tabButtons) do
         btn.MouseButton1Click:Connect(function()

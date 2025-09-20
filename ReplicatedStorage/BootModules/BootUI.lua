@@ -379,6 +379,11 @@ if enterRealmButton then
             task.wait(0.28)
 
             local personaType, chosenSlot = Cosmetics.getSelectedPersona()
+            BootUI.hideLoadout()
+            local currentHud = BootUI.hud
+            if currentHud and currentHud.setBackButtonEnabled then
+                currentHud:setBackButtonEnabled(false)
+            end
             if enterRE then
                 enterRE:FireServer({ type = personaType, slot = chosenSlot })
             else
