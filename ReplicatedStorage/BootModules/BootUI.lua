@@ -184,6 +184,48 @@ local StarterBackpack = config.inventory or config.starterBackpack or {
 BootUI.StarterBackpack = StarterBackpack
 BootUI.personaData = config.personaData
 
+local cosmeticsInterface = {}
+if hud and hud.createCosmeticsInterface then
+    cosmeticsInterface = hud:createCosmeticsInterface() or {}
+end
+
+if not cosmeticsInterface.showDojoPicker then
+    cosmeticsInterface.showDojoPicker = function()
+        BootUI.hideLoadout()
+        BootUI.setShopButtonVisible(false)
+    end
+end
+
+if not cosmeticsInterface.showLoadout then
+    cosmeticsInterface.showLoadout = function(personaType)
+        BootUI.showLoadout()
+        BootUI.setShopButtonVisible(true)
+    end
+end
+
+if not cosmeticsInterface.updateBackpack then
+    cosmeticsInterface.updateBackpack = function(data)
+        BootUI.populateBackpackUI(data)
+    end
+end
+
+if not cosmeticsInterface.buildCharacterPreview then
+    cosmeticsInterface.buildCharacterPreview = function(personaType)
+        local builder = BootUI.buildCharacterPreview
+        if builder then
+            builder(personaType)
+        end
+    end
+end
+
+if not cosmeticsInterface.getStarterBackpack then
+    cosmeticsInterface.getStarterBackpack = function()
+        return BootUI.StarterBackpack
+    end
+end
+
+BootUI.cosmeticsInterface = cosmeticsInterface
+
 
 -- =====================
 -- Camera helpers (world)
@@ -242,6 +284,10 @@ local function tweenToEnd()
     TweenService:Create(cam, TweenInfo.new(CAM_TWEEN_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = cf, FieldOfView = fov}):Play()
 end
 BootUI.tweenToEnd = tweenToEnd
+
+if not cosmeticsInterface.tweenToEnd then
+    cosmeticsInterface.tweenToEnd = tweenToEnd
+end
 
 -- Lighting helpers (disable DOF while UI is visible)
 -- =====================
@@ -303,7 +349,7 @@ root.BackgroundTransparency = 1
 root.Parent = ui
 
 BootUI.root = root
-Cosmetics.init(config, root, BootUI)
+Cosmetics.init(config, root, cosmeticsInterface)
 
 -- Intro visuals
 local fade = Instance.new("Frame")

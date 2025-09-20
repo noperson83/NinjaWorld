@@ -349,6 +349,32 @@ function WorldHUD:getBackpackInterface()
     return self.backpack
 end
 
+function WorldHUD:createCosmeticsInterface()
+    local hud = self
+    return {
+        showDojoPicker = function()
+            if hud and hud.hideLoadout then
+                hud:hideLoadout()
+            end
+        end,
+        showLoadout = function(personaType)
+            if hud and hud.showLoadout then
+                hud:showLoadout()
+            end
+        end,
+        updateBackpack = function(data)
+            if hud and hud.setBackpackData then
+                hud:setBackpackData(data)
+            end
+        end,
+        buildCharacterPreview = function(personaType)
+            if hud and hud.quest and hud.quest.buildCharacterPreview then
+                hud.quest.buildCharacterPreview(personaType)
+            end
+        end,
+    }
+end
+
 function WorldHUD:setShopButtonVisible(visible)
     if self.shopButton then
         self.shopButton.Visible = visible and true or false

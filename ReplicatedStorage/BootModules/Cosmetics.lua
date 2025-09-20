@@ -17,7 +17,7 @@ local player = Players.LocalPlayer
 
 local dojo
 local slotButtons = {}
-local boot
+local uiBridge
 local rootUI
 local slotsContainer
 
@@ -26,6 +26,45 @@ local currentChoiceType = "Roblox"
 local chosenSlot
 
 local levelValue
+local fallbackStarterBackpack
+
+local function getCallback(name)
+        if typeof(uiBridge) ~= "table" then
+                return nil
+        end
+        local cb = uiBridge[name]
+        if typeof(cb) == "function" then
+                return cb
+        end
+        return nil
+end
+
+local function callCallback(name, ...)
+        local cb = getCallback(name)
+        if cb then
+                return cb(...)
+        end
+end
+
+local function getStarterBackpack()
+        if typeof(uiBridge) == "table" then
+                local fetch = uiBridge.getStarterBackpack
+                if typeof(fetch) == "function" then
+                        return fetch()
+                end
+                if uiBridge.starterBackpack ~= nil then
+                        return uiBridge.starterBackpack
+                end
+        end
+        return fallbackStarterBackpack
+end
+
+local function triggerTweenToEnd()
+        local tween = getCallback("tweenToEnd")
+        if tween then
+                tween()
+        end
+end
 
 local function applyPersonaData(p)
         if not p then return end
@@ -233,54 +272,48 @@ end
 
 local function showDojoPicker()
         if dojo then dojo.Visible = true end
-        if boot then
-                if boot.hideLoadout then
-                        boot.hideLoadout()
-                elseif boot.loadout then
-                        boot.loadout.Visible = false
-                end
-                if boot.setShopButtonVisible then
-                        boot.setShopButtonVisible(false)
-                elseif boot.shopBtn then
-                        boot.shopBtn.Visible = false
-                end
-        end
+        callCallback("showDojoPicker")
 end
 
 local function showLoadout(personaType)
         if dojo then dojo.Visible = false end
-        if boot then
-                if boot.setShopButtonVisible then
-                        boot.setShopButtonVisible(true)
-                elseif boot.shopBtn then
-                        boot.shopBtn.Visible = true
-                end
-                if boot.showLoadout then
-                        boot.showLoadout()
-                elseif boot.loadout then
-                        boot.loadout.Visible = true
-                end
-                if boot.buildCharacterPreview then boot.buildCharacterPreview(personaType) end
-                if boot.populateBackpackUI then
-                                local saved = player:GetAttribute("Inventory")
-                                if typeof(saved) == "string" then
-                                        local ok, data = pcall(HttpService.JSONDecode, HttpService, saved)
-                                        if ok then
-                                                boot.populateBackpackUI(data)
-					end
-				elseif boot.StarterBackpack then
-					boot.populateBackpackUI(boot.StarterBackpack)
-					local conn
-					conn = player:GetAttributeChangedSignal("Inventory"):Connect(function()
-						local inv = player:GetAttribute("Inventory")
-						if typeof(inv) == "string" then
-							local ok, data = pcall(HttpService.JSONDecode, HttpService, inv)
-							if ok then
-								boot.populateBackpackUI(data)
-								conn:Disconnect()
-							end
-						end
-					end)
+        local showLoadoutCallback = getCallback("showLoadout")
+        if showLoadoutCallback then
+                showLoadoutCallback(personaType)
+        end
+
+        local buildPreview = getCallback("buildCharacterPreview")
+        if buildPreview then
+                buildPreview(personaType)
+        end
+
+        local updateBackpack = getCallback("updateBackpack")
+        if updateBackpack then
+                local saved = player:GetAttribute("Inventory")
+                if typeof(saved) == "string" then
+                        local ok, data = pcall(HttpService.JSONDecode, HttpService, saved)
+                        if ok then
+                                updateBackpack(data)
+                        end
+                else
+                        local starter = getStarterBackpack()
+                        if starter then
+                                updateBackpack(starter)
+                                local conn
+                                conn = player:GetAttributeChangedSignal("Inventory"):Connect(function()
+                                        local inv = player:GetAttribute("Inventory")
+                                        if typeof(inv) == "string" then
+                                                local ok, data = pcall(HttpService.JSONDecode, HttpService, inv)
+                                                if ok then
+                                                        updateBackpack(data)
+                                                        if conn then
+                                                                conn:Disconnect()
+                                                                conn = nil
+                                                        end
+                                                end
+                                        end
+                                end)
+                        end
                 end
         end
 end
@@ -303,13 +336,18 @@ function Cosmetics.showDojoPicker()
 	showDojoPicker()
 end
 
-function Cosmetics.init(config, root, bootUI)
-	boot = bootUI
-	rootUI = root
+function Cosmetics.init(config, root, interface)
+        uiBridge = interface
+        rootUI = root
+        if typeof(config) == "table" then
+                fallbackStarterBackpack = config.inventory or config.starterBackpack
+        else
+                fallbackStarterBackpack = nil
+        end
 
-	local stats = player:FindFirstChild("Stats")
-	if stats then
-		levelValue = stats:FindFirstChild("Level")
+        local stats = player:FindFirstChild("Stats")
+        if stats then
+                levelValue = stats:FindFirstChild("Level")
 		if levelValue then
 			levelValue:GetPropertyChangedSignal("Value"):Connect(updateLevelLabels)
 			updateLevelLabels()
@@ -709,7 +747,7 @@ function Cosmetics.init(config, root, bootUI)
                         chosenSlot = index
                         currentChoiceType = result.persona and result.persona.type or currentChoiceType
                         applyPersonaData(result.persona)
-                        if boot and boot.tweenToEnd then boot.tweenToEnd() end
+                        triggerTweenToEnd()
                         showLoadout(result.persona and result.persona.type or currentChoiceType)
                 end)
                entry.robloxBtn.MouseButton1Click:Connect(function()
@@ -721,7 +759,7 @@ function Cosmetics.init(config, root, bootUI)
                                         chosenSlot = index
                                         currentChoiceType = "Roblox"
                                         applyPersonaData(useRes.persona)
-                                        if boot and boot.tweenToEnd then boot.tweenToEnd() end
+                                        triggerTweenToEnd()
                                         showLoadout("Roblox")
                                 else
                                         warn("Use slot failed:", useRes and useRes.err)
@@ -739,7 +777,7 @@ function Cosmetics.init(config, root, bootUI)
                                         chosenSlot = index
                                         currentChoiceType = "Ninja"
                                         applyPersonaData(useRes.persona)
-                                        if boot and boot.tweenToEnd then boot.tweenToEnd() end
+                                        triggerTweenToEnd()
                                         showLoadout("Ninja")
                                 else
                                         warn("Use slot failed:", useRes and useRes.err)
