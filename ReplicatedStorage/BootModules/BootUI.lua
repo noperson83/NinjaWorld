@@ -13,19 +13,88 @@ local Lighting          = game:GetService("Lighting")
 local HttpService       = game:GetService("HttpService")
 
 local player  = Players.LocalPlayer
-local rf      = ReplicatedStorage.PersonaServiceRF
+local rf      = nil
 local cam     = Workspace.CurrentCamera
 local enterRE = ReplicatedStorage:FindFirstChild("EnterDojoRE") -- created by server script
 
+local GameSettings = require(ReplicatedStorage.GameSettings)
+local DEFAULT_SLOT_COUNT = tonumber(GameSettings.maxSlots) or 3
+
+local function getPersonaRemote()
+    if rf and rf.Parent then
+        return rf
+    end
+    rf = ReplicatedStorage:FindFirstChild("PersonaServiceRF")
+    if not rf then
+        rf = ReplicatedStorage:WaitForChild("PersonaServiceRF", 5)
+    end
+    if not rf then
+        warn("BootUI: PersonaServiceRF missing")
+    end
+    return rf
+end
+
+local function sanitizePersonaData(data)
+    local result = {}
+
+    if typeof(data) == "table" then
+        for key, value in pairs(data) do
+            if key ~= "slots" then
+                result[key] = value
+            end
+        end
+        if typeof(data.slots) == "table" then
+            result.slots = data.slots
+        end
+    end
+
+    if typeof(result.slots) ~= "table" then
+        result.slots = {}
+    end
+
+    local slotCount = tonumber(result.slotCount)
+    if not slotCount then
+        local highest = 0
+        for key in pairs(result.slots) do
+            local idx = tonumber(key)
+            if idx and idx > highest then
+                highest = idx
+            end
+        end
+        slotCount = highest
+    end
+
+    if not slotCount or slotCount < 0 then
+        slotCount = 0
+    end
+    if slotCount == 0 and DEFAULT_SLOT_COUNT > 0 then
+        slotCount = DEFAULT_SLOT_COUNT
+    end
+
+    result.slotCount = slotCount
+
+    return result
+end
+
 local function profileRF(action, data)
+    local remote = getPersonaRemote()
+    if not remote then
+        warn("PersonaServiceRF unavailable for action", action)
+        return nil
+    end
     local start = os.clock()
-    local result = rf:InvokeServer(action, data)
+    local ok, result = pcall(remote.InvokeServer, remote, action, data)
+    if not ok then
+        warn(string.format("PersonaServiceRF:%s failed: %s", tostring(action), tostring(result)))
+        return nil
+    end
     warn(string.format("PersonaServiceRF:%s took %.3fs", tostring(action), os.clock() - start))
     return result
 end
 
 function BootUI.fetchData()
-    local persona = profileRF("get", {}) or {}
+    local persona = profileRF("get", {})
+    persona = sanitizePersonaData(persona)
     local inventory
     local invStr = player:GetAttribute("Inventory")
     if typeof(invStr) == "string" then
