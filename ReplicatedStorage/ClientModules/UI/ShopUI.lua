@@ -6,10 +6,20 @@ local bootModules = ReplicatedStorage:WaitForChild("BootModules")
 -- shop UI can still be created even if the module is missing. Returning nil
 -- from this module would cause requires to fail in BootUI.
 local ShopItems = {Elements = {}, Weapons = {}}
-local ok, shopItemsModule = pcall(function()
-    return bootModules:WaitForChild("ShopItems", 10)
-end)
-if ok and shopItemsModule then
+local function waitForShopItemsModule()
+    local module = bootModules:FindFirstChild("ShopItems")
+    while not module do
+        if not bootModules.Parent or not bootModules:IsDescendantOf(game) then
+            return nil
+        end
+        task.wait()
+        module = bootModules:FindFirstChild("ShopItems")
+    end
+    return module
+end
+
+local shopItemsModule = waitForShopItemsModule()
+if shopItemsModule then
     local success, items = pcall(require, shopItemsModule)
     if success and typeof(items) == "table" then
         ShopItems = items

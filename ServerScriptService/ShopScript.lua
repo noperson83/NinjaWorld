@@ -13,10 +13,20 @@ local bootModules = ReplicatedStorage:WaitForChild("BootModules")
 -- Load ShopItems if available; otherwise continue with an empty list so the
 -- server script doesn't abort during startup.
 local ShopItems = {}
-local ok, shopItemsModule = pcall(function()
-    return bootModules:WaitForChild("ShopItems", 10)
-end)
-if ok and shopItemsModule then
+local function waitForShopItemsModule()
+    local module = bootModules:FindFirstChild("ShopItems")
+    while not module do
+        if not bootModules.Parent or not bootModules:IsDescendantOf(game) then
+            return nil
+        end
+        task.wait()
+        module = bootModules:FindFirstChild("ShopItems")
+    end
+    return module
+end
+
+local shopItemsModule = waitForShopItemsModule()
+if shopItemsModule then
     local success, items = pcall(require, shopItemsModule)
     if success and typeof(items) == "table" then
         ShopItems = items
