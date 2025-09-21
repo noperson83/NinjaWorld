@@ -25,7 +25,7 @@ local slideSpeedMultiplier = 1.25
 local canStrike = true
 local animationTracks = {}
 local STRIKE_SOUND_NAME = "Combat_Strike_SFX"
-local STRIKE_SOUND_ID = 9118820981
+local STRIKE_SOUND_ID = 12222216
 
 AudioPlayer.preloadAudio({ [STRIKE_SOUND_NAME] = STRIKE_SOUND_ID })
 
