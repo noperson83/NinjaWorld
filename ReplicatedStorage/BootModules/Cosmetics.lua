@@ -28,6 +28,20 @@ local chosenSlot
 local levelValue
 local fallbackStarterBackpack
 
+local function preloadModelAsync(model)
+        if not model then
+                return
+        end
+        task.spawn(function()
+                local ok, err = pcall(function()
+                        ContentProvider:PreloadAsync({model})
+                end)
+                if not ok then
+                        warn("Failed to preload persona preview:", err)
+                end
+        end)
+end
+
 local function getCallback(name)
         if typeof(uiBridge) ~= "table" then
                 return nil
@@ -217,24 +231,22 @@ local function updateSlots()
 					ui.robloxBtn.Visible = false
 					ui.starterBtn.Visible = false
 					if ui.placeholder then ui.placeholder.Visible = false end
-					if ui.viewport then
-						local desc = getDescription(slot.type)
-						if desc then
-							local world = Instance.new("WorldModel")
-							world.Parent = ui.viewport
-							local model = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
-							model:PivotTo(CFrame.new(0,0,0) * CFrame.Angles(0, math.pi, 0))
-							-- Preload assets so the preview doesn't show the default black figure.
-							pcall(function()
-								ContentProvider:PreloadAsync({model})
-							end)
-							model.Parent = world
-							local cam = Instance.new("Camera")
-							cam.CFrame = CFrame.new(Vector3.new(0,2,4), Vector3.new(0,2,0))
-							cam.Parent = ui.viewport
-							ui.viewport.CurrentCamera = cam
-						end
-					end
+                                        if ui.viewport then
+                                                local desc = getDescription(slot.type)
+                                                if desc then
+                                                        local world = Instance.new("WorldModel")
+                                                        world.Parent = ui.viewport
+                                                        local model = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
+                                                        model:PivotTo(CFrame.new(0,0,0) * CFrame.Angles(0, math.pi, 0))
+                                                        model.Parent = world
+                                                        -- Start preloading, but don't block the UI on asset downloads.
+                                                        preloadModelAsync(model)
+                                                        local cam = Instance.new("Camera")
+                                                        cam.CFrame = CFrame.new(Vector3.new(0,2,4), Vector3.new(0,2,0))
+                                                        cam.Parent = ui.viewport
+                                                        ui.viewport.CurrentCamera = cam
+                                                end
+                                        end
 					if not ui.clearConn then
 						ui.clearConn = ui.clearBtn.MouseButton1Click:Connect(function()
 							showConfirm(("Clear slot %d?"):format(index), function()
