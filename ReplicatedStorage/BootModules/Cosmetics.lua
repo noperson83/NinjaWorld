@@ -6,10 +6,36 @@ local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local ContentProvider = game:GetService("ContentProvider")
 
-local rf = ReplicatedStorage.PersonaServiceRF
+local GameSettings = require(ReplicatedStorage.GameSettings)
+local DEFAULT_SLOT_COUNT = tonumber(GameSettings.maxSlots) or 3
+
+local rf = nil
+local function getPersonaRemote()
+    if rf and rf.Parent then
+        return rf
+    end
+    rf = ReplicatedStorage:FindFirstChild("PersonaServiceRF")
+    if not rf then
+        rf = ReplicatedStorage:WaitForChild("PersonaServiceRF", 5)
+    end
+    if not rf then
+        warn("Cosmetics: PersonaServiceRF missing")
+    end
+    return rf
+end
+
 local function profileRF(action, data)
+    local remote = getPersonaRemote()
+    if not remote then
+        warn("Cosmetics: PersonaServiceRF unavailable for action", action)
+        return nil
+    end
     local start = os.clock()
-    local result = rf:InvokeServer(action, data)
+    local ok, result = pcall(remote.InvokeServer, remote, action, data)
+    if not ok then
+        warn(string.format("PersonaServiceRF:%s failed: %s", tostring(action), tostring(result)))
+        return nil
+    end
     warn(string.format("PersonaServiceRF:%s took %.3fs", tostring(action), os.clock() - start))
     return result
 end
@@ -21,7 +47,60 @@ local uiBridge
 local rootUI
 local slotsContainer
 
-local personaCache = {slots = {}, slotCount = 0}
+local function sanitizePersonaData(data)
+        local result = {}
+        local slots
+
+        if typeof(data) == "table" then
+                for key, value in pairs(data) do
+                        if key == "slots" and typeof(value) == "table" then
+                                slots = value
+                        elseif key ~= "slots" then
+                                result[key] = value
+                        end
+                end
+                if not slots then
+                        for key, value in pairs(data) do
+                                local idx = tonumber(key)
+                                if idx then
+                                        slots = slots or {}
+                                        slots[idx] = value
+                                end
+                        end
+                end
+        end
+
+        if not slots then
+                slots = {}
+        end
+        result.slots = slots
+
+        local slotCount = tonumber(result.slotCount)
+        if not slotCount and typeof(data) == "table" then
+                slotCount = tonumber(data.slotCount)
+        end
+        if not slotCount then
+                local highest = 0
+                for key in pairs(slots) do
+                        local idx = tonumber(key)
+                        if idx and idx > highest then
+                                highest = idx
+                        end
+                end
+                slotCount = highest
+        end
+        if not slotCount or slotCount < 0 then
+                slotCount = 0
+        end
+        if slotCount == 0 and DEFAULT_SLOT_COUNT > 0 then
+                slotCount = DEFAULT_SLOT_COUNT
+        end
+        result.slotCount = slotCount
+
+        return result
+end
+
+local personaCache = sanitizePersonaData({})
 local currentChoiceType = "Roblox"
 local chosenSlot
 
@@ -181,13 +260,14 @@ end
 local refreshSlots
 
 local function highestUsed()
-	local hi = 0
-	for i = 1, personaCache.slotCount do
-		if personaCache.slots[i] ~= nil then
-			hi = i
-		end
-	end
-	return hi
+        local hi = 0
+        local count = tonumber(personaCache.slotCount) or 0
+        for i = 1, count do
+                if personaCache.slots[i] ~= nil then
+                        hi = i
+                end
+        end
+        return hi
 end
 
 local function getDescription(personaType)
@@ -278,7 +358,7 @@ local function updateSlots()
 end
 
 refreshSlots = function(data)
-        personaCache = data or personaCache
+        personaCache = sanitizePersonaData(data)
         updateSlots()
 end
 
@@ -442,7 +522,7 @@ function Cosmetics.init(config, root, interface)
 	slotsContainer.Parent = picker
 
         -- fetch initial slot data
-        personaCache = config.personaData or personaCache
+        personaCache = sanitizePersonaData(config.personaData)
 
 	slotButtons = {}
 
