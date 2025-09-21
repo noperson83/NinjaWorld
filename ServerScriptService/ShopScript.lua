@@ -26,7 +26,22 @@ if ok and shopItemsModule then
 else
     warn("ShopItems module missing")
 end
-local CurrencyService = shared.CurrencyService
+local function waitForCurrencyService()
+    local service = shared.CurrencyService
+    while not service do
+        task.wait()
+        service = shared.CurrencyService
+    end
+    return service
+end
+
+local CurrencyService = waitForCurrencyService()
+
+local function getCurrencyService()
+    local service = CurrencyService
+    assert(service, "ShopScript expected CurrencyService to be initialized")
+    return service
+end
 
 local function findItem(itemId)
     for category, items in pairs(ShopItems) do
@@ -84,9 +99,12 @@ shopEvent.OnServerEvent:Connect(function(player, data)
     local category, def = findItem(itemId)
     if not def or def.cost ~= cost then return end
 
-    local balance = CurrencyService and CurrencyService.GetBalance(player)
+    local cs = getCurrencyService()
+    local getBalance = assert(cs.GetBalance, "CurrencyService missing GetBalance")
+    local adjustCoins = assert(cs.AdjustCoins, "CurrencyService missing AdjustCoins")
+    local balance = getBalance(player)
     if not balance or balance.coins < cost then return end
-    if not CurrencyService.AdjustCoins(player, -cost) then return end
+    if not adjustCoins(player, -cost) then return end
 
     if category == "Weapons" then
         giveWeapon(player, itemId, def)

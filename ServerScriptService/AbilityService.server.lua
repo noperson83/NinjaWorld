@@ -1,6 +1,22 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local AbilityMetadata = require(ReplicatedStorage.ClientModules.AbilityMetadata)
-local CurrencyService = shared.CurrencyService
+
+local function waitForCurrencyService()
+    local service = shared.CurrencyService
+    while not service do
+        task.wait()
+        service = shared.CurrencyService
+    end
+    return service
+end
+
+local CurrencyService = waitForCurrencyService()
+
+local function getCurrencyService()
+    local service = CurrencyService
+    assert(service, "AbilityService expected CurrencyService to be initialized")
+    return service
+end
 
 local learnRF = Instance.new("RemoteFunction")
 learnRF.Name = "LearnAbility"
@@ -30,15 +46,14 @@ learnRF.OnServerInvoke = function(player, abilityName)
     if not prerequisitesMet(player, abilityName) then
         return false, "Missing prerequisites"
     end
-    local cs = CurrencyService
-    if not cs then
-        return false, "Currency service unavailable"
-    end
-    local balance = cs.GetBalance(player)
+    local cs = getCurrencyService()
+    local getBalance = assert(cs.GetBalance, "CurrencyService missing GetBalance")
+    local adjustCoins = assert(cs.AdjustCoins, "CurrencyService missing AdjustCoins")
+    local balance = getBalance(player)
     if not balance or balance.coins < info.cost then
         return false, "Not enough currency"
     end
-    if not cs.AdjustCoins(player, -info.cost) then
+    if not adjustCoins(player, -info.cost) then
         return false, "Not enough currency"
     end
     abilitiesFolder = abilitiesFolder or Instance.new("Folder")
