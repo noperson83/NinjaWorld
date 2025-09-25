@@ -7,7 +7,19 @@ function Shop.new(config, currencyService)
         self.currencyService = currencyService
         self.config = config
         local ReplicatedStorage = game:GetService("ReplicatedStorage")
-        self.remote = ReplicatedStorage:FindFirstChild("ShopEvent")
+        local function waitForRemote()
+                local remote = ReplicatedStorage:FindFirstChild("ShopEvent")
+                while not remote do
+                        if not ReplicatedStorage.Parent or not ReplicatedStorage:IsDescendantOf(game) then
+                                return nil
+                        end
+                        task.wait()
+                        remote = ReplicatedStorage:FindFirstChild("ShopEvent")
+                end
+                return remote
+        end
+
+        self.remote = waitForRemote()
         return self
 end
 
