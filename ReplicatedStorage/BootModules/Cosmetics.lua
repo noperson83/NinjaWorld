@@ -104,6 +104,78 @@ local personaCache = sanitizePersonaData({})
 local currentChoiceType = "Roblox"
 local chosenSlot
 
+local selectedPersonaLabel
+
+local function describeSelectedPersona()
+        local personaType = currentChoiceType or "Roblox"
+        local slotText
+        if chosenSlot and personaCache and personaCache.slots then
+                local slotData = personaCache.slots[chosenSlot]
+                if slotData then
+                        if typeof(slotData.type) == "string" then
+                                personaType = slotData.type
+                        end
+                        if typeof(slotData.name) == "string" and slotData.name ~= "" then
+                                slotText = slotData.name
+                        end
+                end
+        end
+
+        if not slotText then
+                if personaType == "Ninja" then
+                        slotText = "Starter Ninja"
+                elseif personaType == "Roblox" then
+                        slotText = "Roblox Avatar"
+                else
+                        slotText = personaType or "Unknown"
+                end
+        end
+
+        if chosenSlot then
+                return string.format("Selected Persona (Slot %d): %s", chosenSlot, slotText)
+        end
+
+        if personaType == "Roblox" then
+                return string.format("Selected Persona: %s", slotText)
+        end
+
+        return string.format("Selected Persona: %s", slotText)
+end
+
+local function ensureSelectionValid()
+        if chosenSlot and personaCache and personaCache.slots and personaCache.slots[chosenSlot] then
+                return
+        end
+
+        chosenSlot = nil
+        if not (personaCache and personaCache.slots) then
+                currentChoiceType = currentChoiceType or "Roblox"
+                return
+        end
+
+        local count = tonumber(personaCache.slotCount) or 0
+        for index = 1, count do
+                local slotData = personaCache.slots[index]
+                if slotData ~= nil then
+                        chosenSlot = index
+                        if typeof(slotData.type) == "string" then
+                                currentChoiceType = slotData.type
+                        end
+                        break
+                end
+        end
+
+        if not chosenSlot then
+                currentChoiceType = currentChoiceType or "Roblox"
+        end
+end
+
+local function updateSelectedPersonaLabel()
+        if selectedPersonaLabel then
+                selectedPersonaLabel.Text = describeSelectedPersona()
+        end
+end
+
 local levelValue
 local fallbackStarterBackpack
 
@@ -179,6 +251,8 @@ local function applyPersonaData(p)
                         end
                 end
         end
+
+        updateSelectedPersonaLabel()
 end
 
 local function getLevel()
@@ -359,12 +433,15 @@ end
 
 refreshSlots = function(data)
         personaCache = sanitizePersonaData(data)
+        ensureSelectionValid()
         updateSlots()
+        updateSelectedPersonaLabel()
 end
 
 local function showDojoPicker()
         if dojo then dojo.Visible = true end
         callCallback("showDojoPicker")
+        updateSelectedPersonaLabel()
 end
 
 local function showLoadout(personaType)
@@ -463,22 +540,35 @@ function Cosmetics.init(config, root, interface)
 	dojo.ZIndex = 10
 	dojo.Parent = root
 
-	local dojoTitle = Instance.new("ImageLabel")
-	dojoTitle.Size = UDim2.fromScale(0.7,0.24)
-	dojoTitle.Position = UDim2.fromScale(0.5,0.1)
-	dojoTitle.AnchorPoint = Vector2.new(0.5,0.5)
-	-- Use BootUI logo where starter dojo image was
-	dojoTitle.Image = "rbxassetid://138217463115431"
-	dojoTitle.BackgroundTransparency = 1
-	dojoTitle.ScaleType = Enum.ScaleType.Fit
-	dojoTitle.ZIndex = 11
-	dojoTitle.Parent = dojo
+        local dojoTitle = Instance.new("ImageLabel")
+        dojoTitle.Size = UDim2.fromScale(0.7,0.24)
+        dojoTitle.Position = UDim2.fromScale(0.5,0.1)
+        dojoTitle.AnchorPoint = Vector2.new(0.5,0.5)
+        -- Use BootUI logo where starter dojo image was
+        dojoTitle.Image = "rbxassetid://138217463115431"
+        dojoTitle.BackgroundTransparency = 1
+        dojoTitle.ScaleType = Enum.ScaleType.Fit
+        dojoTitle.ZIndex = 11
+        dojoTitle.Parent = dojo
 
-	local picker = Instance.new("Frame")
-	picker.Size = UDim2.fromScale(0.8,0.7)
-	picker.Position = UDim2.fromScale(0.5,0.55)
-	picker.AnchorPoint = Vector2.new(0.5,0.5)
-	picker.BackgroundColor3 = Color3.fromRGB(24,26,28)
+        selectedPersonaLabel = Instance.new("TextLabel")
+        selectedPersonaLabel.Name = "SelectedPersonaLabel"
+        selectedPersonaLabel.Size = UDim2.new(0.7, 0, 0.06, 0)
+        selectedPersonaLabel.Position = UDim2.fromScale(0.5, 0.24)
+        selectedPersonaLabel.AnchorPoint = Vector2.new(0.5, 0)
+        selectedPersonaLabel.BackgroundTransparency = 1
+        selectedPersonaLabel.TextScaled = true
+        selectedPersonaLabel.Font = Enum.Font.GothamSemibold
+        selectedPersonaLabel.TextColor3 = Color3.fromRGB(255, 220, 180)
+        selectedPersonaLabel.Text = ""
+        selectedPersonaLabel.ZIndex = 12
+        selectedPersonaLabel.Parent = dojo
+
+        local picker = Instance.new("Frame")
+        picker.Size = UDim2.fromScale(0.8,0.7)
+        picker.Position = UDim2.fromScale(0.5,0.55)
+        picker.AnchorPoint = Vector2.new(0.5,0.5)
+        picker.BackgroundColor3 = Color3.fromRGB(24,26,28)
 	picker.BackgroundTransparency = 0.6
 	picker.BorderSizePixel = 0
 	picker.ZIndex = 11
@@ -526,7 +616,7 @@ function Cosmetics.init(config, root, interface)
 
 	slotButtons = {}
 
-	-- create slot 1 (center, larger)
+        -- create slot 1 (center, larger)
 	do
 		local frame = Instance.new("Frame")
 		frame.Size = UDim2.fromScale(0.4, 0.6)
@@ -616,10 +706,10 @@ function Cosmetics.init(config, root, interface)
 		clearBtn.ZIndex = 11
 		clearBtn.Parent = frame
 
-		slotButtons[1] = {
-			frame = frame,
-			viewport = viewport,
-			placeholder = placeholder,
+                slotButtons[1] = {
+                        frame = frame,
+                        viewport = viewport,
+                        placeholder = placeholder,
 			useBtn = useBtn,
 			clearBtn = clearBtn,
 			robloxBtn = robloxBtn,
@@ -828,10 +918,11 @@ function Cosmetics.init(config, root, interface)
 		}
 	end
 
-	updateSlots()
+        updateSlots()
+        updateSelectedPersonaLabel()
 
-	for i,entry in pairs(slotButtons) do
-		local index = i
+        for i,entry in pairs(slotButtons) do
+                local index = i
                entry.useBtn.MouseButton1Click:Connect(function()
                         local result = profileRF("use", {slot = index})
                         if not (result and result.ok) then warn("Use slot failed:", result and result.err) return end
@@ -840,6 +931,7 @@ function Cosmetics.init(config, root, interface)
                         applyPersonaData(result.persona)
                         triggerTweenToEnd()
                         showLoadout(result.persona and result.persona.type or currentChoiceType)
+                        updateSelectedPersonaLabel()
                 end)
                entry.robloxBtn.MouseButton1Click:Connect(function()
                         local res = profileRF("save", {slot = index, type = "Roblox"})
@@ -852,6 +944,7 @@ function Cosmetics.init(config, root, interface)
                                         applyPersonaData(useRes.persona)
                                         triggerTweenToEnd()
                                         showLoadout("Roblox")
+                                        updateSelectedPersonaLabel()
                                 else
                                         warn("Use slot failed:", useRes and useRes.err)
                                 end
@@ -870,6 +963,7 @@ function Cosmetics.init(config, root, interface)
                                         applyPersonaData(useRes.persona)
                                         triggerTweenToEnd()
                                         showLoadout("Ninja")
+                                        updateSelectedPersonaLabel()
                                 else
                                         warn("Use slot failed:", useRes and useRes.err)
                                 end
