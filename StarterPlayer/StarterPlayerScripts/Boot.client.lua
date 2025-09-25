@@ -13,12 +13,13 @@ if not blur then
 end
 
 local PersonaUI = require(BootModules.PersonaUI)
-PersonaUI.start({waitTime = 0})
+PersonaUI.start({waitTime = 0, fadeTime = 0})
 
 local DojoClient = require(BootModules.DojoClient)
 
 local BootUI = require(BootModules.BootUI)
 BootUI.start()
+BootUI.setDebugLine("status", "Initializing profile fetch…")
 
 task.spawn(function()
     local data = BootUI.fetchData()

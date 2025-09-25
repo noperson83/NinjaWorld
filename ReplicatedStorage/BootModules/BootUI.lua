@@ -17,6 +17,53 @@ local rf      = nil
 local cam     = Workspace.CurrentCamera
 local enterRE = ReplicatedStorage:FindFirstChild("EnterDojoRE") -- created by server script
 
+local debugLines = {}
+local debugOrder = {}
+local debugLabel
+
+local function rebuildDebugText()
+    if not debugLabel then
+        return
+    end
+
+    local lines = {}
+    for _, key in ipairs(debugOrder) do
+        local value = debugLines[key]
+        if value and value ~= "" then
+            table.insert(lines, value)
+        end
+    end
+
+    if #lines == 0 then
+        debugLabel.Text = "Debug Checks\n(no entries)"
+    else
+        debugLabel.Text = "Debug Checks\n" .. table.concat(lines, "\n")
+    end
+end
+
+local function setDebugLine(key, text)
+    if text and text ~= "" then
+        if not debugLines[key] then
+            table.insert(debugOrder, key)
+        end
+        debugLines[key] = text
+    else
+        if debugLines[key] then
+            debugLines[key] = nil
+            for index, existing in ipairs(debugOrder) do
+                if existing == key then
+                    table.remove(debugOrder, index)
+                    break
+                end
+            end
+        end
+    end
+
+    rebuildDebugText()
+end
+
+BootUI.setDebugLine = setDebugLine
+
 local function getPlayerGui()
     if not player then
         player = Players.LocalPlayer
@@ -101,8 +148,14 @@ end
 
 local function profileRF(action, data)
     local remote = getPersonaRemote()
+    if remote then
+        setDebugLine("personaRemote", "Persona remote ready")
+    else
+        setDebugLine("personaRemote", "Persona remote missing")
+    end
     if not remote then
         warn("PersonaServiceRF unavailable for action", action)
+        setDebugLine("status", "Persona remote missing")
         return nil
     end
     local start = os.clock()
@@ -116,13 +169,26 @@ local function profileRF(action, data)
 end
 
 function BootUI.fetchData()
+    setDebugLine("status", "Fetching persona data…")
     local persona = profileRF("get", {})
     persona = sanitizePersonaData(persona)
+    if persona and typeof(persona.slotCount) == "number" then
+        setDebugLine("personaSlots", string.format("Persona slots loaded: %d", persona.slotCount))
+    else
+        setDebugLine("personaSlots", "Persona slots unavailable")
+    end
     local inventory
     local invStr = player:GetAttribute("Inventory")
     if typeof(invStr) == "string" then
         local ok, decoded = pcall(HttpService.JSONDecode, HttpService, invStr)
-        if ok then inventory = decoded end
+        if ok then
+            inventory = decoded
+            setDebugLine("inventory", "Inventory cache decoded")
+        else
+            setDebugLine("inventory", "Inventory decode failed")
+        end
+    else
+        setDebugLine("inventory", "Inventory not cached")
     end
     return {
         inventory = inventory,
@@ -209,6 +275,65 @@ function BootUI.applyFetchedData(data)
         BootUI.config.personaData = sanitized
         BootUI.personaData = sanitized
         Cosmetics.refreshSlots(sanitized)
+        local function describeMainPersona()
+            if typeof(sanitized) ~= "table" then
+                return "Main persona: unavailable"
+            end
+
+            local slots = sanitized.slots
+            if typeof(slots) ~= "table" then
+                return "Main persona: no slots"
+            end
+
+            local preferred = sanitized.activeSlot or sanitized.selectedSlot or sanitized.currentSlot or sanitized.lastUsedSlot
+            preferred = tonumber(preferred)
+            local chosen = preferred and slots[preferred] or nil
+            local chosenIndex = preferred
+
+            if not chosen then
+                local limit = tonumber(sanitized.slotCount) or #slots
+                for index = 1, limit do
+                    local slot = slots[index]
+                    if slot ~= nil then
+                        chosen = slot
+                        chosenIndex = index
+                        break
+                    end
+                end
+            end
+
+            if not chosen then
+                return "Main persona: empty"
+            end
+
+            local details = {}
+            table.insert(details, string.format("Main persona (slot %d): %s", chosenIndex or 0, tostring(chosen.type or "Unknown")))
+
+            if typeof(chosen.level) == "number" then
+                table.insert(details, string.format("Level %d", chosen.level))
+            end
+            if typeof(chosen.exp) == "number" then
+                table.insert(details, string.format("XP %d", chosen.exp))
+            end
+            if typeof(chosen.power) == "number" then
+                table.insert(details, string.format("Power %d", chosen.power))
+            end
+            if typeof(chosen.wins) == "number" then
+                table.insert(details, string.format("Wins %d", chosen.wins))
+            end
+            if typeof(chosen.coins) == "number" then
+                table.insert(details, string.format("Coins %d", chosen.coins))
+            end
+
+            return table.concat(details, " | ")
+        end
+
+        setDebugLine("mainPersona", describeMainPersona())
+        setDebugLine("status", "Persona selection ready")
+        Cosmetics.showDojoPicker()
+    else
+        setDebugLine("mainPersona", "Main persona: missing data")
+        setDebugLine("status", "Persona data unavailable")
     end
 end
 
@@ -476,6 +601,62 @@ root.Parent = ui
 BootUI.root = root
 Cosmetics.init(config, root, cosmeticsInterface)
 
+local debugPanel = Instance.new("Frame")
+debugPanel.Name = "DebugPanel"
+debugPanel.Size = UDim2.new(0, 320, 0, 0)
+debugPanel.Position = UDim2.fromOffset(16, 16)
+debugPanel.BackgroundColor3 = Color3.fromRGB(10, 12, 18)
+debugPanel.BackgroundTransparency = 0.35
+debugPanel.BorderSizePixel = 0
+debugPanel.AutomaticSize = Enum.AutomaticSize.Y
+debugPanel.ZIndex = 500
+debugPanel.Parent = root
+
+local debugCorner = Instance.new("UICorner")
+debugCorner.CornerRadius = UDim.new(0, 8)
+debugCorner.Parent = debugPanel
+
+local debugPadding = Instance.new("UIPadding")
+debugPadding.PaddingTop = UDim.new(0, 8)
+debugPadding.PaddingBottom = UDim.new(0, 8)
+debugPadding.PaddingLeft = UDim.new(0, 10)
+debugPadding.PaddingRight = UDim.new(0, 10)
+debugPadding.Parent = debugPanel
+
+local debugTextLabel = Instance.new("TextLabel")
+debugTextLabel.Name = "DebugText"
+debugTextLabel.Size = UDim2.new(1, 0, 0, 0)
+debugTextLabel.AutomaticSize = Enum.AutomaticSize.Y
+debugTextLabel.BackgroundTransparency = 1
+debugTextLabel.Font = Enum.Font.Gotham
+debugTextLabel.TextSize = 16
+debugTextLabel.TextWrapped = true
+debugTextLabel.TextXAlignment = Enum.TextXAlignment.Left
+debugTextLabel.TextYAlignment = Enum.TextYAlignment.Top
+debugTextLabel.TextColor3 = Color3.fromRGB(230, 230, 230)
+debugTextLabel.ZIndex = 501
+debugTextLabel.Text = ""
+debugTextLabel.Parent = debugPanel
+
+debugLabel = debugTextLabel
+BootUI.debugPanel = debugPanel
+rebuildDebugText()
+
+local playerName = "Unknown player"
+if player then
+    local displayName = player.DisplayName
+    if typeof(displayName) == "string" and displayName ~= "" then
+        playerName = string.format("Player: %s (@%s)", displayName, player.Name)
+    else
+        playerName = string.format("Player: %s", player.Name)
+    end
+end
+
+setDebugLine("player", playerName)
+setDebugLine("personaSlots", "Waiting for persona data…")
+setDebugLine("mainPersona", "Main persona: awaiting data")
+setDebugLine("status", "Boot interface ready")
+
 -- Intro visuals
 local fade = Instance.new("Frame")
 fade.Size = UDim2.fromScale(1,1)
@@ -551,7 +732,7 @@ end
 -- FLOW
 -- =====================
 cam.CameraType = Enum.CameraType.Scriptable
-holdStartCam(1.0)
+holdStartCam(0.3)
 disableUIBlur()
 
 Cosmetics.showDojoPicker()
