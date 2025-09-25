@@ -17,6 +17,29 @@ local rf      = nil
 local cam     = Workspace.CurrentCamera
 local enterRE = ReplicatedStorage:FindFirstChild("EnterDojoRE") -- created by server script
 
+local function getPlayerGui()
+    if not player then
+        player = Players.LocalPlayer
+    end
+    if not player then
+        return nil
+    end
+
+    local gui = player:FindFirstChildOfClass("PlayerGui")
+    if gui then
+        return gui
+    end
+
+    local ok, result = pcall(function()
+        return player:WaitForChild("PlayerGui", 5)
+    end)
+    if ok and result then
+        return result
+    end
+
+    return nil
+end
+
 local GameSettings = require(ReplicatedStorage.GameSettings)
 local DEFAULT_SLOT_COUNT = tonumber(GameSettings.maxSlots) or 3
 
@@ -432,7 +455,17 @@ ui.ResetOnSpawn   = false
 ui.Name           = "IntroGui"
 ui.IgnoreGuiInset = true
 ui.DisplayOrder   = 100
-ui.Parent         = player.PlayerGui
+local playerGuiParent = getPlayerGui()
+if playerGuiParent then
+    ui.Parent = playerGuiParent
+else
+    task.spawn(function()
+        local target = getPlayerGui()
+        if target then
+            ui.Parent = target
+        end
+    end)
+end
 BootUI.introGui   = ui
 
 local root = Instance.new("Frame")
