@@ -15,7 +15,7 @@ local HttpService       = game:GetService("HttpService")
 local player  = Players.LocalPlayer
 local rf      = nil
 local cam     = Workspace.CurrentCamera
-local enterRE = ReplicatedStorage:FindFirstChild("EnterDojoRE") -- created by server script
+local enterRE -- RemoteEvent created by Init.server.lua
 
 local debugLines = {}
 local debugOrder = {}
@@ -63,6 +63,36 @@ local function setDebugLine(key, text)
 end
 
 BootUI.setDebugLine = setDebugLine
+
+local function getEnterRemote()
+    if enterRE and enterRE.Parent then
+        setDebugLine("enterRemote", "EnterDojoRE ready")
+        return enterRE
+    end
+
+    local remote = ReplicatedStorage:FindFirstChild("EnterDojoRE")
+    if not remote then
+        local ok, result = pcall(function()
+            return ReplicatedStorage:WaitForChild("EnterDojoRE", 5)
+        end)
+        if ok then
+            remote = result
+        end
+    end
+
+    if remote and remote:IsA("RemoteEvent") then
+        enterRE = remote
+        setDebugLine("enterRemote", "EnterDojoRE ready")
+        return enterRE
+    end
+
+    if remote and not remote:IsA("RemoteEvent") then
+        warn("BootUI: EnterDojoRE exists but is a " .. remote.ClassName)
+    end
+
+    setDebugLine("enterRemote", "EnterDojoRE missing")
+    return nil
+end
 
 local function getPlayerGui()
     if not player then
@@ -656,6 +686,7 @@ setDebugLine("player", playerName)
 setDebugLine("personaSlots", "Waiting for persona data…")
 setDebugLine("mainPersona", "Main persona: awaiting data")
 setDebugLine("status", "Boot interface ready")
+getEnterRemote()
 
 -- Intro visuals
 local fade = Instance.new("Frame")
@@ -690,10 +721,12 @@ if enterRealmButton then
             if currentHud and currentHud.setBackButtonEnabled then
                 currentHud:setBackButtonEnabled(false)
             end
-            if enterRE then
-                enterRE:FireServer({ type = personaType, slot = chosenSlot })
+            local enterRemote = getEnterRemote()
+            if enterRemote then
+                enterRemote:FireServer({ type = personaType, slot = chosenSlot })
             else
                 warn("EnterDojoRE missing on server")
+                setDebugLine("status", "EnterDojoRE missing")
             end
 
             task.wait(0.2)
