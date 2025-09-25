@@ -1,5 +1,26 @@
 local PersonaUI = {}
 
+local function getPlayerGui(player)
+    if not player then
+        return nil
+    end
+
+    local gui = player:FindFirstChildOfClass("PlayerGui")
+    if gui then
+        return gui
+    end
+
+    local ok, result = pcall(function()
+        return player:WaitForChild("PlayerGui", 5)
+    end)
+
+    if ok and result then
+        return result
+    end
+
+    return nil
+end
+
 function PersonaUI.start(config)
     config = config or {}
 
@@ -19,7 +40,22 @@ function PersonaUI.start(config)
     gui.Name           = "IntroGui"
     gui.IgnoreGuiInset = true
     gui.DisplayOrder   = 100
-    gui.Parent         = player.PlayerGui
+
+    local parentGui = getPlayerGui(player)
+    if parentGui then
+        gui.Parent = parentGui
+    else
+        warn("PersonaUI: PlayerGui not available, deferring intro UI parent")
+        task.spawn(function()
+            local target = getPlayerGui(player)
+            if target and gui.Parent ~= target then
+                gui.Parent = target
+            elseif not target then
+                warn("PersonaUI: Failed to find PlayerGui; destroying intro UI")
+                gui:Destroy()
+            end
+        end)
+    end
 
     local root = Instance.new("Frame")
     root.Size = UDim2.fromScale(1,1)
