@@ -433,6 +433,29 @@ function WorldHUD.new(config, dependencies)
     btnEnterRealm.Active = false
     btnEnterRealm.AutoButtonColor = false
 
+    -- If no realm has been selected yet, default to the first unlocked realm
+    if not self.selectedRealm then
+        local defaultRealm
+        local realmsFolder = getRealmFolder()
+        if realmsFolder then
+            for _, info in ipairs(REALM_INFO) do
+                local flag = realmsFolder:FindFirstChild(info.key)
+                if flag and flag.Value then
+                    defaultRealm = info.key
+                    break
+                end
+            end
+        end
+
+        if not defaultRealm and REALM_INFO[1] then
+            defaultRealm = REALM_INFO[1].key
+        end
+
+        if defaultRealm then
+            setSelected(defaultRealm)
+        end
+    end
+
     local realmsFolder = getRealmFolder()
     if realmsFolder then
         track(self, realmsFolder.ChildAdded:Connect(function(child)
