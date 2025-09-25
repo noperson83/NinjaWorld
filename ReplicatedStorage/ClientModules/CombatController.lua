@@ -25,7 +25,7 @@ local slideSpeedMultiplier = 1.25
 local canStrike = true
 local animationTracks = {}
 local STRIKE_SOUND_NAME = "Combat_Strike_SFX"
-local STRIKE_SOUND_ID = 12222216
+local STRIKE_SOUND_ID = 12222216 -- Classic sword slash audio asset
 
 AudioPlayer.preloadAudio({ [STRIKE_SOUND_NAME] = STRIKE_SOUND_ID })
 
