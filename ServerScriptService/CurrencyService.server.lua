@@ -12,7 +12,25 @@ end
 local ORB_THRESHOLD = 10
 local balances = {}
 
-local sessionData = shared.sessionData or {}
+local function waitForSessionData()
+    local data = shared.sessionData
+    if data then
+        return data
+    end
+
+    -- Wait for DataSavingScript to publish the shared table so we use the
+    -- exact same reference. Creating our own table would desync with the
+    -- rest of the server scripts and cause us to wait forever for player
+    -- data that never appears.
+    while not data do
+        task.wait()
+        data = shared.sessionData
+    end
+
+    return data
+end
+
+local sessionData = waitForSessionData()
 
 local CurrencyService = {balances = balances}
 shared.CurrencyService = CurrencyService
@@ -82,7 +100,15 @@ end
 Players.PlayerAdded:Connect(function(player)
     local sd = sessionData[player.UserId]
     if not sd then
-        repeat task.wait() sd = sessionData[player.UserId] until sd
+        local start = os.clock()
+        while player.Parent and not sd do
+            task.wait(0.1)
+            sd = sessionData[player.UserId]
+            if os.clock() - start > 10 then
+                warn("[CurrencyService] Timed out waiting for session data for", player.Name)
+                break
+            end
+        end
     end
     balances[player.UserId] = {coins = 0, orbs = {}, elements = sd and sd.elements or {}}
     sendBalance(player)
