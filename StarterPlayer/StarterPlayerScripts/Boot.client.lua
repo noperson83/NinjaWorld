@@ -18,5 +18,9 @@ PersonaUI.start({waitTime = 0})
 local DojoClient = require(BootModules.DojoClient)
 
 local BootUI = require(BootModules.BootUI)
-local config = BootUI.fetchData()
-BootUI.start(config)
+BootUI.start()
+
+task.spawn(function()
+    local data = BootUI.fetchData()
+    BootUI.applyFetchedData(data)
+end)

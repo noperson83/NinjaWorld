@@ -168,6 +168,27 @@ function BootUI.populateBackpackUI(data)
     end
 end
 
+function BootUI.applyFetchedData(data)
+    data = data or {}
+
+    BootUI.config = BootUI.config or {}
+
+    local inventory = data.inventory
+    if typeof(inventory) == "table" then
+        BootUI.config.inventory = inventory
+        BootUI.StarterBackpack = inventory
+        BootUI.populateBackpackUI(inventory)
+    end
+
+    local personaData = data.personaData
+    if personaData ~= nil then
+        local sanitized = sanitizePersonaData(personaData)
+        BootUI.config.personaData = sanitized
+        BootUI.personaData = sanitized
+        Cosmetics.refreshSlots(sanitized)
+    end
+end
+
 function BootUI.getSelectedRealm()
     local hud = BootUI.hud
     if hud and hud.getSelectedRealm then
@@ -294,6 +315,8 @@ if not cosmeticsInterface.getStarterBackpack then
 end
 
 BootUI.cosmeticsInterface = cosmeticsInterface
+
+BootUI.populateBackpackUI(config.inventory)
 
 
 -- =====================
