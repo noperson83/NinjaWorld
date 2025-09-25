@@ -4,7 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ShopUI = require(ReplicatedStorage.ClientModules.UI.ShopUI)
 local QuestUI = require(ReplicatedStorage.ClientModules.UI.QuestUI)
-local BackpackUI = require(ReplicatedStorage.ClientModules.UI.BackpackUI)
+local NinjaPouchUI = require(ReplicatedStorage.ClientModules.UI.NinjaPouchUI)
 local TeleportClient = require(ReplicatedStorage.ClientModules.TeleportClient)
 
 local WorldHUD = {}
@@ -229,7 +229,7 @@ function WorldHUD.new(config, dependencies)
     local quest = QuestUI.init(loadout, baseY)
     self.quest = quest
 
-    local backpack = BackpackUI.init(loadout, baseY)
+    local backpack = NinjaPouchUI.init(loadout, baseY)
     self.backpack = backpack
 
     local togglePanel = Instance.new("Frame")
