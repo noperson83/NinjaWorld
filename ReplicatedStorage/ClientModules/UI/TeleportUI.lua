@@ -135,7 +135,8 @@ function TeleportUI.init(parent, baseY, dependencies)
         local teleportContainer = Instance.new("Frame")
         teleportContainer.Name = "TeleportContainer"
         teleportContainer.Size = UDim2.new(0.65, -20, 0.65, 0)
-        teleportContainer.Position = UDim2.new(0, 20, 0, baseY + 80)
+        teleportContainer.AnchorPoint = Vector2.new(0.5, 0)
+        teleportContainer.Position = UDim2.new(0.5, 0, 0, baseY + 80)
         teleportContainer.BackgroundColor3 = Color3.fromRGB(18, 20, 24)
         teleportContainer.BackgroundTransparency = 0.05
         teleportContainer.BorderSizePixel = 0
