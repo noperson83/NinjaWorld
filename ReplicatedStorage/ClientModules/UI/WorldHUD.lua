@@ -29,8 +29,12 @@ local REALM_INFO = {
 }
 
 local function track(self, conn)
-    if not conn then return end
+    if conn == nil then
+        return nil
+    end
+
     table.insert(self._connections, conn)
+    return conn
 end
 
 local function createRealmButton(parent, info)
