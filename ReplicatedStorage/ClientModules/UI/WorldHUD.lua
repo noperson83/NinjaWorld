@@ -326,7 +326,7 @@ function WorldHUD.new(config, dependencies)
     local worldLayout = Instance.new("UIListLayout")
     worldLayout.FillDirection = Enum.FillDirection.Vertical
     worldLayout.Padding = UDim.new(0, 8)
-    worldLayout.HorizontalAlignment = Enum.HorizontalAlignment.Stretch
+    worldLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
     worldLayout.SortOrder = Enum.SortOrder.LayoutOrder
     worldLayout.Parent = worldFrame
 
