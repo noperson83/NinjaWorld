@@ -33,6 +33,7 @@ local NinjaMarketplaceUI = {}
 local tabFrames = {}
 local tabButtons = {}
 local frame
+local BASE_Z_INDEX = 45
 
 -- UI Helper Functions
 local function createCorner(parent, radius)
@@ -77,7 +78,7 @@ function NinjaMarketplaceUI.init(config, shop, bootUI, defaultTab)
 	frame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 	frame.BackgroundTransparency = 0.05
 	frame.BorderSizePixel = 0
-	frame.ZIndex = 10
+        frame.ZIndex = BASE_Z_INDEX
 	frame.Parent = root
 	createCorner(frame, 15)
 	createStroke(frame, 3, Color3.fromRGB(80, 50, 120))
@@ -90,7 +91,7 @@ function NinjaMarketplaceUI.init(config, shop, bootUI, defaultTab)
 	header.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 	header.BackgroundTransparency = 0.2
 	header.BorderSizePixel = 0
-	header.ZIndex = 11
+        header.ZIndex = BASE_Z_INDEX + 1
 	header.Parent = frame
 	createCorner(header, 15)
 	createGradient(header, ColorSequence.new{
@@ -105,7 +106,7 @@ function NinjaMarketplaceUI.init(config, shop, bootUI, defaultTab)
 	emblem.BackgroundColor3 = Color3.fromRGB(100, 50, 150)
 	emblem.BackgroundTransparency = 0.2
 	emblem.BorderSizePixel = 0
-	emblem.ZIndex = 12
+        emblem.ZIndex = BASE_Z_INDEX + 2
 	emblem.Parent = header
 	createCorner(emblem, 22.5)
 
@@ -116,7 +117,7 @@ function NinjaMarketplaceUI.init(config, shop, bootUI, defaultTab)
 	emblemIcon.Font = Enum.Font.GothamBold
 	emblemIcon.TextScaled = true
 	emblemIcon.TextColor3 = Color3.fromRGB(220, 180, 255)
-	emblemIcon.ZIndex = 13
+        emblemIcon.ZIndex = BASE_Z_INDEX + 3
 	emblemIcon.Parent = emblem
 
 	-- Title
@@ -129,7 +130,7 @@ function NinjaMarketplaceUI.init(config, shop, bootUI, defaultTab)
 	title.Font = Enum.Font.GothamBold
 	title.TextScaled = true
 	title.TextColor3 = Color3.fromRGB(220, 180, 100)
-	title.ZIndex = 12
+        title.ZIndex = BASE_Z_INDEX + 2
 	title.Parent = header
 
 	local subtitle = Instance.new("TextLabel")
@@ -141,7 +142,7 @@ function NinjaMarketplaceUI.init(config, shop, bootUI, defaultTab)
 	subtitle.Font = Enum.Font.Gotham
 	subtitle.TextScaled = true
 	subtitle.TextColor3 = Color3.fromRGB(160, 160, 180)
-	subtitle.ZIndex = 12
+        subtitle.ZIndex = BASE_Z_INDEX + 2
 	subtitle.Parent = header
 
 	-- Close button
@@ -157,7 +158,7 @@ function NinjaMarketplaceUI.init(config, shop, bootUI, defaultTab)
 	closeBtn.BackgroundColor3 = Color3.fromRGB(80, 25, 25)
 	closeBtn.BackgroundTransparency = 0.1
 	closeBtn.BorderSizePixel = 0
-	closeBtn.ZIndex = 12
+        closeBtn.ZIndex = BASE_Z_INDEX + 4
 	closeBtn.AutoButtonColor = true
 	closeBtn.Parent = header
 	createCorner(closeBtn, 22.5)
@@ -171,7 +172,7 @@ function NinjaMarketplaceUI.init(config, shop, bootUI, defaultTab)
 	tabBar.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 	tabBar.BackgroundTransparency = 0.3
 	tabBar.BorderSizePixel = 0
-	tabBar.ZIndex = 11
+        tabBar.ZIndex = BASE_Z_INDEX + 1
 	tabBar.Parent = frame
 	createCorner(tabBar, 10)
 
@@ -191,7 +192,7 @@ function NinjaMarketplaceUI.init(config, shop, bootUI, defaultTab)
 	content.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
 	content.BackgroundTransparency = 0.3
 	content.BorderSizePixel = 0
-	content.ZIndex = 11
+        content.ZIndex = BASE_Z_INDEX + 1
 	content.Parent = frame
 	createCorner(content, 10)
 	createStroke(content, 1, Color3.fromRGB(40, 40, 60))
@@ -216,7 +217,7 @@ function NinjaMarketplaceUI.init(config, shop, bootUI, defaultTab)
 		btn.Font = Enum.Font.GothamSemibold
 		btn.TextScaled = true
 		btn.BorderSizePixel = 0
-		btn.ZIndex = 12
+                btn.ZIndex = BASE_Z_INDEX + 2
 		btn.AutoButtonColor = true
 		btn.LayoutOrder = i
 		btn.Parent = tabBar
@@ -234,7 +235,7 @@ function NinjaMarketplaceUI.init(config, shop, bootUI, defaultTab)
 		tabFrame.ScrollBarThickness = 8
 		tabFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 120)
 		tabFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-		tabFrame.ZIndex = 12
+                tabFrame.ZIndex = BASE_Z_INDEX + 2
 		tabFrame.Parent = content
 		tabFrames[tab.name] = tabFrame
 
@@ -260,7 +261,7 @@ function NinjaMarketplaceUI.init(config, shop, bootUI, defaultTab)
 		card.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 		card.BackgroundTransparency = 0.2
 		card.BorderSizePixel = 0
-		card.ZIndex = 13
+                card.ZIndex = BASE_Z_INDEX + 3
 		createCorner(card, 10)
 		createStroke(card, 1, Color3.fromRGB(60, 60, 80))
 
@@ -270,7 +271,7 @@ function NinjaMarketplaceUI.init(config, shop, bootUI, defaultTab)
 		iconFrame.Position = UDim2.new(0, 10, 0, 10)
 		iconFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
 		iconFrame.BorderSizePixel = 0
-		iconFrame.ZIndex = 14
+                iconFrame.ZIndex = BASE_Z_INDEX + 4
 		iconFrame.Parent = card
 		createCorner(iconFrame, 30)
 
@@ -281,7 +282,7 @@ function NinjaMarketplaceUI.init(config, shop, bootUI, defaultTab)
 		itemIcon.Font = Enum.Font.GothamBold
 		itemIcon.TextScaled = true
 		itemIcon.TextColor3 = tabButtons[category].color
-		itemIcon.ZIndex = 15
+                itemIcon.ZIndex = BASE_Z_INDEX + 5
 		itemIcon.Parent = iconFrame
 
 		-- Item details
@@ -294,7 +295,7 @@ function NinjaMarketplaceUI.init(config, shop, bootUI, defaultTab)
 		nameLabel.Font = Enum.Font.GothamBold
 		nameLabel.TextScaled = true
 		nameLabel.TextColor3 = Color3.fromRGB(220, 220, 240)
-		nameLabel.ZIndex = 14
+                nameLabel.ZIndex = BASE_Z_INDEX + 4
 		nameLabel.Parent = card
 
 		local descLabel = Instance.new("TextLabel")
@@ -306,7 +307,7 @@ function NinjaMarketplaceUI.init(config, shop, bootUI, defaultTab)
 		descLabel.Font = Enum.Font.Gotham
 		descLabel.TextScaled = true
 		descLabel.TextColor3 = Color3.fromRGB(160, 160, 180)
-		descLabel.ZIndex = 14
+                descLabel.ZIndex = BASE_Z_INDEX + 4
 		descLabel.Parent = card
 
 		local rarityLabel = Instance.new("TextLabel")
@@ -319,7 +320,7 @@ function NinjaMarketplaceUI.init(config, shop, bootUI, defaultTab)
 		rarityLabel.TextScaled = true
 		rarityLabel.TextColor3 = Color3.fromRGB(180, 150, 220)
 		rarityLabel.BorderSizePixel = 0
-		rarityLabel.ZIndex = 14
+                rarityLabel.ZIndex = BASE_Z_INDEX + 4
 		rarityLabel.Parent = card
 		createCorner(rarityLabel, 10)
 
@@ -334,7 +335,7 @@ function NinjaMarketplaceUI.init(config, shop, bootUI, defaultTab)
 		purchaseBtn.TextScaled = true
 		purchaseBtn.TextColor3 = Color3.fromRGB(150, 255, 150)
 		purchaseBtn.BorderSizePixel = 0
-		purchaseBtn.ZIndex = 14
+                purchaseBtn.ZIndex = BASE_Z_INDEX + 4
 		purchaseBtn.AutoButtonColor = true
 		purchaseBtn.Parent = card
 		createCorner(purchaseBtn, 10)
