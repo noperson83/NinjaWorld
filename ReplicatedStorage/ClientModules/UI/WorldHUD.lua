@@ -2,7 +2,7 @@ local Players = game:GetService("Players")
 local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local ShopUI = require(ReplicatedStorage.ClientModules.UI.ShopUI)
+local NinjaMarketplaceUI = require(ReplicatedStorage.ClientModules.UI.NinjaMarketplaceUI)
 local NinjaQuestUI = require(ReplicatedStorage.ClientModules.UI.NinjaQuestUI)
 local NinjaPouchUI = require(ReplicatedStorage.ClientModules.UI.NinjaPouchUI)
 local TeleportUI = require(ReplicatedStorage.ClientModules.UI.TeleportUI)
@@ -85,14 +85,14 @@ function WorldHUD.new(config, dependencies)
 
 	local playerGui = ensureParent()
 
-        local gui = Instance.new("ScreenGui")
-        gui.Name = "WorldHUD"
-        gui.ResetOnSpawn = false
-        gui.IgnoreGuiInset = true
-        gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-        gui.DisplayOrder = 75
-        gui.Parent = playerGui
-        self.gui = gui
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "WorldHUD"
+	gui.ResetOnSpawn = false
+	gui.IgnoreGuiInset = true
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+	gui.DisplayOrder = 75
+	gui.Parent = playerGui
+	self.gui = gui
 
 	local root = Instance.new("Frame")
 	root.Name = "WorldHUDRoot"
@@ -126,15 +126,15 @@ function WorldHUD.new(config, dependencies)
 	loadTitle.TextColor3 = Color3.fromRGB(255,200,120)
 	loadTitle.Parent = loadout
 
-        -- Teleport UI
-        local teleportUI = TeleportUI.init(loadout, baseY, {
-                REALM_INFO = REALM_INFO,
-                getRealmFolder = getRealmFolder,
-        })
-        self.teleportUI = teleportUI
-        local teleportCloseButton = teleportUI and teleportUI.closeButton or nil
-        self.teleportCloseButton = teleportCloseButton
-        self.enterRealmButton = teleportUI and teleportUI.enterRealmButton or nil
+	-- Teleport UI
+	local teleportUI = TeleportUI.init(loadout, baseY, {
+		REALM_INFO = REALM_INFO,
+		getRealmFolder = getRealmFolder,
+	})
+	self.teleportUI = teleportUI
+	local teleportCloseButton = teleportUI and teleportUI.closeButton or nil
+	self.teleportCloseButton = teleportCloseButton
+	self.enterRealmButton = teleportUI and teleportUI.enterRealmButton or nil
 
 	local quest = NinjaQuestUI.init(loadout, baseY)
 	self.quest = quest
@@ -185,12 +185,12 @@ function WorldHUD.new(config, dependencies)
 	self.teleportOpenButton = teleOpenButton
 	self.shopButton = shopButton
 
-        local function setTeleportsVisible(visible)
-                if teleportUI then
-                        teleportUI:setVisible(visible)
-                end
-                teleOpenButton.Visible = not visible
-        end
+	local function setTeleportsVisible(visible)
+		if teleportUI then
+			teleportUI:setVisible(visible)
+		end
+		teleOpenButton.Visible = not visible
+	end
 
 	if quest and quest.closeButton then
 		track(self, quest.closeButton.MouseButton1Click:Connect(function()
@@ -236,11 +236,11 @@ function WorldHUD.new(config, dependencies)
 		self:toggleShop()
 	end))
 
-        if teleportCloseButton then
-                track(self, teleportCloseButton.MouseButton1Click:Connect(function()
-                        setTeleportsVisible(false)
-                end))
-        end
+	if teleportCloseButton then
+		track(self, teleportCloseButton.MouseButton1Click:Connect(function()
+			setTeleportsVisible(false)
+		end))
+	end
 
 	track(self, teleOpenButton.MouseButton1Click:Connect(function()
 		setTeleportsVisible(true)
@@ -263,11 +263,11 @@ function WorldHUD.new(config, dependencies)
 	backButton.Parent = loadout
 	self.backButton = backButton
 
-        local realmDisplayLookup = {}
-        self.realmDisplayLookup = realmDisplayLookup
-        for _, info in ipairs(REALM_INFO) do
-                realmDisplayLookup[info.key] = info.name
-        end
+	local realmDisplayLookup = {}
+	self.realmDisplayLookup = realmDisplayLookup
+	for _, info in ipairs(REALM_INFO) do
+		realmDisplayLookup[info.key] = info.name
+	end
 
 	if self.config and self.config.showShop then
 		self:toggleShop()
@@ -364,12 +364,12 @@ function WorldHUD:toggleShop(defaultTab)
 	end
 	if not self.shopFrame or not self.shopFrame.Parent then
 		local fakeBoot = {root = self.root}
-		self.shopFrame = ShopUI.init(self.config, self.shop, fakeBoot, defaultTab)
+		self.shopFrame = NinjaMarketplaceUI.init(self.config, self.shop, fakeBoot, defaultTab)
 	else
 		self.shopFrame.Visible = not self.shopFrame.Visible
 	end
-	if self.shopFrame and self.shopFrame.Visible and defaultTab and ShopUI.setTab then
-		ShopUI.setTab(defaultTab)
+	if self.shopFrame and self.shopFrame.Visible and defaultTab and NinjaMarketplaceUI.setTab then
+		NinjaMarketplaceUI.setTab(defaultTab)
 	end
 	return self.shopFrame and self.shopFrame.Visible
 end
@@ -387,37 +387,37 @@ function WorldHUD:updateCurrency(coins, orbs, elements)
 end
 
 function WorldHUD:getSelectedRealm()
-        if self.teleportUI and self.teleportUI.getSelectedRealm then
-                return self.teleportUI:getSelectedRealm()
-        end
-        return nil
+	if self.teleportUI and self.teleportUI.getSelectedRealm then
+		return self.teleportUI:getSelectedRealm()
+	end
+	return nil
 end
 
 function WorldHUD:getRealmDisplayName(key)
-        return self.realmDisplayLookup and self.realmDisplayLookup[key]
+	return self.realmDisplayLookup and self.realmDisplayLookup[key]
 end
 
 function WorldHUD:setSelectedRealm(key)
-        if self.teleportUI and self.teleportUI.setSelectedRealm then
-                self.teleportUI:setSelectedRealm(key)
-        end
+	if self.teleportUI and self.teleportUI.setSelectedRealm then
+		self.teleportUI:setSelectedRealm(key)
+	end
 end
 
 function WorldHUD:destroy()
 	if self._destroyed then return end
 	self._destroyed = true
-        for _, conn in ipairs(self._connections) do
-                if conn.Disconnect then conn:Disconnect() end
-        end
-        self._connections = {}
-        if self.teleportUI and self.teleportUI.destroy then
-                self.teleportUI:destroy()
-        end
-        if self.gui then
-                self.gui:Destroy()
-        end
-        self.gui = nil
-        self.root = nil
+	for _, conn in ipairs(self._connections) do
+		if conn.Disconnect then conn:Disconnect() end
+	end
+	self._connections = {}
+	if self.teleportUI and self.teleportUI.destroy then
+		self.teleportUI:destroy()
+	end
+	if self.gui then
+		self.gui:Destroy()
+	end
+	self.gui = nil
+	self.root = nil
 	self.loadout = nil
 	self.shopButton = nil
 	self.shopFrame = nil
@@ -425,16 +425,16 @@ function WorldHUD:destroy()
 	self.enterRealmButton = nil
 	self.quest = nil
 	self.backpack = nil
-        self.togglePanel = nil
-        self.questOpenButton = nil
-        self.backpackOpenButton = nil
-        self.teleportOpenButton = nil
-        self.teleportCloseButton = nil
-        self.teleportUI = nil
-        self.backButtonEnabled = nil
-        if currentHud == self then
-                currentHud = nil
-        end
+	self.togglePanel = nil
+	self.questOpenButton = nil
+	self.backpackOpenButton = nil
+	self.teleportOpenButton = nil
+	self.teleportCloseButton = nil
+	self.teleportUI = nil
+	self.backButtonEnabled = nil
+	if currentHud == self then
+		currentHud = nil
+	end
 end
 
 return WorldHUD
