@@ -4,101 +4,271 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ContentProvider = game:GetService("ContentProvider")
 
+local function createCorner(parent, radius)
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, radius or 8)
+    corner.Parent = parent
+    return corner
+end
+
+local function createStroke(parent, thickness, color)
+    local stroke = Instance.new("UIStroke")
+    stroke.Thickness = thickness or 1
+    stroke.Color = color or Color3.fromRGB(100, 100, 100)
+    stroke.Parent = parent
+    return stroke
+end
+
+local function createGlow(parent, size, transparency)
+    local glow = Instance.new("ImageLabel")
+    glow.Name = "Glow"
+    glow.Size = UDim2.new(1, size or 20, 1, size or 20)
+    glow.Position = UDim2.new(0, -(size or 20) / 2, 0, -(size or 20) / 2)
+    glow.BackgroundTransparency = 1
+    glow.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
+    glow.ImageColor3 = Color3.fromRGB(100, 50, 200)
+    glow.ImageTransparency = transparency or 0.85
+    glow.ZIndex = parent.ZIndex - 1
+    glow.Parent = parent
+    return glow
+end
+
 function QuestUI.init(parent, baseY)
     local questRoot = Instance.new("Frame")
     questRoot.Name = "QuestUIRoot"
-    questRoot.Size = UDim2.fromScale(1,1)
+    questRoot.Size = UDim2.fromScale(1, 1)
     questRoot.BackgroundTransparency = 1
     questRoot.ZIndex = 5
     questRoot.Parent = parent
 
-    local emoteBar = Instance.new("Frame")
-    emoteBar.Name = "QuestEmoteBar"
-    emoteBar.Size = UDim2.new(1,-40,0,38)
-    emoteBar.Position = UDim2.fromOffset(20, baseY + 60)
-    emoteBar.BackgroundColor3 = Color3.fromRGB(24,26,28)
-    emoteBar.BackgroundTransparency = 0.6
-    emoteBar.BorderSizePixel = 0
-    emoteBar.Parent = questRoot
-    local emoteLayout = Instance.new("UIListLayout", emoteBar)
-    emoteLayout.FillDirection = Enum.FillDirection.Horizontal
-    emoteLayout.Padding = UDim.new(0,6)
-    emoteLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    -- Primary action bar that contains emote buttons and close button
+    local actionBar = Instance.new("Frame")
+    actionBar.Name = "NinjaActionBar"
+    actionBar.Size = UDim2.new(1, -40, 0, 50)
+    actionBar.Position = UDim2.fromOffset(20, baseY + 55)
+    actionBar.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+    actionBar.BackgroundTransparency = 0.1
+    actionBar.BorderSizePixel = 0
+    actionBar.ZIndex = 6
+    actionBar.Parent = questRoot
+    createCorner(actionBar, 12)
+    createStroke(actionBar, 2, Color3.fromRGB(80, 50, 120))
+    createGlow(actionBar, 16, 0.92)
 
-    local function emoteButton(text)
-        local b = Instance.new("TextButton")
-        b.BackgroundColor3 = Color3.fromRGB(50,120,255)
-        b.TextColor3 = Color3.new(1,1,1)
-        b.Font = Enum.Font.GothamSemibold
-        b.TextScaled = true
-        b.AutoButtonColor = true
-        b.Size = UDim2.new(0,120,1,0)
-        b.Text = text
-        b.Parent = emoteBar
-        return b
+    local actionTitle = Instance.new("TextLabel")
+    actionTitle.Size = UDim2.new(0, 200, 0, 25)
+    actionTitle.Position = UDim2.new(0, 15, 0, 5)
+    actionTitle.BackgroundTransparency = 1
+    actionTitle.TextXAlignment = Enum.TextXAlignment.Left
+    actionTitle.Text = "🥷 Ninja Actions"
+    actionTitle.Font = Enum.Font.GothamBold
+    actionTitle.TextScaled = true
+    actionTitle.TextColor3 = Color3.fromRGB(220, 180, 100)
+    actionTitle.ZIndex = 7
+    actionTitle.Parent = actionBar
+
+    local emoteContainer = Instance.new("Frame")
+    emoteContainer.Size = UDim2.new(1, -220, 0, 38)
+    emoteContainer.Position = UDim2.new(0, 15, 0, 25)
+    emoteContainer.BackgroundTransparency = 1
+    emoteContainer.ZIndex = 7
+    emoteContainer.Parent = actionBar
+
+    local emoteLayout = Instance.new("UIListLayout")
+    emoteLayout.FillDirection = Enum.FillDirection.Horizontal
+    emoteLayout.Padding = UDim.new(0, 8)
+    emoteLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    emoteLayout.Parent = emoteContainer
+
+    local function createEmoteButton(text, icon)
+        local btn = Instance.new("TextButton")
+        btn.Name = text .. "Button"
+        btn.Size = UDim2.new(0, 110, 0, 35)
+        btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        btn.BackgroundTransparency = 0.2
+        btn.TextColor3 = Color3.fromRGB(200, 200, 220)
+        btn.Font = Enum.Font.GothamSemibold
+        btn.TextScaled = true
+        btn.AutoButtonColor = true
+        btn.Text = (icon or "⚫") .. " " .. text
+        btn.BorderSizePixel = 0
+        btn.ZIndex = 8
+        btn.Parent = emoteContainer
+        createCorner(btn, 8)
+        createStroke(btn, 1, Color3.fromRGB(60, 60, 80))
+
+        local glow = Instance.new("Frame")
+        glow.Size = UDim2.new(1, 4, 1, 4)
+        glow.Position = UDim2.new(0, -2, 0, -2)
+        glow.BackgroundColor3 = Color3.fromRGB(100, 50, 200)
+        glow.BackgroundTransparency = 0.9
+        glow.BorderSizePixel = 0
+        glow.ZIndex = 7
+        glow.Parent = btn
+        createCorner(glow, 10)
+
+        btn.MouseEnter:Connect(function()
+            btn.BackgroundColor3 = Color3.fromRGB(80, 50, 120)
+            btn.BackgroundTransparency = 0.1
+            glow.BackgroundTransparency = 0.7
+        end)
+
+        btn.MouseLeave:Connect(function()
+            btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+            btn.BackgroundTransparency = 0.2
+            glow.BackgroundTransparency = 0.9
+        end)
+
+        return btn
     end
 
     local closeButton = Instance.new("TextButton")
     closeButton.Name = "QuestCloseButton"
-    closeButton.Size = UDim2.new(0,32,0,32)
-    closeButton.AnchorPoint = Vector2.new(1,0.5)
-    closeButton.Position = UDim2.new(1,-6,0.5,0)
-    closeButton.BackgroundColor3 = Color3.fromRGB(120,40,40)
-    closeButton.TextColor3 = Color3.new(1,1,1)
+    closeButton.Size = UDim2.new(0, 40, 0, 40)
+    closeButton.AnchorPoint = Vector2.new(1, 0.5)
+    closeButton.Position = UDim2.new(1, -8, 0.5, 0)
+    closeButton.BackgroundColor3 = Color3.fromRGB(80, 20, 20)
+    closeButton.BackgroundTransparency = 0.1
+    closeButton.TextColor3 = Color3.fromRGB(255, 150, 150)
     closeButton.Font = Enum.Font.GothamBold
     closeButton.TextScaled = true
-    closeButton.Text = "X"
+    closeButton.Text = "✕"
     closeButton.AutoButtonColor = true
-    closeButton.ZIndex = 6
-    closeButton.Parent = emoteBar
+    closeButton.ZIndex = 8
+    closeButton.BorderSizePixel = 0
+    closeButton.Parent = actionBar
+    createCorner(closeButton, 20)
+    createStroke(closeButton, 2, Color3.fromRGB(120, 40, 40))
 
-    local vpCard = Instance.new("Frame")
-    vpCard.BackgroundTransparency = 0.6
-    vpCard.Size = UDim2.new(0.47, -20, 0.65, 0)
-    vpCard.Position = UDim2.fromOffset(20, baseY + 80)
-    vpCard.BackgroundColor3 = Color3.fromRGB(24,26,28)
-    vpCard.BorderSizePixel = 0
-    vpCard.Parent = questRoot
+    local previewCard = Instance.new("Frame")
+    previewCard.Name = "CharacterPreview"
+    previewCard.BackgroundTransparency = 0.1
+    previewCard.Size = UDim2.new(0.48, -30, 0.65, 0)
+    previewCard.Position = UDim2.fromOffset(20, baseY + 115)
+    previewCard.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+    previewCard.BorderSizePixel = 0
+    previewCard.ZIndex = 5
+    previewCard.Parent = questRoot
+    createCorner(previewCard, 12)
+    createStroke(previewCard, 2, Color3.fromRGB(60, 60, 80))
+    createGlow(previewCard, 24, 0.94)
+
+    local previewHeader = Instance.new("Frame")
+    previewHeader.Size = UDim2.new(1, 0, 0, 45)
+    previewHeader.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+    previewHeader.BackgroundTransparency = 0.3
+    previewHeader.BorderSizePixel = 0
+    previewHeader.ZIndex = 6
+    previewHeader.Parent = previewCard
+    createCorner(previewHeader, 12)
+
+    local headerTitle = Instance.new("TextLabel")
+    headerTitle.Size = UDim2.new(1, -20, 1, 0)
+    headerTitle.Position = UDim2.new(0, 20, 0, 0)
+    headerTitle.BackgroundTransparency = 1
+    headerTitle.TextXAlignment = Enum.TextXAlignment.Left
+    headerTitle.Text = "🎭 Character Preview"
+    headerTitle.Font = Enum.Font.GothamBold
+    headerTitle.TextScaled = true
+    headerTitle.TextColor3 = Color3.fromRGB(220, 180, 100)
+    headerTitle.ZIndex = 7
+    headerTitle.Parent = previewHeader
+
+    local viewportContainer = Instance.new("Frame")
+    viewportContainer.Size = UDim2.new(1, -10, 1, -55)
+    viewportContainer.Position = UDim2.new(0, 5, 0, 50)
+    viewportContainer.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
+    viewportContainer.BackgroundTransparency = 0.3
+    viewportContainer.BorderSizePixel = 0
+    viewportContainer.ZIndex = 6
+    viewportContainer.Parent = previewCard
+    createCorner(viewportContainer, 8)
+    createStroke(viewportContainer, 1, Color3.fromRGB(40, 40, 60))
 
     local viewport = Instance.new("ViewportFrame")
-    viewport.Size = UDim2.fromScale(1,1)
-    viewport.BackgroundColor3 = Color3.fromRGB(16,16,16)
-    viewport.BackgroundTransparency = 0.6
+    viewport.Size = UDim2.new(1, -4, 1, -4)
+    viewport.Position = UDim2.new(0, 2, 0, 2)
+    viewport.BackgroundColor3 = Color3.fromRGB(8, 8, 12)
+    viewport.BackgroundTransparency = 0.2
     viewport.BorderSizePixel = 0
-    viewport.Parent = vpCard
+    viewport.ZIndex = 7
+    viewport.Parent = viewportContainer
+    createCorner(viewport, 6)
+
+    local controlsLabel = Instance.new("TextLabel")
+    controlsLabel.Size = UDim2.new(1, -10, 0, 25)
+    controlsLabel.Position = UDim2.new(0, 5, 1, -30)
+    controlsLabel.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+    controlsLabel.BackgroundTransparency = 0.3
+    controlsLabel.TextColor3 = Color3.fromRGB(150, 150, 170)
+    controlsLabel.Font = Enum.Font.Gotham
+    controlsLabel.TextScaled = true
+    controlsLabel.Text = "🖱️ Drag to rotate • 🖲️ Scroll to zoom"
+    controlsLabel.ZIndex = 8
+    controlsLabel.BorderSizePixel = 0
+    controlsLabel.Parent = previewCard
+    createCorner(controlsLabel, 6)
 
     -- Orbitable viewport state
     local vpWorld, vpModel, vpCam, vpHumanoid, currentEmoteTrack
-    local orbit = {yaw = math.pi, pitch = 0.1, dist = 10, min = 4, max = 40, center = Vector3.new(), dragging = false}
+    local orbit = {
+        yaw = math.pi,
+        pitch = 0.1,
+        dist = 10,
+        min = 4,
+        max = 40,
+        center = Vector3.new(),
+        dragging = false,
+    }
 
     local function updateVPCamera()
-        if not vpCam then return end
+        if not vpCam then
+            return
+        end
+
         local dir = CFrame.fromEulerAnglesYXZ(orbit.pitch, orbit.yaw, 0).LookVector
         local camPos = orbit.center - dir * orbit.dist
         vpCam.CFrame = CFrame.new(camPos, orbit.center)
+    end
+
+    local function setControlsDefault()
+        controlsLabel.Text = "🖱️ Drag to rotate • 🖲️ Scroll to zoom"
+        controlsLabel.TextColor3 = Color3.fromRGB(150, 150, 170)
     end
 
     local function hookViewportControls()
         viewport.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 orbit.dragging = true
+                controlsLabel.Text = "🔄 Rotating character..."
+                controlsLabel.TextColor3 = Color3.fromRGB(100, 200, 150)
             end
         end)
+
         viewport.InputEnded:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 orbit.dragging = false
+                setControlsDefault()
             end
         end)
+
         viewport.InputChanged:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseMovement and orbit.dragging then
                 local d = input.Delta
-                orbit.yaw = orbit.yaw - d.X * 0.01
+                orbit.yaw -= d.X * 0.01
                 orbit.pitch = math.clamp(orbit.pitch - d.Y * 0.01, -1.2, 1.2)
                 updateVPCamera()
             elseif input.UserInputType == Enum.UserInputType.MouseWheel then
                 local scroll = input.Position.Z
                 orbit.dist = math.clamp(orbit.dist - scroll * 1.5, orbit.min, orbit.max)
                 updateVPCamera()
+                controlsLabel.Text = "🔍 Zooming... Distance: " .. math.floor(orbit.dist)
+                controlsLabel.TextColor3 = Color3.fromRGB(100, 200, 150)
+                task.delay(0.5, function()
+                    if controlsLabel.Parent then
+                        setControlsDefault()
+                    end
+                end)
             end
         end)
     end
@@ -119,32 +289,47 @@ function QuestUI.init(parent, baseY)
         end
     end
 
-    local EMOTES = {
-        Idle  = "rbxassetid://507766388",
-        Wave  = "rbxassetid://507770239",
-        Point = "rbxassetid://507770453",
-        Dance = "rbxassetid://507771019",
-        Laugh = "rbxassetid://507770818",
-        Cheer = "rbxassetid://507770677",
-        Sit   = "rbxassetid://2506281703",
+    local NINJA_EMOTES = {
+        Idle = {id = "rbxassetid://507766388", icon = "🧘", desc = "Meditation"},
+        Bow = {id = "rbxassetid://507770239", icon = "🙇", desc = "Honor Bow"},
+        Strike = {id = "rbxassetid://507770453", icon = "👊", desc = "Strike Pose"},
+        Stealth = {id = "rbxassetid://507771019", icon = "🥷", desc = "Shadow Dance"},
+        Victory = {id = "rbxassetid://507770818", icon = "🎉", desc = "Mission Complete"},
+        Focus = {id = "rbxassetid://507770677", icon = "⚡", desc = "Inner Focus"},
+        Rest = {id = "rbxassetid://2506281703", icon = "💤", desc = "Rest"},
     }
 
-    local function playEmote(name)
-        if not (vpHumanoid and EMOTES[name]) then return end
+    local function playEmote(emoteName)
+        local emoteData = NINJA_EMOTES[emoteName]
+        if not (vpHumanoid and emoteData) then
+            return
+        end
+
         stopEmote()
+
         local anim = Instance.new("Animation")
-        anim.AnimationId = EMOTES[name]
+        anim.AnimationId = emoteData.id
         currentEmoteTrack = vpHumanoid:LoadAnimation(anim)
-        currentEmoteTrack.Looped = (name == "Idle" or name == "Dance")
+        currentEmoteTrack.Looped = emoteName == "Idle" or emoteName == "Stealth"
         currentEmoteTrack:Play(0.1)
+
+        headerTitle.Text = "🎭 " .. emoteData.desc .. " - " .. emoteData.icon
+        task.delay(2, function()
+            if headerTitle.Parent then
+                headerTitle.Text = "🎭 Character Preview"
+            end
+        end)
     end
 
     local function wireEmoteButtons()
-        local order = {"Idle","Wave","Point","Dance","Laugh","Cheer","Sit"}
-        for _,label in ipairs(order) do
-            local b = emoteButton(label)
-            b.MouseButton1Click:Connect(function()
-                playEmote(label)
+        local emoteOrder = {"Idle", "Bow", "Strike", "Stealth", "Victory", "Focus", "Rest"}
+        for _, emoteName in ipairs(emoteOrder) do
+            local emoteData = NINJA_EMOTES[emoteName]
+            local btn = createEmoteButton(emoteData.desc, emoteData.icon)
+            btn.MouseButton1Click:Connect(function()
+                task.spawn(function()
+                    playEmote(emoteName)
+                end)
             end)
         end
     end
@@ -167,7 +352,15 @@ function QuestUI.init(parent, baseY)
 
     local function buildCharacterPreview(personaType)
         clearChildren(viewport)
+        stopEmote()
+
+        if viewport.CurrentCamera then
+            viewport.CurrentCamera:Destroy()
+            viewport.CurrentCamera = nil
+        end
+
         vpWorld, vpModel, vpCam, vpHumanoid = nil, nil, nil, nil
+
         vpWorld = Instance.new("WorldModel")
         vpWorld.Parent = viewport
 
@@ -176,31 +369,45 @@ function QuestUI.init(parent, baseY)
             local hdFolder = ReplicatedStorage:FindFirstChild("HumanoidDescriptions")
                 or ReplicatedStorage:FindFirstChild("HumanoidDescription")
             local hd = hdFolder and hdFolder:FindFirstChild("Ninja")
-            if hd then desc = hd:Clone() end
+            if hd then
+                desc = hd:Clone()
+                headerTitle.Text = "🥷 Ninja Master Preview"
+            end
         else
             local ok, hd = pcall(function()
                 return Players:GetHumanoidDescriptionFromUserId(Players.LocalPlayer.UserId)
             end)
-            if ok then desc = hd end
+            if ok then
+                desc = hd
+                headerTitle.Text = "🎭 " .. Players.LocalPlayer.DisplayName .. "'s Avatar"
+            end
         end
-        if not desc then return end
+
+        if not desc then
+            headerTitle.Text = "❌ Preview Unavailable"
+            return
+        end
 
         vpModel = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
-        vpModel:PivotTo(CFrame.new(0,0,0))
-        pcall(function()
-            ContentProvider:PreloadAsync({vpModel})
+        vpModel:PivotTo(CFrame.new(0, 0, 0))
+
+        task.spawn(function()
+            pcall(function()
+                ContentProvider:PreloadAsync({ vpModel })
+            end)
         end)
+
         vpModel.Parent = vpWorld
         vpHumanoid = vpModel:FindFirstChildOfClass("Humanoid")
 
         local _, size = vpModel:GetBoundingBox()
         local radius = math.max(size.X, size.Y, size.Z)
-        orbit.center = Vector3.new(0, size.Y*0.5, 0)
-        orbit.dist   = math.clamp(radius * 1.8, 6, 20)
-        orbit.min    = math.max(3, radius*0.8)
-        orbit.max    = radius * 4
-        orbit.pitch  = 0.15
-        orbit.yaw    = math.pi
+        orbit.center = Vector3.new(0, size.Y * 0.5, 0)
+        orbit.dist = math.clamp(radius * 1.8, 6, 20)
+        orbit.min = math.max(3, radius * 0.8)
+        orbit.max = radius * 4
+        orbit.pitch = 0.15
+        orbit.yaw = math.pi
 
         vpCam = Instance.new("Camera")
         vpCam.Parent = viewport
@@ -212,7 +419,9 @@ function QuestUI.init(parent, baseY)
             viewport:SetAttribute("_controlsHooked", true)
         end
 
-        playEmote("Idle")
+        task.delay(0.1, function()
+            playEmote("Idle")
+        end)
     end
 
     wireEmoteButtons()
@@ -220,6 +429,7 @@ function QuestUI.init(parent, baseY)
     questController.buildCharacterPreview = buildCharacterPreview
 
     closeButton.MouseButton1Click:Connect(function()
+        stopEmote()
         setVisible(false)
     end)
 
@@ -227,3 +437,4 @@ function QuestUI.init(parent, baseY)
 end
 
 return QuestUI
+
