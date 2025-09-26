@@ -135,8 +135,6 @@ function TeleportClient.bindWorldButtons(gui)
                return
        end
 
-       local realmsFolder = player:FindFirstChild("Realms")
-
        local enterButton = gui:FindFirstChild("EnterRealmButton", true)
        if not enterButton then
                warn("TeleportClient: EnterRealmButton not found")
@@ -144,7 +142,101 @@ function TeleportClient.bindWorldButtons(gui)
        end
 
        local worldButtons = {}
+       local buttonUpdaters = {}
+       local realmFolderConnections = {}
+       local statsChildAddedConnection
+       local playerChildAddedConnection
        local selectedRealm = nil
+
+       local function getRealmFlag(name)
+               local realmsFolder = player:FindFirstChild("Realms")
+               if realmsFolder then
+                       local flag = realmsFolder:FindFirstChild(name)
+                       if flag then
+                               return flag
+                       end
+               end
+
+               local stats = player:FindFirstChild("Stats")
+               if stats then
+                       local statsRealms = stats:FindFirstChild("Realms")
+                       if statsRealms then
+                               return statsRealms:FindFirstChild(name)
+                       end
+               end
+
+               return nil
+       end
+
+       local function watchRealmFolder(folder)
+               if not folder or realmFolderConnections[folder] then
+                       return
+               end
+
+               realmFolderConnections[folder] = folder.ChildAdded:Connect(function(child)
+                       if child:IsA("BoolValue") then
+                               local updater = buttonUpdaters[child.Name]
+                               if updater then
+                                       updater()
+                               end
+                       end
+               end)
+       end
+
+       local function ensureRealmFolderConnections()
+               local directRealms = player:FindFirstChild("Realms")
+               if directRealms then
+                       watchRealmFolder(directRealms)
+               end
+
+               local stats = player:FindFirstChild("Stats")
+               if stats then
+                       if not statsChildAddedConnection then
+                               statsChildAddedConnection = stats.ChildAdded:Connect(function(child)
+                                       if child.Name == "Realms" and child:IsA("Folder") then
+                                               watchRealmFolder(child)
+                                               for _, updater in pairs(buttonUpdaters) do
+                                                       updater()
+                                               end
+                                       end
+                               end)
+                       end
+
+                       local statsRealms = stats:FindFirstChild("Realms")
+                       if statsRealms then
+                               watchRealmFolder(statsRealms)
+                       end
+               end
+
+               if not playerChildAddedConnection then
+                       playerChildAddedConnection = player.ChildAdded:Connect(function(child)
+                               if child.Name == "Realms" and child:IsA("Folder") then
+                                       watchRealmFolder(child)
+                                       for _, updater in pairs(buttonUpdaters) do
+                                               updater()
+                                       end
+                               elseif child.Name == "Stats" and child:IsA("Folder") then
+                                       statsChildAddedConnection = statsChildAddedConnection or child.ChildAdded:Connect(function(grandChild)
+                                               if grandChild.Name == "Realms" and grandChild:IsA("Folder") then
+                                                       watchRealmFolder(grandChild)
+                                                       for _, updater in pairs(buttonUpdaters) do
+                                                               updater()
+                                                       end
+                                               end
+                                       end)
+                                       local childRealms = child:FindFirstChild("Realms")
+                                       if childRealms then
+                                               watchRealmFolder(childRealms)
+                                               for _, updater in pairs(buttonUpdaters) do
+                                                       updater()
+                                               end
+                                       end
+                               end
+                       end)
+               end
+       end
+
+       ensureRealmFolderConnections()
 
        local function selectRealm(name, button)
                selectedRealm = name
@@ -169,12 +261,34 @@ function TeleportClient.bindWorldButtons(gui)
                button.AutoButtonColor = false
 
                local function isUnlocked()
-                       local flag = realmsFolder and realmsFolder:FindFirstChild(name)
+                       local flag = getRealmFlag(name)
                        return flag and flag.Value
                end
 
+               local flagConnection
+               local lastFlag
+
                local function updateVisual()
-                       if TeleportClient.worldSpawnIds[name] and TeleportClient.worldSpawnIds[name] > 0 and isUnlocked() then
+                       local flag = getRealmFlag(name)
+
+                       if flag ~= lastFlag then
+                               if flagConnection then
+                                       flagConnection:Disconnect()
+                                       flagConnection = nil
+                               end
+
+                               lastFlag = flag
+
+                               if flag then
+                                       flagConnection = flag:GetPropertyChangedSignal("Value"):Connect(function()
+                                               updateVisual()
+                                       end)
+                               end
+                       end
+
+                       local unlocked = flag and flag.Value
+
+                       if TeleportClient.worldSpawnIds[name] and TeleportClient.worldSpawnIds[name] > 0 and unlocked then
                                button.BackgroundColor3 = Color3.fromRGB(50,120,255)
                                button.TextColor3 = Color3.new(1,1,1)
                        else
@@ -183,14 +297,11 @@ function TeleportClient.bindWorldButtons(gui)
                        end
                end
 
+               buttonUpdaters[name] = updateVisual
+
                updateVisual()
 
-               if realmsFolder then
-                       local flag = realmsFolder:FindFirstChild(name)
-                       if flag then
-                               flag:GetPropertyChangedSignal("Value"):Connect(updateVisual)
-                       end
-               end
+               ensureRealmFolderConnections()
 
                button.Activated:Connect(function()
                        local placeId = TeleportClient.worldSpawnIds[name]
