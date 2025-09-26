@@ -54,8 +54,8 @@ function QuestUI.init(parent, baseY)
 
     local vpCard = Instance.new("Frame")
     vpCard.BackgroundTransparency = 0.6
-    vpCard.Size = UDim2.new(0.48,-30,0.62,0)
-    vpCard.Position = UDim2.fromOffset(20, baseY + 92)
+    vpCard.Size = UDim2.new(0.47, -20, 0.65, 0)
+    vpCard.Position = UDim2.fromOffset(20, baseY + 80)
     vpCard.BackgroundColor3 = Color3.fromRGB(24,26,28)
     vpCard.BorderSizePixel = 0
     vpCard.Parent = questRoot
