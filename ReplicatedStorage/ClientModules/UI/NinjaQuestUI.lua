@@ -41,49 +41,77 @@ function QuestUI.init(parent, baseY)
     questRoot.ZIndex = 5
     questRoot.Parent = parent
 
-    -- Primary action bar that contains emote buttons and close button
-    local actionBar = Instance.new("Frame")
-    actionBar.Name = "NinjaActionBar"
-    actionBar.Size = UDim2.new(1, -40, 0, 50)
-    actionBar.Position = UDim2.fromOffset(20, baseY + 55)
-    actionBar.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-    actionBar.BackgroundTransparency = 0.1
-    actionBar.BorderSizePixel = 0
-    actionBar.ZIndex = 6
-    actionBar.Parent = questRoot
-    createCorner(actionBar, 12)
-    createStroke(actionBar, 2, Color3.fromRGB(80, 50, 120))
-    createGlow(actionBar, 16, 0.92)
+    local previewCard = Instance.new("Frame")
+    previewCard.Name = "CharacterPreview"
+    previewCard.BackgroundTransparency = 0.1
+    previewCard.Size = UDim2.new(0.48, -30, 0.65, 0)
+    previewCard.Position = UDim2.fromOffset(20, baseY + 55)
+    previewCard.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+    previewCard.BorderSizePixel = 0
+    previewCard.ZIndex = 5
+    previewCard.Parent = questRoot
+    createCorner(previewCard, 12)
+    createStroke(previewCard, 2, Color3.fromRGB(60, 60, 80))
+    createGlow(previewCard, 24, 0.94)
 
-    local actionTitle = Instance.new("TextLabel")
-    actionTitle.Size = UDim2.new(0, 200, 0, 25)
-    actionTitle.Position = UDim2.new(0, 15, 0, 5)
-    actionTitle.BackgroundTransparency = 1
-    actionTitle.TextXAlignment = Enum.TextXAlignment.Left
-    actionTitle.Text = "🥷 Ninja Actions"
-    actionTitle.Font = Enum.Font.GothamBold
-    actionTitle.TextScaled = true
-    actionTitle.TextColor3 = Color3.fromRGB(220, 180, 100)
-    actionTitle.ZIndex = 7
-    actionTitle.Parent = actionBar
+    local previewHeader = Instance.new("Frame")
+    previewHeader.Size = UDim2.new(1, 0, 0, 45)
+    previewHeader.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+    previewHeader.BackgroundTransparency = 0.3
+    previewHeader.BorderSizePixel = 0
+    previewHeader.ZIndex = 6
+    previewHeader.Parent = previewCard
+    createCorner(previewHeader, 12)
+
+    local headerTitle = Instance.new("TextLabel")
+    headerTitle.Size = UDim2.new(1, -20, 1, 0)
+    headerTitle.Position = UDim2.new(0, 20, 0, 0)
+    headerTitle.BackgroundTransparency = 1
+    headerTitle.TextXAlignment = Enum.TextXAlignment.Left
+    headerTitle.Text = "🎭 Character Preview"
+    headerTitle.Font = Enum.Font.GothamBold
+    headerTitle.TextScaled = true
+    headerTitle.TextColor3 = Color3.fromRGB(220, 180, 100)
+    headerTitle.ZIndex = 7
+    headerTitle.Parent = previewHeader
+
+    local closeButton = Instance.new("TextButton")
+    closeButton.Name = "QuestCloseButton"
+    closeButton.Size = UDim2.new(0, 34, 0, 34)
+    closeButton.AnchorPoint = Vector2.new(1, 0.5)
+    closeButton.Position = UDim2.new(1, -10, 0.5, 0)
+    closeButton.BackgroundColor3 = Color3.fromRGB(80, 20, 20)
+    closeButton.BackgroundTransparency = 0.1
+    closeButton.TextColor3 = Color3.fromRGB(255, 150, 150)
+    closeButton.Font = Enum.Font.GothamBold
+    closeButton.TextScaled = true
+    closeButton.Text = "✕"
+    closeButton.AutoButtonColor = true
+    closeButton.ZIndex = 8
+    closeButton.BorderSizePixel = 0
+    closeButton.Parent = previewHeader
+    createCorner(closeButton, 20)
+    createStroke(closeButton, 2, Color3.fromRGB(120, 40, 40))
 
     local emoteContainer = Instance.new("Frame")
-    emoteContainer.Size = UDim2.new(1, -220, 0, 38)
-    emoteContainer.Position = UDim2.new(0, 15, 0, 25)
+    emoteContainer.Name = "EmoteButtonRow"
+    emoteContainer.Size = UDim2.new(1, -20, 0, 46)
+    emoteContainer.Position = UDim2.new(0, 10, 0, 55)
     emoteContainer.BackgroundTransparency = 1
-    emoteContainer.ZIndex = 7
-    emoteContainer.Parent = actionBar
+    emoteContainer.ZIndex = 6
+    emoteContainer.Parent = previewCard
 
     local emoteLayout = Instance.new("UIListLayout")
     emoteLayout.FillDirection = Enum.FillDirection.Horizontal
     emoteLayout.Padding = UDim.new(0, 8)
     emoteLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    emoteLayout.SortOrder = Enum.SortOrder.LayoutOrder
     emoteLayout.Parent = emoteContainer
 
     local function createEmoteButton(text, icon)
         local btn = Instance.new("TextButton")
         btn.Name = text .. "Button"
-        btn.Size = UDim2.new(0, 110, 0, 35)
+        btn.Size = UDim2.new(0, 110, 0, 40)
         btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
         btn.BackgroundTransparency = 0.2
         btn.TextColor3 = Color3.fromRGB(200, 200, 220)
@@ -122,61 +150,9 @@ function QuestUI.init(parent, baseY)
         return btn
     end
 
-    local closeButton = Instance.new("TextButton")
-    closeButton.Name = "QuestCloseButton"
-    closeButton.Size = UDim2.new(0, 40, 0, 40)
-    closeButton.AnchorPoint = Vector2.new(1, 0.5)
-    closeButton.Position = UDim2.new(1, -8, 0.5, 0)
-    closeButton.BackgroundColor3 = Color3.fromRGB(80, 20, 20)
-    closeButton.BackgroundTransparency = 0.1
-    closeButton.TextColor3 = Color3.fromRGB(255, 150, 150)
-    closeButton.Font = Enum.Font.GothamBold
-    closeButton.TextScaled = true
-    closeButton.Text = "✕"
-    closeButton.AutoButtonColor = true
-    closeButton.ZIndex = 8
-    closeButton.BorderSizePixel = 0
-    closeButton.Parent = actionBar
-    createCorner(closeButton, 20)
-    createStroke(closeButton, 2, Color3.fromRGB(120, 40, 40))
-
-    local previewCard = Instance.new("Frame")
-    previewCard.Name = "CharacterPreview"
-    previewCard.BackgroundTransparency = 0.1
-    previewCard.Size = UDim2.new(0.48, -30, 0.65, 0)
-    previewCard.Position = UDim2.fromOffset(20, baseY + 115)
-    previewCard.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-    previewCard.BorderSizePixel = 0
-    previewCard.ZIndex = 5
-    previewCard.Parent = questRoot
-    createCorner(previewCard, 12)
-    createStroke(previewCard, 2, Color3.fromRGB(60, 60, 80))
-    createGlow(previewCard, 24, 0.94)
-
-    local previewHeader = Instance.new("Frame")
-    previewHeader.Size = UDim2.new(1, 0, 0, 45)
-    previewHeader.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-    previewHeader.BackgroundTransparency = 0.3
-    previewHeader.BorderSizePixel = 0
-    previewHeader.ZIndex = 6
-    previewHeader.Parent = previewCard
-    createCorner(previewHeader, 12)
-
-    local headerTitle = Instance.new("TextLabel")
-    headerTitle.Size = UDim2.new(1, -20, 1, 0)
-    headerTitle.Position = UDim2.new(0, 20, 0, 0)
-    headerTitle.BackgroundTransparency = 1
-    headerTitle.TextXAlignment = Enum.TextXAlignment.Left
-    headerTitle.Text = "🎭 Character Preview"
-    headerTitle.Font = Enum.Font.GothamBold
-    headerTitle.TextScaled = true
-    headerTitle.TextColor3 = Color3.fromRGB(220, 180, 100)
-    headerTitle.ZIndex = 7
-    headerTitle.Parent = previewHeader
-
     local viewportContainer = Instance.new("Frame")
-    viewportContainer.Size = UDim2.new(1, -10, 1, -55)
-    viewportContainer.Position = UDim2.new(0, 5, 0, 50)
+    viewportContainer.Size = UDim2.new(1, -10, 1, -115)
+    viewportContainer.Position = UDim2.new(0, 5, 0, 105)
     viewportContainer.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
     viewportContainer.BackgroundTransparency = 0.3
     viewportContainer.BorderSizePixel = 0
