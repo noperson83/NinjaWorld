@@ -272,7 +272,6 @@ function QuestUI.init(parent, baseY)
         Stealth = {id = "rbxassetid://507771019", icon = "🥷", desc = "Shadow Dance"},
         Victory = {id = "rbxassetid://507770818", icon = "🎉", desc = "Mission Complete"},
         Focus = {id = "rbxassetid://507770677", icon = "⚡", desc = "Inner Focus"},
-        Rest = {id = "rbxassetid://2506281703", icon = "💤", desc = "Rest"},
     }
 
     local function playEmote(emoteName)
@@ -298,7 +297,7 @@ function QuestUI.init(parent, baseY)
     end
 
     local function wireEmoteButtons()
-        local emoteOrder = {"Idle", "Bow", "Strike", "Stealth", "Victory", "Focus", "Rest"}
+        local emoteOrder = {"Idle", "Bow", "Strike", "Stealth", "Victory", "Focus"}
         for _, emoteName in ipairs(emoteOrder) do
             local emoteData = NINJA_EMOTES[emoteName]
             local btn = createEmoteButton(emoteData.desc, emoteData.icon)
