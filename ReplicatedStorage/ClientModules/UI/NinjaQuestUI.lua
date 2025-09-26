@@ -167,6 +167,8 @@ function QuestUI.init(parent, baseY)
     viewport.BackgroundTransparency = 0.2
     viewport.BorderSizePixel = 0
     viewport.ZIndex = 7
+    viewport.Active = true
+    viewport.Selectable = false
     viewport.Parent = viewportContainer
     createCorner(viewport, 6)
 
