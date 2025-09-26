@@ -313,7 +313,7 @@ function WorldHUD.new(config, dependencies)
 
     local worldFrame = Instance.new("ScrollingFrame")
     worldFrame.Name = "WorldTeleFrame"
-    worldFrame.Size = UDim2.new(1, 0, 1, -88)
+    worldFrame.Size = UDim2.new(1, 0, 1, -92)
     worldFrame.Position = UDim2.new(0, 0, 0, 36)
     worldFrame.BackgroundColor3 = Color3.fromRGB(24, 26, 28)
     worldFrame.BackgroundTransparency = 0.4
@@ -342,9 +342,24 @@ function WorldHUD.new(config, dependencies)
     worldLayout.SortOrder = Enum.SortOrder.LayoutOrder
     worldLayout.Parent = worldFrame
 
+    local enterButtonHolder = Instance.new("Frame")
+    enterButtonHolder.Name = "EnterRealmButtonHolder"
+    enterButtonHolder.Size = UDim2.new(1, 0, 0, 56)
+    enterButtonHolder.AnchorPoint = Vector2.new(0, 1)
+    enterButtonHolder.Position = UDim2.new(0, 0, 1, 0)
+    enterButtonHolder.BackgroundTransparency = 1
+    enterButtonHolder.Parent = worldColumn
+
+    local enterButtonPadding = Instance.new("UIPadding")
+    enterButtonPadding.PaddingTop = UDim.new(0, 8)
+    enterButtonPadding.PaddingBottom = UDim.new(0, 8)
+    enterButtonPadding.PaddingLeft = UDim.new(0, 8)
+    enterButtonPadding.PaddingRight = UDim.new(0, 8)
+    enterButtonPadding.Parent = enterButtonHolder
+
     local enterRealmButton = Instance.new("TextButton")
     enterRealmButton.Name = "EnterRealmButton"
-    enterRealmButton.Size = UDim2.new(1, 0, 0, 48)
+    enterRealmButton.Size = UDim2.new(1, 0, 1, 0)
     enterRealmButton.LayoutOrder = 1000
     enterRealmButton.Text = "Select a realm"
     enterRealmButton.Font = Enum.Font.GothamBold
@@ -353,7 +368,7 @@ function WorldHUD.new(config, dependencies)
     enterRealmButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
     enterRealmButton.AutoButtonColor = false
     enterRealmButton.Active = false
-    enterRealmButton.Parent = worldFrame
+    enterRealmButton.Parent = enterButtonHolder
 
     local enterCorner = Instance.new("UICorner")
     enterCorner.CornerRadius = UDim.new(0, 8)

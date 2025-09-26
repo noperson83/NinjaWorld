@@ -137,7 +137,7 @@ function TeleportClient.bindWorldButtons(gui)
 
        local realmsFolder = player:FindFirstChild("Realms")
 
-       local enterButton = worldFrame:FindFirstChild("EnterRealmButton")
+       local enterButton = gui:FindFirstChild("EnterRealmButton", true)
        if not enterButton then
                warn("TeleportClient: EnterRealmButton not found")
                return
