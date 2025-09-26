@@ -85,11 +85,14 @@ local function teleportToPlace(placeId)
 	resetDebounceAfter(2)
 end
 
-function TeleportClient.bindZoneButtons(gui)
+function TeleportClient.bindZoneButtons(gui, callbacks)
         if not gui then
                 warn("TeleportClient: gui parameter missing for zone buttons")
                 return
         end
+
+        callbacks = callbacks or {}
+        local onTeleport = callbacks.onTeleport
 
         local teleFrame = gui:FindFirstChild("TeleFrame", true)
         if not teleFrame then
@@ -114,6 +117,9 @@ function TeleportClient.bindZoneButtons(gui)
                 local button = teleFrame:FindFirstChild(name .. "Button")
                 if button then
                         button.Activated:Connect(function()
+                                if onTeleport then
+                                        onTeleport()
+                                end
                                 teleportToIsland(unpack(zoneInfo))
                         end)
                 else
@@ -123,11 +129,14 @@ function TeleportClient.bindZoneButtons(gui)
 end
 
 
-function TeleportClient.bindWorldButtons(gui)
+function TeleportClient.bindWorldButtons(gui, callbacks)
         if not gui then
                 warn("TeleportClient: gui parameter missing for world buttons")
                 return
         end
+
+       callbacks = callbacks or {}
+       local onTeleport = callbacks.onTeleport
 
        local worldFrame = gui:FindFirstChild("WorldTeleFrame", true)
        if not worldFrame then
@@ -351,6 +360,9 @@ function TeleportClient.bindWorldButtons(gui)
                if not selectedRealm then return end
                local placeId = TeleportClient.worldSpawnIds[selectedRealm]
                if placeId and placeId > 0 then
+                       if onTeleport then
+                               onTeleport()
+                       end
                        teleportToPlace(placeId)
                else
                        warn("TeleportClient: missing asset id for realm " .. tostring(selectedRealm))
@@ -358,17 +370,17 @@ function TeleportClient.bindWorldButtons(gui)
        end)
 end
 
-function TeleportClient.init(gui)
+function TeleportClient.init(gui, callbacks)
         if not gui then
                 warn("TeleportClient: gui parameter is required")
                 return
         end
 
         if gui:FindFirstChild("TeleFrame", true) then
-                TeleportClient.bindZoneButtons(gui)
+                TeleportClient.bindZoneButtons(gui, callbacks)
         end
         if gui:FindFirstChild("WorldTeleFrame", true) then
-                TeleportClient.bindWorldButtons(gui)
+                TeleportClient.bindWorldButtons(gui, callbacks)
         end
 end
 

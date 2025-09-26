@@ -131,6 +131,7 @@ function TeleportUI.init(parent, baseY, dependencies)
         self.selectedRealm = nil
         self.realmInfo = dependencies.REALM_INFO or DEFAULT_REALM_INFO
         self.getRealmFolder = dependencies.getRealmFolder or defaultGetRealmFolder
+        self.onTeleport = dependencies.onTeleport
 
         local teleportContainer = Instance.new("Frame")
         teleportContainer.Name = "TeleportContainer"
@@ -474,8 +475,13 @@ function TeleportUI.init(parent, baseY, dependencies)
                 self:setVisible(false)
         end))
 
-        TeleportClient.bindZoneButtons(teleportContainer)
-        TeleportClient.bindWorldButtons(teleportContainer)
+        local teleportCallbacks
+        if self.onTeleport then
+                teleportCallbacks = {onTeleport = self.onTeleport}
+        end
+
+        TeleportClient.bindZoneButtons(teleportContainer, teleportCallbacks)
+        TeleportClient.bindWorldButtons(teleportContainer, teleportCallbacks)
 
         return self
 end
