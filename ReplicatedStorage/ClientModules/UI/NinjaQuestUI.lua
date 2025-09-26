@@ -92,12 +92,17 @@ function QuestUI.init(parent, baseY)
     closeButton.Parent = previewHeader
     createCorner(closeButton, 10)
 
-    local emoteContainer = Instance.new("Frame")
+    local emoteContainer = Instance.new("ScrollingFrame")
     emoteContainer.Name = "EmoteButtonRow"
     emoteContainer.Size = UDim2.new(1, -20, 0, 46)
     emoteContainer.Position = UDim2.new(0, 10, 0, 55)
     emoteContainer.BackgroundTransparency = 1
     emoteContainer.ZIndex = 6
+    emoteContainer.ScrollingDirection = Enum.ScrollingDirection.X
+    emoteContainer.AutomaticCanvasSize = Enum.AutomaticSize.X
+    emoteContainer.CanvasSize = UDim2.new(0, 0, 0, 46)
+    emoteContainer.ScrollBarThickness = 4
+    emoteContainer.ClipsDescendants = true
     emoteContainer.Parent = previewCard
 
     local emoteLayout = Instance.new("UIListLayout")
