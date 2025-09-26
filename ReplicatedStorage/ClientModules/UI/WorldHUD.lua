@@ -85,13 +85,14 @@ function WorldHUD.new(config, dependencies)
 
 	local playerGui = ensureParent()
 
-	local gui = Instance.new("ScreenGui")
-	gui.Name = "WorldHUD"
-	gui.ResetOnSpawn = false
-	gui.IgnoreGuiInset = true
-	gui.DisplayOrder = 75
-	gui.Parent = playerGui
-	self.gui = gui
+        local gui = Instance.new("ScreenGui")
+        gui.Name = "WorldHUD"
+        gui.ResetOnSpawn = false
+        gui.IgnoreGuiInset = true
+        gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+        gui.DisplayOrder = 75
+        gui.Parent = playerGui
+        self.gui = gui
 
 	local root = Instance.new("Frame")
 	root.Name = "WorldHUDRoot"
