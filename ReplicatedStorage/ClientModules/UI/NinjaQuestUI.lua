@@ -77,21 +77,20 @@ function QuestUI.init(parent, baseY)
 
     local closeButton = Instance.new("TextButton")
     closeButton.Name = "QuestCloseButton"
-    closeButton.Size = UDim2.new(0, 34, 0, 34)
-    closeButton.AnchorPoint = Vector2.new(1, 0.5)
-    closeButton.Position = UDim2.new(1, -10, 0.5, 0)
-    closeButton.BackgroundColor3 = Color3.fromRGB(80, 20, 20)
-    closeButton.BackgroundTransparency = 0.1
-    closeButton.TextColor3 = Color3.fromRGB(255, 150, 150)
+    closeButton.Size = UDim2.new(0, 32, 0, 32)
+    closeButton.AnchorPoint = Vector2.new(1, 0)
+    closeButton.Position = UDim2.new(1, -20, 0, 16)
+    closeButton.BackgroundColor3 = Color3.fromRGB(120, 40, 40)
+    closeButton.BackgroundTransparency = 0
+    closeButton.TextColor3 = Color3.new(1, 1, 1)
     closeButton.Font = Enum.Font.GothamBold
     closeButton.TextScaled = true
-    closeButton.Text = "✕"
+    closeButton.Text = "X"
     closeButton.AutoButtonColor = true
     closeButton.ZIndex = 8
     closeButton.BorderSizePixel = 0
     closeButton.Parent = previewHeader
-    createCorner(closeButton, 20)
-    createStroke(closeButton, 2, Color3.fromRGB(120, 40, 40))
+    createCorner(closeButton, 10)
 
     local emoteContainer = Instance.new("Frame")
     emoteContainer.Name = "EmoteButtonRow"
