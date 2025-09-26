@@ -160,46 +160,81 @@ function TeleportClient.bindWorldButtons(gui)
        enterButton.Active = false
        enterButton.AutoButtonColor = false
 
-       for name, placeId in pairs(TeleportClient.worldSpawnIds) do
+       local function bindRealmButton(name, button)
+               if worldButtons[name] then
+                       return true
+               end
+
+               worldButtons[name] = button
+               button.AutoButtonColor = false
+
+               local function isUnlocked()
+                       local flag = realmsFolder and realmsFolder:FindFirstChild(name)
+                       return flag and flag.Value
+               end
+
+               local function updateVisual()
+                       if TeleportClient.worldSpawnIds[name] and TeleportClient.worldSpawnIds[name] > 0 and isUnlocked() then
+                               button.BackgroundColor3 = Color3.fromRGB(50,120,255)
+                               button.TextColor3 = Color3.new(1,1,1)
+                       else
+                               button.BackgroundColor3 = Color3.fromRGB(80,80,80)
+                               button.TextColor3 = Color3.fromRGB(170,170,170)
+                       end
+               end
+
+               updateVisual()
+
+               if realmsFolder then
+                       local flag = realmsFolder:FindFirstChild(name)
+                       if flag then
+                               flag:GetPropertyChangedSignal("Value"):Connect(updateVisual)
+                       end
+               end
+
+               button.Activated:Connect(function()
+                       local placeId = TeleportClient.worldSpawnIds[name]
+                       if not (placeId and placeId > 0) then
+                               warn("TeleportClient: missing asset id for realm " .. name)
+                               return
+                       end
+                       if not isUnlocked() then
+                               notify("Realm " .. name .. " is locked")
+                               return
+                       end
+                       selectRealm(name, button)
+               end)
+
+               return true
+       end
+
+       local function tryBindButton(name)
                local button = worldFrame:FindFirstChild(name .. "Button")
                if button then
-                       worldButtons[name] = button
-                       button.AutoButtonColor = false
-                       local function isUnlocked()
-                               local flag = realmsFolder and realmsFolder:FindFirstChild(name)
-                               return flag and flag.Value
-                       end
-                       local function updateVisual()
-                               if placeId and placeId > 0 and isUnlocked() then
-                                       button.BackgroundColor3 = Color3.fromRGB(50,120,255)
-                                       button.TextColor3 = Color3.new(1,1,1)
-                               else
-                                       button.BackgroundColor3 = Color3.fromRGB(80,80,80)
-                                       button.TextColor3 = Color3.fromRGB(170,170,170)
+                       return bindRealmButton(name, button)
+               end
+               return false
+       end
+
+       for name in pairs(TeleportClient.worldSpawnIds) do
+               if not tryBindButton(name) then
+                       task.delay(5, function()
+                               if not worldButtons[name] then
+                                       warn("World button not found for: " .. name)
                                end
-                       end
-                       updateVisual()
-                       if realmsFolder then
-                               local flag = realmsFolder:FindFirstChild(name)
-                               if flag then
-                                       flag:GetPropertyChangedSignal("Value"):Connect(updateVisual)
-                               end
-                       end
-                       button.Activated:Connect(function()
-                               if not (placeId and placeId > 0) then
-                                       warn("TeleportClient: missing asset id for realm " .. name)
-                                       return
-                               end
-                               if not isUnlocked() then
-                                       notify("Realm " .. name .. " is locked")
-                                       return
-                               end
-                               selectRealm(name, button)
                        end)
-               else
-                       warn("World button not found for: " .. name)
                end
        end
+
+       worldFrame.ChildAdded:Connect(function(child)
+               local suffixStart = string.find(child.Name, "Button", 1, true)
+               if not suffixStart then return end
+
+               local baseName = string.sub(child.Name, 1, suffixStart - 1)
+               if TeleportClient.worldSpawnIds[baseName] then
+                       bindRealmButton(baseName, child)
+               end
+       end)
 
        enterButton.Activated:Connect(function()
                if not selectedRealm then return end
