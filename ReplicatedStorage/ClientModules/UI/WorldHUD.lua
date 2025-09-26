@@ -37,6 +37,18 @@ local function track(self, conn)
     return conn
 end
 
+local function getEnumValue(enumType, itemName, fallback)
+    local ok, value = pcall(function()
+        return enumType[itemName]
+    end)
+
+    if ok and value ~= nil then
+        return value
+    end
+
+    return fallback
+end
+
 local function createRealmButton(parent, info, order)
     local btn = Instance.new("TextButton")
     btn.Name = info.key .. "Button"
@@ -326,7 +338,7 @@ function WorldHUD.new(config, dependencies)
     local worldLayout = Instance.new("UIListLayout")
     worldLayout.FillDirection = Enum.FillDirection.Vertical
     worldLayout.Padding = UDim.new(0, 8)
-    worldLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+    worldLayout.HorizontalAlignment = getEnumValue(Enum.HorizontalAlignment, "Stretch", Enum.HorizontalAlignment.Left)
     worldLayout.SortOrder = Enum.SortOrder.LayoutOrder
     worldLayout.Parent = worldFrame
 
