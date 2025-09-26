@@ -31,8 +31,8 @@ function NinjaPouchUI.init(parent, baseY)
     -- Main pouch container
     local pouch = Instance.new("Frame")
     pouch.Name = "NinjaPouch"
-    pouch.Size = UDim2.new(0.45, -20, 0.65, 0)
-    pouch.Position = UDim2.new(1, -15, 0, baseY + 80)
+    pouch.Size = UDim2.new(0.47, -20, 0.65, 0)
+    pouch.Position = UDim2.new(1, -20, 0, baseY + 80)
     pouch.AnchorPoint = Vector2.new(1, 0)
     pouch.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
     pouch.BackgroundTransparency = 0.1
