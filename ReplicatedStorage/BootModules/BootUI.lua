@@ -737,7 +737,17 @@ if enterRealmButton then
 
             DojoClient.hide()
             restoreUIBlur()
-            TweenService:Create(fade, TweenInfo.new(0.35), {BackgroundTransparency = 1}):Play()
+            local fadeTween = TweenService:Create(fade, TweenInfo.new(0.35), {BackgroundTransparency = 1})
+            fadeTween.Completed:Connect(function(playbackState)
+                if playbackState == Enum.PlaybackState.Completed then
+                    BootUI.showLoadout()
+                    local currentHud = BootUI.hud
+                    if currentHud and currentHud.setBackButtonEnabled then
+                        currentHud:setBackButtonEnabled(true)
+                    end
+                end
+            end)
+            fadeTween:Play()
             task.delay(0.4, function()
                 BootUI.hideOverlay()
             end)
