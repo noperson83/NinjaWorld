@@ -44,7 +44,7 @@ function NinjaQuestUI.init(parent, baseY)
 	local previewCard = Instance.new("Frame")
 	previewCard.Name = "CharacterPreview"
 	previewCard.BackgroundTransparency = 0.1
-	previewCard.Size = UDim2.new(0.49, -20, 0.65, 0)
+	previewCard.Size = UDim2.new(0.49, -20, 0.74, 0)
 	previewCard.Position = UDim2.fromOffset(20, baseY + 80)
 	previewCard.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 	previewCard.BorderSizePixel = 0
@@ -418,4 +418,3 @@ function NinjaQuestUI.init(parent, baseY)
 end
 
 return NinjaQuestUI
-
