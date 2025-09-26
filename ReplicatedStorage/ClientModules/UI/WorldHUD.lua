@@ -37,16 +37,24 @@ local function track(self, conn)
     return conn
 end
 
-local function createRealmButton(parent, info)
+local function createRealmButton(parent, info, order)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0,160,1,0)
+    btn.Name = info.key .. "Button"
+    btn.Size = UDim2.new(1, 0, 0, 44)
+    btn.LayoutOrder = order or 0
     btn.Text = info.name
-    btn.Font = Enum.Font.Gotham
+    btn.Font = Enum.Font.GothamSemibold
     btn.TextScaled = true
-    btn.BackgroundColor3 = Color3.fromRGB(80,80,80)
-    btn.TextColor3 = Color3.fromRGB(170,170,170)
-    btn.AutoButtonColor = false
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+    btn.TextColor3 = Color3.fromRGB(170, 170, 170)
+    btn.AutoButtonColor = true
+    btn.BorderSizePixel = 0
     btn.Parent = parent
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = btn
+
     return btn
 end
 
@@ -114,27 +122,6 @@ function WorldHUD.new(config, dependencies)
     root.Parent = gui
     self.root = root
 
-    -- Shop button and toggle logic
-    local shopButton = Instance.new("TextButton")
-    shopButton.Name = "ShopButton"
-    shopButton.Size = UDim2.fromScale(0.1,0.06)
-    shopButton.AnchorPoint = Vector2.new(1,1)
-    shopButton.Position = UDim2.fromScale(0.98,0.98)
-    shopButton.Text = "Shop"
-    shopButton.Font = Enum.Font.GothamSemibold
-    shopButton.TextScaled = true
-    shopButton.TextColor3 = Color3.new(1,1,1)
-    shopButton.BackgroundColor3 = Color3.fromRGB(50,120,255)
-    shopButton.AutoButtonColor = true
-    shopButton.ZIndex = 10
-    shopButton.Visible = false
-    shopButton.Parent = root
-    self.shopButton = shopButton
-
-    track(self, shopButton.Activated:Connect(function()
-        self:toggleShop()
-    end))
-
     -- Loadout UI
     local loadout = Instance.new("Frame")
     loadout.Name = "Loadout"
@@ -160,66 +147,46 @@ function WorldHUD.new(config, dependencies)
     loadTitle.TextColor3 = Color3.fromRGB(255,200,120)
     loadTitle.Parent = loadout
 
-    -- Teleport UI placeholders
+    -- Teleport UI
     local teleportContainer = Instance.new("Frame")
     teleportContainer.Name = "TeleportContainer"
-    teleportContainer.Size = UDim2.fromScale(1,1)
-    teleportContainer.BackgroundTransparency = 1
+    teleportContainer.Size = UDim2.new(0.65, -20, 0.65, 0)
+    teleportContainer.Position = UDim2.new(0, 20, 0, baseY + 80)
+    teleportContainer.BackgroundColor3 = Color3.fromRGB(18, 20, 24)
+    teleportContainer.BackgroundTransparency = 0.05
+    teleportContainer.BorderSizePixel = 0
     teleportContainer.Visible = false
     teleportContainer.ZIndex = 25
     teleportContainer.Parent = loadout
 
-    local teleFrame = Instance.new("Frame")
-    teleFrame.Name = "TeleFrame"
-    teleFrame.Size = UDim2.fromScale(1,1)
-    teleFrame.BackgroundTransparency = 1
-    teleFrame.Visible = false
-    teleFrame.Parent = teleportContainer
+    local teleportCorner = Instance.new("UICorner")
+    teleportCorner.CornerRadius = UDim.new(0, 12)
+    teleportCorner.Parent = teleportContainer
 
-    local zoneButtons = {"Atom","Fire","Grow","Ice","Light","Metal","Water","Wind","Dojo","Starter"}
-    for _, zone in ipairs(zoneButtons) do
-        local button = Instance.new("TextButton")
-        button.Name = zone .. "Button"
-        button.Size = UDim2.new(0,0,0,0)
-        button.Visible = false
-        button.Text = zone
-        button.Parent = teleFrame
-    end
+    local teleportStroke = Instance.new("UIStroke")
+    teleportStroke.Color = Color3.fromRGB(70, 90, 140)
+    teleportStroke.Thickness = 2
+    teleportStroke.Transparency = 0.3
+    teleportStroke.Parent = teleportContainer
 
-    local worldFrame = Instance.new("Frame")
-    worldFrame.Name = "WorldTeleFrame"
-    worldFrame.Size = UDim2.fromScale(1,1)
-    worldFrame.BackgroundTransparency = 1
-    worldFrame.Visible = false
-    worldFrame.Parent = teleportContainer
-
-    local enterRealmButton = Instance.new("TextButton")
-    enterRealmButton.Name = "EnterRealmButton"
-    enterRealmButton.Size = UDim2.new(0,0,0,0)
-    enterRealmButton.Visible = false
-    enterRealmButton.Text = "Enter"
-    enterRealmButton.Parent = worldFrame
-    self.enterRealmButton = enterRealmButton
-
-    for realmName, _ in pairs(TeleportClient.worldSpawnIds) do
-        local button = Instance.new("TextButton")
-        button.Name = realmName .. "Button"
-        button.Size = UDim2.new(0,0,0,0)
-        button.Visible = false
-        button.Text = realmName
-        button.Parent = worldFrame
-    end
-
-    TeleportClient.bindZoneButtons(root)
-    TeleportClient.bindWorldButtons(root)
+    local teleportTitle = Instance.new("TextLabel")
+    teleportTitle.Size = UDim2.new(1, -48, 0, 34)
+    teleportTitle.Position = UDim2.new(0, 20, 0, 16)
+    teleportTitle.BackgroundTransparency = 1
+    teleportTitle.Text = "Teleport Hub"
+    teleportTitle.TextXAlignment = Enum.TextXAlignment.Left
+    teleportTitle.Font = Enum.Font.GothamBold
+    teleportTitle.TextScaled = true
+    teleportTitle.TextColor3 = Color3.fromRGB(225, 225, 240)
+    teleportTitle.Parent = teleportContainer
 
     local teleportCloseButton = Instance.new("TextButton")
     teleportCloseButton.Name = "TeleportCloseButton"
-    teleportCloseButton.Size = UDim2.new(0,32,0,32)
-    teleportCloseButton.AnchorPoint = Vector2.new(1,0)
-    teleportCloseButton.Position = UDim2.new(1,-20,0, baseY + 20)
-    teleportCloseButton.BackgroundColor3 = Color3.fromRGB(120,40,40)
-    teleportCloseButton.TextColor3 = Color3.new(1,1,1)
+    teleportCloseButton.Size = UDim2.new(0, 32, 0, 32)
+    teleportCloseButton.AnchorPoint = Vector2.new(1, 0)
+    teleportCloseButton.Position = UDim2.new(1, -20, 0, 16)
+    teleportCloseButton.BackgroundColor3 = Color3.fromRGB(120, 40, 40)
+    teleportCloseButton.TextColor3 = Color3.new(1, 1, 1)
     teleportCloseButton.Text = "X"
     teleportCloseButton.Font = Enum.Font.GothamBold
     teleportCloseButton.TextScaled = true
@@ -227,8 +194,165 @@ function WorldHUD.new(config, dependencies)
     teleportCloseButton.Visible = false
     teleportCloseButton.ZIndex = 30
     teleportCloseButton.Parent = teleportContainer
+
+    local teleportCloseCorner = Instance.new("UICorner")
+    teleportCloseCorner.CornerRadius = UDim.new(0, 10)
+    teleportCloseCorner.Parent = teleportCloseButton
+
+    local teleportContent = Instance.new("Frame")
+    teleportContent.Name = "TeleportContent"
+    teleportContent.Size = UDim2.new(1, -32, 1, -84)
+    teleportContent.Position = UDim2.new(0, 16, 0, 60)
+    teleportContent.BackgroundTransparency = 1
+    teleportContent.Parent = teleportContainer
+
+    local localColumn = Instance.new("Frame")
+    localColumn.Name = "LocalTeleports"
+    localColumn.Size = UDim2.new(0.48, 0, 1, 0)
+    localColumn.BackgroundTransparency = 1
+    localColumn.Parent = teleportContent
+
+    local worldColumn = Instance.new("Frame")
+    worldColumn.Name = "WorldTeleports"
+    worldColumn.Size = UDim2.new(0.48, 0, 1, 0)
+    worldColumn.Position = UDim2.new(0.52, 0, 0, 0)
+    worldColumn.BackgroundTransparency = 1
+    worldColumn.Parent = teleportContent
+
+    local localTitle = Instance.new("TextLabel")
+    localTitle.Size = UDim2.new(1, 0, 0, 28)
+    localTitle.BackgroundTransparency = 1
+    localTitle.Text = "Locations"
+    localTitle.TextXAlignment = Enum.TextXAlignment.Left
+    localTitle.Font = Enum.Font.GothamSemibold
+    localTitle.TextScaled = true
+    localTitle.TextColor3 = Color3.fromRGB(200, 200, 220)
+    localTitle.Parent = localColumn
+
+    local teleFrame = Instance.new("Frame")
+    teleFrame.Name = "TeleFrame"
+    teleFrame.Size = UDim2.new(1, 0, 1, -36)
+    teleFrame.Position = UDim2.new(0, 0, 0, 36)
+    teleFrame.BackgroundColor3 = Color3.fromRGB(24, 26, 28)
+    teleFrame.BackgroundTransparency = 0.4
+    teleFrame.BorderSizePixel = 0
+    teleFrame.Parent = localColumn
+
+    local teleFrameCorner = Instance.new("UICorner")
+    teleFrameCorner.CornerRadius = UDim.new(0, 10)
+    teleFrameCorner.Parent = teleFrame
+
+    local telePadding = Instance.new("UIPadding")
+    telePadding.PaddingTop = UDim.new(0, 8)
+    telePadding.PaddingBottom = UDim.new(0, 8)
+    telePadding.PaddingLeft = UDim.new(0, 8)
+    telePadding.PaddingRight = UDim.new(0, 8)
+    telePadding.Parent = teleFrame
+
+    local teleGrid = Instance.new("UIGridLayout")
+    teleGrid.CellSize = UDim2.new(0.5, -10, 0, 52)
+    teleGrid.CellPadding = UDim2.new(0, 8, 0, 8)
+    teleGrid.SortOrder = Enum.SortOrder.LayoutOrder
+    teleGrid.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    teleGrid.VerticalAlignment = Enum.VerticalAlignment.Top
+    teleGrid.Parent = teleFrame
+
+    local zoneButtonsInfo = {
+        {name = "Starter", label = "Starter Zone"},
+        {name = "Dojo", label = "Dojo Entrance"},
+        {name = "Water", label = "Water Island"},
+        {name = "Fire", label = "Fire Island"},
+        {name = "Wind", label = "Wind Island"},
+        {name = "Grow", label = "Growth Island"},
+        {name = "Ice", label = "Ice Island"},
+        {name = "Light", label = "Light Island"},
+        {name = "Metal", label = "Metal Island"},
+        {name = "Atom", label = "Atoms Island"},
+    }
+
+    for index, info in ipairs(zoneButtonsInfo) do
+        local button = Instance.new("TextButton")
+        button.Name = info.name .. "Button"
+        button.Size = UDim2.new(0, 0, 0, 0)
+        button.LayoutOrder = index
+        button.BackgroundColor3 = Color3.fromRGB(50, 120, 255)
+        button.BackgroundTransparency = 0.2
+        button.TextColor3 = Color3.new(1, 1, 1)
+        button.Font = Enum.Font.GothamSemibold
+        button.TextScaled = true
+        button.AutoButtonColor = true
+        button.Text = info.label
+        button.Parent = teleFrame
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 8)
+        corner.Parent = button
+    end
+
+    local worldTitle = Instance.new("TextLabel")
+    worldTitle.Size = UDim2.new(1, 0, 0, 28)
+    worldTitle.BackgroundTransparency = 1
+    worldTitle.Text = "Realms"
+    worldTitle.TextXAlignment = Enum.TextXAlignment.Left
+    worldTitle.Font = Enum.Font.GothamSemibold
+    worldTitle.TextScaled = true
+    worldTitle.TextColor3 = Color3.fromRGB(200, 200, 220)
+    worldTitle.Parent = worldColumn
+
+    local worldFrame = Instance.new("ScrollingFrame")
+    worldFrame.Name = "WorldTeleFrame"
+    worldFrame.Size = UDim2.new(1, 0, 1, -88)
+    worldFrame.Position = UDim2.new(0, 0, 0, 36)
+    worldFrame.BackgroundColor3 = Color3.fromRGB(24, 26, 28)
+    worldFrame.BackgroundTransparency = 0.4
+    worldFrame.BorderSizePixel = 0
+    worldFrame.ScrollBarThickness = 6
+    worldFrame.ScrollingDirection = Enum.ScrollingDirection.Y
+    worldFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    worldFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+    worldFrame.Parent = worldColumn
+
+    local worldCorner = Instance.new("UICorner")
+    worldCorner.CornerRadius = UDim.new(0, 10)
+    worldCorner.Parent = worldFrame
+
+    local worldPadding = Instance.new("UIPadding")
+    worldPadding.PaddingTop = UDim.new(0, 8)
+    worldPadding.PaddingBottom = UDim.new(0, 8)
+    worldPadding.PaddingLeft = UDim.new(0, 8)
+    worldPadding.PaddingRight = UDim.new(0, 8)
+    worldPadding.Parent = worldFrame
+
+    local worldLayout = Instance.new("UIListLayout")
+    worldLayout.FillDirection = Enum.FillDirection.Vertical
+    worldLayout.Padding = UDim.new(0, 8)
+    worldLayout.HorizontalAlignment = Enum.HorizontalAlignment.Stretch
+    worldLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    worldLayout.Parent = worldFrame
+
+    local enterRealmButton = Instance.new("TextButton")
+    enterRealmButton.Name = "EnterRealmButton"
+    enterRealmButton.Size = UDim2.new(1, 0, 0, 48)
+    enterRealmButton.LayoutOrder = 1000
+    enterRealmButton.Text = "Select a realm"
+    enterRealmButton.Font = Enum.Font.GothamBold
+    enterRealmButton.TextScaled = true
+    enterRealmButton.TextColor3 = Color3.fromRGB(220, 220, 230)
+    enterRealmButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    enterRealmButton.AutoButtonColor = false
+    enterRealmButton.Active = false
+    enterRealmButton.Parent = worldFrame
+
+    local enterCorner = Instance.new("UICorner")
+    enterCorner.CornerRadius = UDim.new(0, 8)
+    enterCorner.Parent = enterRealmButton
+
+    TeleportClient.bindZoneButtons(root)
+    TeleportClient.bindWorldButtons(root)
+
     self.teleportContainer = teleportContainer
     self.teleportCloseButton = teleportCloseButton
+    self.enterRealmButton = enterRealmButton
 
     local quest = QuestUI.init(loadout, baseY)
     self.quest = quest
@@ -238,7 +362,7 @@ function WorldHUD.new(config, dependencies)
 
     local togglePanel = Instance.new("Frame")
     togglePanel.Name = "PanelToggleButtons"
-    togglePanel.Size = UDim2.new(0,180,0,120)
+    togglePanel.Size = UDim2.new(0,180,0,160)
     togglePanel.AnchorPoint = Vector2.new(0,1)
     togglePanel.Position = UDim2.new(0,20,1,-220)
     togglePanel.BackgroundTransparency = 1
@@ -272,9 +396,12 @@ function WorldHUD.new(config, dependencies)
     local questOpenButton = createOpenButton("Quests")
     local backpackOpenButton = createOpenButton("Backpack")
     local teleOpenButton = createOpenButton("Teleports")
+    local shopButton = createOpenButton("Shop")
+    shopButton.Visible = true
     self.questOpenButton = questOpenButton
     self.backpackOpenButton = backpackOpenButton
     self.teleportOpenButton = teleOpenButton
+    self.shopButton = shopButton
 
     local function setTeleportsVisible(visible)
         teleportContainer.Visible = visible and true or false
@@ -322,6 +449,10 @@ function WorldHUD.new(config, dependencies)
         backpackOpenButton.Visible = true
     end
 
+    track(self, shopButton.MouseButton1Click:Connect(function()
+        self:toggleShop()
+    end))
+
     track(self, teleportCloseButton.MouseButton1Click:Connect(function()
         setTeleportsVisible(false)
     end))
@@ -332,45 +463,20 @@ function WorldHUD.new(config, dependencies)
 
     setTeleportsVisible(false)
 
-    local btnRow = Instance.new("Frame")
-    btnRow.Size = UDim2.new(1,-40,0,60)
-    btnRow.Position = UDim2.new(0,20,1,-80)
-    btnRow.BackgroundTransparency = 1
-    btnRow.Parent = loadout
-
-    local function makeAction(text, rightAlign)
-        local b = Instance.new("TextButton")
-        b.Size = UDim2.new(0,240,1,0)
-        b.Position = rightAlign and UDim2.new(1,-250,0,0) or UDim2.fromOffset(0,0)
-        b.AnchorPoint = rightAlign and Vector2.new(1,0) or Vector2.new(0,0)
-        b.Text = text
-        b.Font = Enum.Font.GothamSemibold
-        b.TextScaled = true
-        b.TextColor3 = Color3.new(1,1,1)
-        b.BackgroundColor3 = Color3.fromRGB(50,120,255)
-        b.AutoButtonColor = true
-        b.Parent = btnRow
-        return b
-    end
-
-    local btnBack = makeAction("Back", false)
-    local btnEnterRealm = makeAction("Enter Realm", true)
-    self.backButton = btnBack
-    self.enterRealmButton = btnEnterRealm
-
-    local realmScroll = Instance.new("ScrollingFrame")
-    realmScroll.Size = UDim2.new(1,-500,1,0)
-    realmScroll.Position = UDim2.fromOffset(250,-100)
-    realmScroll.BackgroundTransparency = 1
-    realmScroll.ScrollBarThickness = 6
-    realmScroll.CanvasSize = UDim2.new()
-    realmScroll.Parent = btnRow
-    local realmLayout = Instance.new("UIListLayout", realmScroll)
-    realmLayout.FillDirection = Enum.FillDirection.Horizontal
-    realmLayout.Padding = UDim.new(0,6)
-    track(self, realmLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        realmScroll.CanvasSize = UDim2.new(0, realmLayout.AbsoluteContentSize.X, 0, 0)
-    end))
+    local backButton = Instance.new("TextButton")
+    backButton.Name = "BackButton"
+    backButton.Size = UDim2.new(0, 220, 0, 48)
+    backButton.AnchorPoint = Vector2.new(0, 1)
+    backButton.Position = UDim2.new(0, 20, 1, -20)
+    backButton.BackgroundColor3 = Color3.fromRGB(50, 120, 255)
+    backButton.TextColor3 = Color3.new(1, 1, 1)
+    backButton.Font = Enum.Font.GothamSemibold
+    backButton.TextScaled = true
+    backButton.AutoButtonColor = true
+    backButton.Text = "Back"
+    backButton.ZIndex = 40
+    backButton.Parent = loadout
+    self.backButton = backButton
 
     local realmButtons = {}
     self.realmButtons = realmButtons
@@ -393,7 +499,7 @@ function WorldHUD.new(config, dependencies)
         local unlocked = isRealmUnlocked(key)
         btn.Active = unlocked
         btn.AutoButtonColor = unlocked
-        btn.BackgroundColor3 = unlocked and Color3.fromRGB(50,120,255) or Color3.fromRGB(80,80,80)
+        btn.BackgroundColor3 = unlocked and Color3.fromRGB(50,120,255) or Color3.fromRGB(40,40,48)
         btn.TextColor3 = unlocked and Color3.new(1,1,1) or Color3.fromRGB(170,170,170)
     end
 
@@ -407,15 +513,25 @@ function WorldHUD.new(config, dependencies)
             end
         end
         local hasPlace = (key == "StarterDojo") or (TeleportClient.WorldPlaceIds[key] and TeleportClient.WorldPlaceIds[key] > 0)
-        btnEnterRealm.Active = hasPlace
-        btnEnterRealm.AutoButtonColor = hasPlace
-        btnEnterRealm.BackgroundColor3 = hasPlace and Color3.fromRGB(50,120,255) or Color3.fromRGB(80,80,80)
-        btnEnterRealm.Text = "Enter " .. (realmDisplayLookup[key] or "Realm")
+        enterRealmButton.Active = hasPlace
+        enterRealmButton.AutoButtonColor = hasPlace
+        enterRealmButton.BackgroundColor3 = hasPlace and Color3.fromRGB(50,120,255) or Color3.fromRGB(80,80,80)
+        enterRealmButton.TextColor3 = hasPlace and Color3.new(1,1,1) or Color3.fromRGB(220,220,230)
+        enterRealmButton.Text = "Enter " .. (realmDisplayLookup[key] or "Realm")
     end
     self._setSelectedRealm = setSelected
 
-    for _, info in ipairs(REALM_INFO) do
-        local btn = createRealmButton(realmScroll, info)
+    track(self, enterRealmButton:GetPropertyChangedSignal("Text"):Connect(function()
+        local key = self.selectedRealm
+        if not key then return end
+        local desired = "Enter " .. (realmDisplayLookup[key] or key)
+        if enterRealmButton.Text ~= desired then
+            enterRealmButton.Text = desired
+        end
+    end))
+
+    for index, info in ipairs(REALM_INFO) do
+        local btn = createRealmButton(worldFrame, info, index)
         realmButtons[info.key] = btn
         track(self, btn.Activated:Connect(function()
             if not btn.Active then return end
@@ -434,8 +550,8 @@ function WorldHUD.new(config, dependencies)
         updateRealmButton(info.key)
     end
 
-    btnEnterRealm.Active = false
-    btnEnterRealm.AutoButtonColor = false
+    enterRealmButton.Active = false
+    enterRealmButton.AutoButtonColor = false
 
     -- If no realm has been selected yet, default to the first unlocked realm
     if not self.selectedRealm then
