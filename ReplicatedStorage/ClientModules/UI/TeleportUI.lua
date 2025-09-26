@@ -6,6 +6,8 @@ TeleportUI.__index = TeleportUI
 
 local player = Players.LocalPlayer
 
+local BASE_Z_INDEX = 25
+
 local DEFAULT_REALM_INFO = {
         {key = "StarterDojo",   name = "Starter Dojo"},
         {key = "SecretVillage", name = "Secret Village of Elementara"},
@@ -138,7 +140,7 @@ function TeleportUI.init(parent, baseY, dependencies)
         teleportContainer.BackgroundTransparency = 0.05
         teleportContainer.BorderSizePixel = 0
         teleportContainer.Visible = false
-        teleportContainer.ZIndex = 25
+        teleportContainer.ZIndex = BASE_Z_INDEX
         teleportContainer.Parent = parent
 
         local teleportCorner = Instance.new("UICorner")
@@ -160,6 +162,7 @@ function TeleportUI.init(parent, baseY, dependencies)
         teleportTitle.Font = Enum.Font.GothamBold
         teleportTitle.TextScaled = true
         teleportTitle.TextColor3 = Color3.fromRGB(225, 225, 240)
+        teleportTitle.ZIndex = BASE_Z_INDEX + 1
         teleportTitle.Parent = teleportContainer
 
         local teleportCloseButton = Instance.new("TextButton")
@@ -174,7 +177,7 @@ function TeleportUI.init(parent, baseY, dependencies)
         teleportCloseButton.TextScaled = true
         teleportCloseButton.AutoButtonColor = true
         teleportCloseButton.Visible = false
-        teleportCloseButton.ZIndex = 30
+        teleportCloseButton.ZIndex = BASE_Z_INDEX + 5
         teleportCloseButton.Parent = teleportContainer
 
         local teleportCloseCorner = Instance.new("UICorner")
@@ -186,12 +189,14 @@ function TeleportUI.init(parent, baseY, dependencies)
         teleportContent.Size = UDim2.new(1, -32, 1, -84)
         teleportContent.Position = UDim2.new(0, 16, 0, 60)
         teleportContent.BackgroundTransparency = 1
+        teleportContent.ZIndex = BASE_Z_INDEX + 1
         teleportContent.Parent = teleportContainer
 
         local localColumn = Instance.new("Frame")
         localColumn.Name = "LocalTeleports"
         localColumn.Size = UDim2.new(0.48, 0, 1, 0)
         localColumn.BackgroundTransparency = 1
+        localColumn.ZIndex = BASE_Z_INDEX + 2
         localColumn.Parent = teleportContent
 
         local worldColumn = Instance.new("Frame")
@@ -199,6 +204,7 @@ function TeleportUI.init(parent, baseY, dependencies)
         worldColumn.Size = UDim2.new(0.48, 0, 1, 0)
         worldColumn.Position = UDim2.new(0.52, 0, 0, 0)
         worldColumn.BackgroundTransparency = 1
+        worldColumn.ZIndex = BASE_Z_INDEX + 2
         worldColumn.Parent = teleportContent
 
         local localTitle = Instance.new("TextLabel")
@@ -209,6 +215,7 @@ function TeleportUI.init(parent, baseY, dependencies)
         localTitle.Font = Enum.Font.GothamSemibold
         localTitle.TextScaled = true
         localTitle.TextColor3 = Color3.fromRGB(200, 200, 220)
+        localTitle.ZIndex = BASE_Z_INDEX + 3
         localTitle.Parent = localColumn
 
         local teleFrame = Instance.new("Frame")
@@ -218,6 +225,7 @@ function TeleportUI.init(parent, baseY, dependencies)
         teleFrame.BackgroundColor3 = Color3.fromRGB(24, 26, 28)
         teleFrame.BackgroundTransparency = 0.4
         teleFrame.BorderSizePixel = 0
+        teleFrame.ZIndex = BASE_Z_INDEX + 3
         teleFrame.Parent = localColumn
 
         local teleFrameCorner = Instance.new("UICorner")
@@ -264,6 +272,7 @@ function TeleportUI.init(parent, baseY, dependencies)
                 button.TextScaled = true
                 button.AutoButtonColor = true
                 button.Text = info.label
+                button.ZIndex = BASE_Z_INDEX + 4
                 button.Parent = teleFrame
 
                 local corner = Instance.new("UICorner")
@@ -279,6 +288,7 @@ function TeleportUI.init(parent, baseY, dependencies)
         worldTitle.Font = Enum.Font.GothamSemibold
         worldTitle.TextScaled = true
         worldTitle.TextColor3 = Color3.fromRGB(200, 200, 220)
+        worldTitle.ZIndex = BASE_Z_INDEX + 3
         worldTitle.Parent = worldColumn
 
         local worldFrame = Instance.new("ScrollingFrame")
@@ -292,6 +302,7 @@ function TeleportUI.init(parent, baseY, dependencies)
         worldFrame.ScrollingDirection = Enum.ScrollingDirection.Y
         worldFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
         worldFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+        worldFrame.ZIndex = BASE_Z_INDEX + 3
         worldFrame.Parent = worldColumn
 
         local worldCorner = Instance.new("UICorner")
@@ -318,6 +329,7 @@ function TeleportUI.init(parent, baseY, dependencies)
         enterButtonHolder.AnchorPoint = Vector2.new(0, 1)
         enterButtonHolder.Position = UDim2.new(0, 0, 1, 0)
         enterButtonHolder.BackgroundTransparency = 1
+        enterButtonHolder.ZIndex = BASE_Z_INDEX + 3
         enterButtonHolder.Parent = worldColumn
 
         local enterButtonPadding = Instance.new("UIPadding")
@@ -338,6 +350,7 @@ function TeleportUI.init(parent, baseY, dependencies)
         enterRealmButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
         enterRealmButton.AutoButtonColor = false
         enterRealmButton.Active = false
+        enterRealmButton.ZIndex = BASE_Z_INDEX + 4
         enterRealmButton.Parent = enterButtonHolder
 
         local enterCorner = Instance.new("UICorner")
@@ -400,6 +413,7 @@ function TeleportUI.init(parent, baseY, dependencies)
 
         for index, info in ipairs(self.realmInfo) do
                 local btn = createRealmButton(worldFrame, info, index)
+                btn.ZIndex = BASE_Z_INDEX + 4
                 self.realmButtons[info.key] = btn
                 track(self, btn.Activated:Connect(function()
                         if not btn.Active then return end
