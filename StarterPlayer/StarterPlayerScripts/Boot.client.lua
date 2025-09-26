@@ -6,14 +6,14 @@ local BootModules = ReplicatedStorage.BootModules
 -- Ensure a BlurEffect exists so other scripts can safely toggle it
 local blur = Lighting:FindFirstChild("Blur") or Lighting:FindFirstChildOfClass("BlurEffect")
 if not blur then
-    blur = Instance.new("BlurEffect")
-    blur.Name = "Blur"
-    blur.Enabled = false
-    blur.Parent = Lighting
+	blur = Instance.new("BlurEffect")
+	blur.Name = "Blur"
+	blur.Enabled = false
+	blur.Parent = Lighting
 end
 
-local PersonaUI = require(BootModules.PersonaUI)
-PersonaUI.start({waitTime = 0, fadeTime = 0})
+local LoadingUI = require(BootModules.LoadingUI)
+LoadingUI.start({waitTime = 0, fadeTime = 0})
 
 local DojoClient = require(BootModules.DojoClient)
 
@@ -22,6 +22,6 @@ BootUI.start()
 BootUI.setDebugLine("status", "Initializing profile fetch…")
 
 task.spawn(function()
-    local data = BootUI.fetchData()
-    BootUI.applyFetchedData(data)
+	local data = BootUI.fetchData()
+	BootUI.applyFetchedData(data)
 end)
