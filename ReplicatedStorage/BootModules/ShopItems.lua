@@ -1,3 +1,6 @@
+-- Item definitions exposed to both server and client boot modules.
+-- Keeping this module in ReplicatedStorage/BootModules ensures Roblox Studio
+-- exports it with the exact "ShopItems" name required at runtime.
 local ShopItems = {
     Elements = {
         Fire = {cost = 100},
