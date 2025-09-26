@@ -1,977 +1,1026 @@
-local Cosmetics = {}
+local NinjaCosmetics = {}
 
+-- ═══════════════════════════════════════════════════════════════
+--                        CORE SERVICES
+-- ═══════════════════════════════════════════════════════════════
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local ContentProvider = game:GetService("ContentProvider")
 
+-- ═══════════════════════════════════════════════════════════════
+--                      CONFIGURATION
+-- ═══════════════════════════════════════════════════════════════
 local GameSettings = require(ReplicatedStorage.GameSettings)
 local DEFAULT_SLOT_COUNT = tonumber(GameSettings.maxSlots) or 3
 
-local rf = nil
+-- Ninja-themed color palette
+local NINJA_COLORS = {
+    PRIMARY = Color3.fromRGB(15, 15, 25),        -- Deep shadow black
+    SECONDARY = Color3.fromRGB(25, 30, 45),      -- Midnight blue
+    ACCENT = Color3.fromRGB(200, 150, 50),       -- Golden accent
+    SUCCESS = Color3.fromRGB(80, 160, 80),       -- Forest green
+    DANGER = Color3.fromRGB(180, 60, 60),        -- Blood red
+    TEXT_PRIMARY = Color3.fromRGB(240, 240, 240), -- Almost white
+    TEXT_SECONDARY = Color3.fromRGB(200, 200, 200), -- Light gray
+    BORDER = Color3.fromRGB(60, 60, 80),         -- Subtle border
+    GLOW = Color3.fromRGB(100, 150, 255)         -- Mystical blue glow
+}
+
+-- Animation settings
+local ANIMATIONS = {
+    FADE_TIME = 0.3,
+    SCALE_TIME = 0.2,
+    HOVER_SCALE = 1.05,
+    CLICK_SCALE = 0.95
+}
+
+-- ═══════════════════════════════════════════════════════════════
+--                      PRIVATE VARIABLES
+-- ═══════════════════════════════════════════════════════════════
+local player = Players.LocalPlayer
+local personaServiceRF = nil
+local personaCache = {}
+local currentChoiceType = "Ninja"
+local chosenSlot = nil
+local selectedPersonaLabel = nil
+local levelValue = nil
+local fallbackStarterBackpack = nil
+
+-- UI References
+local dojoInterface = nil
+local slotButtons = {}
+local uiBridge = nil
+local rootUI = nil
+local slotsContainer = nil
+
+-- ═══════════════════════════════════════════════════════════════
+--                     UTILITY FUNCTIONS
+-- ═══════════════════════════════════════════════════════════════
+
+-- Enhanced remote function getter with error handling
 local function getPersonaRemote()
-    if rf and rf.Parent then
-        return rf
+    if personaServiceRF and personaServiceRF.Parent then
+        return personaServiceRF
     end
-    rf = ReplicatedStorage:FindFirstChild("PersonaServiceRF")
-    if not rf then
-        rf = ReplicatedStorage:WaitForChild("PersonaServiceRF", 5)
+
+    personaServiceRF = ReplicatedStorage:FindFirstChild("PersonaServiceRF")
+    if not personaServiceRF then
+        personaServiceRF = ReplicatedStorage:WaitForChild("PersonaServiceRF", 5)
     end
-    if not rf then
-        warn("Cosmetics: PersonaServiceRF missing")
+
+    if not personaServiceRF then
+        warn("🥷 NinjaCosmetics: PersonaServiceRF is missing from the shadows!")
     end
-    return rf
+
+    return personaServiceRF
 end
 
-local function profileRF(action, data)
+-- Enhanced remote function caller with performance monitoring
+local function invokePersonaService(action, data)
     local remote = getPersonaRemote()
     if not remote then
-        warn("Cosmetics: PersonaServiceRF unavailable for action", action)
+        warn("🥷 NinjaCosmetics: Cannot reach the shadow realm for action:", action)
         return nil
     end
-    local start = os.clock()
-    local ok, result = pcall(remote.InvokeServer, remote, action, data)
-    if not ok then
-        warn(string.format("PersonaServiceRF:%s failed: %s", tostring(action), tostring(result)))
+
+    local startTime = os.clock()
+    local success, result = pcall(remote.InvokeServer, remote, action, data)
+
+    if not success then
+        warn(string.format("🥷 PersonaService:%s failed with shadow error: %s", tostring(action), tostring(result)))
         return nil
     end
-    warn(string.format("PersonaServiceRF:%s took %.3fs", tostring(action), os.clock() - start))
+
+    local executionTime = os.clock() - startTime
+    if executionTime > 1 then
+        warn(string.format("🥷 PersonaService:%s took %.3fs - the shadows are slow today", tostring(action), executionTime))
+    end
+
     return result
 end
-local player = Players.LocalPlayer
 
-local dojo
-local slotButtons = {}
-local uiBridge
-local rootUI
-local slotsContainer
-
+-- Enhanced persona data sanitizer
 local function sanitizePersonaData(data)
-        local result = {}
-        local slots
+    local result = {}
+    local slots = nil
 
-        if typeof(data) == "table" then
-                for key, value in pairs(data) do
-                        if key == "slots" and typeof(value) == "table" then
-                                slots = value
-                        elseif key ~= "slots" then
-                                result[key] = value
-                        end
-                end
-                if not slots then
-                        for key, value in pairs(data) do
-                                local idx = tonumber(key)
-                                if idx then
-                                        slots = slots or {}
-                                        slots[idx] = value
-                                end
-                        end
-                end
+    -- Extract slots data
+    if typeof(data) == "table" then
+        for key, value in pairs(data) do
+            if key == "slots" and typeof(value) == "table" then
+                slots = value
+            elseif key ~= "slots" then
+                result[key] = value
+            end
         end
 
+        -- Fallback: look for numeric keys as slots
         if not slots then
-                slots = {}
-        end
-        result.slots = slots
-
-        local slotCount = tonumber(result.slotCount)
-        if not slotCount and typeof(data) == "table" then
-                slotCount = tonumber(data.slotCount)
-        end
-        if not slotCount then
-                local highest = 0
-                for key in pairs(slots) do
-                        local idx = tonumber(key)
-                        if idx and idx > highest then
-                                highest = idx
-                        end
+            for key, value in pairs(data) do
+                local slotIndex = tonumber(key)
+                if slotIndex then
+                    slots = slots or {}
+                    slots[slotIndex] = value
                 end
-                slotCount = highest
+            end
         end
-        if not slotCount or slotCount < 0 then
-                slotCount = 0
-        end
-        if slotCount == 0 and DEFAULT_SLOT_COUNT > 0 then
-                slotCount = DEFAULT_SLOT_COUNT
-        end
-        result.slotCount = slotCount
+    end
 
-        return result
+    result.slots = slots or {}
+
+    -- Determine slot count
+    local slotCount = tonumber(result.slotCount) or (typeof(data) == "table" and tonumber(data.slotCount))
+    if not slotCount then
+        local highestSlot = 0
+        for key in pairs(result.slots) do
+            local index = tonumber(key)
+            if index and index > highestSlot then
+                highestSlot = index
+            end
+        end
+        slotCount = highestSlot
+    end
+
+    slotCount = math.max(slotCount or 0, 0)
+    if slotCount == 0 and DEFAULT_SLOT_COUNT > 0 then
+        slotCount = DEFAULT_SLOT_COUNT
+    end
+
+    result.slotCount = slotCount
+    return result
 end
 
-local personaCache = sanitizePersonaData({})
-local currentChoiceType = "Roblox"
-local chosenSlot
+-- ═══════════════════════════════════════════════════════════════
+--                    PERSONA MANAGEMENT
+-- ═══════════════════════════════════════════════════════════════
 
-local selectedPersonaLabel
+local function getPersonaDescription(personaType)
+    if personaType == "Ninja" then
+        local descriptionsFolder = ReplicatedStorage:FindFirstChild("HumanoidDescriptions") 
+            or ReplicatedStorage:FindFirstChild("HumanoidDescription")
+        local ninjaDescription = descriptionsFolder and descriptionsFolder:FindFirstChild("Ninja")
+        return ninjaDescription and ninjaDescription:Clone()
+    else
+        local success, description = pcall(function()
+            return Players:GetHumanoidDescriptionFromUserId(player.UserId)
+        end)
+        return success and description
+    end
+end
 
 local function describeSelectedPersona()
-        local personaType = currentChoiceType or "Roblox"
-        local slotText
-        if chosenSlot and personaCache and personaCache.slots then
-                local slotData = personaCache.slots[chosenSlot]
-                if slotData then
-                        if typeof(slotData.type) == "string" then
-                                personaType = slotData.type
-                        end
-                        if typeof(slotData.name) == "string" and slotData.name ~= "" then
-                                slotText = slotData.name
-                        end
-                end
-        end
+    local personaType = currentChoiceType or "Ninja"
+    local slotText = nil
 
-        if not slotText then
-                if personaType == "Ninja" then
-                        slotText = "Starter Ninja"
-                elseif personaType == "Roblox" then
-                        slotText = "Roblox Avatar"
-                else
-                        slotText = personaType or "Unknown"
-                end
+    if chosenSlot and personaCache and personaCache.slots then
+        local slotData = personaCache.slots[chosenSlot]
+        if slotData then
+            personaType = slotData.type or personaType
+            slotText = slotData.name
         end
+    end
 
-        if chosenSlot then
-                return string.format("Selected Persona (Slot %d): %s", chosenSlot, slotText)
+    if not slotText or slotText == "" then
+        if personaType == "Ninja" then
+            slotText = "🥷 Shadow Warrior"
+        elseif personaType == "Roblox" then
+            slotText = "👤 Avatar Form"
+        else
+            slotText = personaType or "❓ Unknown"
         end
+    end
 
-        if personaType == "Roblox" then
-                return string.format("Selected Persona: %s", slotText)
-        end
-
-        return string.format("Selected Persona: %s", slotText)
+    local prefix = chosenSlot and string.format("Slot %d: ", chosenSlot) or ""
+    return string.format("🌟 Active Persona - %s%s", prefix, slotText)
 end
 
-local function ensureSelectionValid()
-        if chosenSlot and personaCache and personaCache.slots and personaCache.slots[chosenSlot] then
-                return
-        end
+local function ensureValidSelection()
+    if chosenSlot and personaCache and personaCache.slots and personaCache.slots[chosenSlot] then
+        return -- Current selection is valid
+    end
 
-        chosenSlot = nil
-        if not (personaCache and personaCache.slots) then
-                currentChoiceType = currentChoiceType or "Roblox"
-                return
-        end
+    chosenSlot = nil
+    if not (personaCache and personaCache.slots) then
+        currentChoiceType = currentChoiceType or "Ninja"
+        return
+    end
 
-        local count = tonumber(personaCache.slotCount) or 0
-        for index = 1, count do
-                local slotData = personaCache.slots[index]
-                if slotData ~= nil then
-                        chosenSlot = index
-                        if typeof(slotData.type) == "string" then
-                                currentChoiceType = slotData.type
-                        end
-                        break
-                end
+    -- Find first available slot
+    local maxSlots = tonumber(personaCache.slotCount) or 0
+    for slotIndex = 1, maxSlots do
+        local slotData = personaCache.slots[slotIndex]
+        if slotData ~= nil then
+            chosenSlot = slotIndex
+            currentChoiceType = slotData.type or currentChoiceType
+            break
         end
+    end
 
-        if not chosenSlot then
-                currentChoiceType = currentChoiceType or "Roblox"
-        end
+    if not chosenSlot then
+        currentChoiceType = currentChoiceType or "Ninja"
+    end
 end
 
 local function updateSelectedPersonaLabel()
-        if selectedPersonaLabel then
-                selectedPersonaLabel.Text = describeSelectedPersona()
-        end
+    if selectedPersonaLabel then
+        selectedPersonaLabel.Text = describeSelectedPersona()
+    end
 end
 
-local levelValue
-local fallbackStarterBackpack
+-- ═══════════════════════════════════════════════════════════════
+--                    UI CREATION HELPERS
+-- ═══════════════════════════════════════════════════════════════
 
-local function preloadModelAsync(model)
-        if not model then
-                return
-        end
-        task.spawn(function()
-                local ok, err = pcall(function()
-                        ContentProvider:PreloadAsync({model})
-                end)
-                if not ok then
-                        warn("Failed to preload persona preview:", err)
-                end
+local function createStyledFrame(parent, size, position, anchorPoint)
+    local frame = Instance.new("Frame")
+    frame.Size = size
+    frame.Position = position or UDim2.fromScale(0, 0)
+    frame.AnchorPoint = anchorPoint or Vector2.new(0, 0)
+    frame.BackgroundColor3 = NINJA_COLORS.PRIMARY
+    frame.BackgroundTransparency = 1
+    frame.BorderSizePixel = 2
+    frame.BorderColor3 = NINJA_COLORS.BORDER
+    frame.ZIndex = 11
+    frame.Parent = parent
+
+    -- Add subtle glow effect
+    local glow = Instance.new("UIStroke")
+    glow.Color = NINJA_COLORS.GLOW
+    glow.Thickness = 1
+    glow.Transparency = 0.7
+    glow.Parent = frame
+
+    -- Add rounded corners similar to NinjaPouchUI styling
+    local corners = Instance.new("UICorner")
+    corners.CornerRadius = UDim.new(0, 12)
+    corners.Parent = frame
+
+    return frame
+end
+
+local function createNinjaButton(parent, text, size, position, color, onClick)
+    local button = Instance.new("TextButton")
+    button.Size = size
+    button.Position = position
+    button.Text = text
+    button.Font = Enum.Font.GothamSemibold
+    button.TextScaled = true
+    button.TextColor3 = NINJA_COLORS.TEXT_PRIMARY
+    button.BackgroundColor3 = color or NINJA_COLORS.ACCENT
+    button.BorderSizePixel = 0
+    button.ZIndex = 12
+    button.Parent = parent
+
+    -- Add corner rounding
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = button
+
+    -- Add hover and click animations using UIScale for smooth transitions
+    local scale = Instance.new("UIScale")
+    scale.Parent = button
+
+    local function tweenScale(targetScale, duration)
+        local tween = TweenService:Create(scale, TweenInfo.new(duration, Enum.EasingStyle.Quad), {Scale = targetScale})
+        tween:Play()
+    end
+
+    button.MouseEnter:Connect(function()
+        tweenScale(ANIMATIONS.HOVER_SCALE, ANIMATIONS.SCALE_TIME)
+    end)
+
+    button.MouseLeave:Connect(function()
+        tweenScale(1, ANIMATIONS.SCALE_TIME)
+    end)
+
+    button.MouseButton1Down:Connect(function()
+        tweenScale(ANIMATIONS.CLICK_SCALE, ANIMATIONS.SCALE_TIME / 2)
+    end)
+
+    button.MouseButton1Up:Connect(function()
+        tweenScale(1, ANIMATIONS.SCALE_TIME / 2)
+    end)
+
+    if onClick then
+        button.MouseButton1Click:Connect(onClick)
+    end
+
+    return button
+end
+
+-- ═══════════════════════════════════════════════════════════════
+--                    CONFIRMATION DIALOG
+-- ═══════════════════════════════════════════════════════════════
+
+local function showNinjaConfirmation(message, onConfirm)
+    local overlay = Instance.new("Frame")
+    overlay.Size = UDim2.fromScale(1, 1)
+    overlay.BackgroundColor3 = Color3.new(0, 0, 0)
+    overlay.BackgroundTransparency = 0.3
+    overlay.ZIndex = 300
+    overlay.Parent = rootUI
+
+    local dialog = createStyledFrame(overlay, 
+        UDim2.fromScale(0.35, 0.25), 
+        UDim2.fromScale(0.5, 0.5), 
+        Vector2.new(0.5, 0.5)
+    )
+    dialog.ZIndex = 301
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, -20, 0.3, 0)
+    title.Position = UDim2.new(0, 10, 0, 10)
+    title.BackgroundTransparency = 1
+    title.Text = "⚠️ Shadow Council Confirmation"
+    title.Font = Enum.Font.GothamSemibold
+    title.TextScaled = true
+    title.TextColor3 = NINJA_COLORS.ACCENT
+    title.ZIndex = 302
+    title.Parent = dialog
+
+    local messageLabel = Instance.new("TextLabel")
+    messageLabel.Size = UDim2.new(1, -20, 0.4, 0)
+    messageLabel.Position = UDim2.new(0, 10, 0.3, 0)
+    messageLabel.BackgroundTransparency = 1
+    messageLabel.Text = message
+    messageLabel.Font = Enum.Font.Gotham
+    messageLabel.TextScaled = true
+    messageLabel.TextColor3 = NINJA_COLORS.TEXT_PRIMARY
+    messageLabel.TextWrapped = true
+    messageLabel.ZIndex = 302
+    messageLabel.Parent = dialog
+
+    local function closeDialog()
+        local tween = TweenService:Create(overlay, 
+            TweenInfo.new(ANIMATIONS.FADE_TIME, Enum.EasingStyle.Quad), 
+            {BackgroundTransparency = 1}
+        )
+        tween:Play()
+        tween.Completed:Connect(function()
+            overlay:Destroy()
         end)
+    end
+
+    createNinjaButton(dialog, "✅ Proceed", 
+        UDim2.new(0.35, 0, 0.25, 0), 
+        UDim2.new(0.1, 0, 0.7, 0), 
+        NINJA_COLORS.SUCCESS, 
+        function()
+            closeDialog()
+            if onConfirm then onConfirm() end
+        end
+    )
+
+    createNinjaButton(dialog, "❌ Cancel", 
+        UDim2.new(0.35, 0, 0.25, 0), 
+        UDim2.new(0.55, 0, 0.7, 0), 
+        NINJA_COLORS.DANGER, 
+        closeDialog
+    )
 end
 
-local function getCallback(name)
-        if typeof(uiBridge) ~= "table" then
-                return nil
-        end
-        local cb = uiBridge[name]
-        if typeof(cb) == "function" then
-                return cb
-        end
-        return nil
+-- ═══════════════════════════════════════════════════════════════
+--                      SLOT MANAGEMENT
+-- ═══════════════════════════════════════════════════════════════
+
+local function getPlayerLevel()
+    if levelValue and levelValue.Value then
+        return levelValue.Value
+    end
+    local attribute = player:GetAttribute("Level")
+    return typeof(attribute) == "number" and attribute or 1
 end
 
-local function callCallback(name, ...)
-        local cb = getCallback(name)
-        if cb then
-                return cb(...)
+local function updateLevelDisplays()
+    for slotIndex, slotUI in pairs(slotButtons) do
+        if slotUI and slotUI.levelLabel then
+            local slotData = personaCache.slots[slotIndex]
+            local displayLevel = slotData and slotData.level or getPlayerLevel()
+            slotUI.levelLabel.Text = string.format("⭐ Level %d", displayLevel)
         end
+    end
+end
+
+local function getHighestUsedSlot()
+    local highest = 0
+    local maxSlots = tonumber(personaCache.slotCount) or 0
+    for slotIndex = 1, maxSlots do
+        if personaCache.slots[slotIndex] ~= nil then
+            highest = slotIndex
+        end
+    end
+    return highest
+end
+
+local function preloadPersonaModel(model)
+    if not model then return end
+
+    task.spawn(function()
+        local success, error = pcall(function()
+            ContentProvider:PreloadAsync({model})
+        end)
+        if not success then
+            warn("🥷 Failed to preload persona in the shadows:", error)
+        end
+    end)
+end
+
+local function updateSlotDisplays()
+    local highestUsed = math.min(getHighestUsedSlot(), #slotButtons)
+    local visibleSlots = math.min(highestUsed + 1, #slotButtons)
+
+    for slotIndex = 1, #slotButtons do
+        local slotData = personaCache.slots[slotIndex]
+        local slotUI = slotButtons[slotIndex]
+
+        if not slotUI then continue end
+
+        -- Clear existing viewport content
+        if slotUI.viewport then
+            slotUI.viewport:ClearAllChildren()
+            slotUI.viewport.CurrentCamera = nil
+        end
+
+        if slotUI.placeholder then
+            slotUI.placeholder.Visible = false
+        end
+
+        slotUI.frame.Visible = slotIndex <= visibleSlots
+
+        if slotIndex <= visibleSlots then
+            if slotData then
+                -- Slot has saved persona
+                slotUI.useButton.Visible = true
+                slotUI.clearButton.Visible = true
+                slotUI.robloxButton.Visible = false
+                slotUI.ninjaButton.Visible = false
+
+                if slotUI.placeholder then 
+                    slotUI.placeholder.Visible = false 
+                end
+
+                -- Create persona preview
+                if slotUI.viewport then
+                    local description = getPersonaDescription(slotData.type)
+                    if description then
+                        local world = Instance.new("WorldModel")
+                        world.Parent = slotUI.viewport
+
+                        local model = Players:CreateHumanoidModelFromDescription(description, Enum.HumanoidRigType.R15)
+                        model:PivotTo(CFrame.new(0, 0, 0) * CFrame.Angles(0, math.pi, 0))
+                        model.Parent = world
+
+                        preloadPersonaModel(model)
+
+                        local camera = Instance.new("Camera")
+                        camera.CFrame = CFrame.new(Vector3.new(0, 2, 4), Vector3.new(0, 2, 0))
+                        camera.Parent = slotUI.viewport
+                        slotUI.viewport.CurrentCamera = camera
+                    end
+                end
+
+                -- Connect clear button
+                if not slotUI.clearConnection then
+                    slotUI.clearConnection = slotUI.clearButton.MouseButton1Click:Connect(function()
+                        showNinjaConfirmation(
+                            string.format("🗑️ Remove the shadow warrior from slot %d?", slotIndex),
+                            function()
+                                local result = invokePersonaService("clear", {slot = slotIndex})
+                                if result and result.ok then
+                                    if chosenSlot == slotIndex then 
+                                        chosenSlot = nil 
+                                    end
+                                    refreshSlotData(result)
+                                else
+                                    warn("🥷 Failed to clear slot:", result and result.err)
+                                end
+                            end
+                        )
+                    end)
+                end
+            else
+                -- Empty slot
+                slotUI.useButton.Visible = false
+                slotUI.clearButton.Visible = false
+                slotUI.robloxButton.Visible = true
+                slotUI.ninjaButton.Visible = true
+
+                if slotUI.clearConnection then
+                    slotUI.clearConnection:Disconnect()
+                    slotUI.clearConnection = nil
+                end
+
+                if slotUI.placeholder then 
+                    slotUI.placeholder.Visible = true 
+                end
+            end
+        end
+    end
+
+    updateLevelDisplays()
+end
+
+local function refreshSlotData(newData)
+    personaCache = sanitizePersonaData(newData)
+    ensureValidSelection()
+    updateSlotDisplays()
+    updateSelectedPersonaLabel()
+end
+
+-- ═══════════════════════════════════════════════════════════════
+--                     CALLBACK HELPERS
+-- ═══════════════════════════════════════════════════════════════
+
+local function getUICallback(callbackName)
+    if typeof(uiBridge) ~= "table" then return nil end
+    local callback = uiBridge[callbackName]
+    return typeof(callback) == "function" and callback or nil
+end
+
+local function callUICallback(callbackName, ...)
+    local callback = getUICallback(callbackName)
+    if callback then
+        return callback(...)
+    end
 end
 
 local function getStarterBackpack()
-        if typeof(uiBridge) == "table" then
-                local fetch = uiBridge.getStarterBackpack
-                if typeof(fetch) == "function" then
-                        return fetch()
+    if typeof(uiBridge) == "table" then
+        local fetch = uiBridge.getStarterBackpack
+        if typeof(fetch) == "function" then
+            return fetch()
+        end
+        if uiBridge.starterBackpack ~= nil then
+            return uiBridge.starterBackpack
+        end
+    end
+    return fallbackStarterBackpack
+end
+
+local function triggerTransitionAnimation()
+    local tweenCallback = getUICallback("tweenToEnd")
+    if tweenCallback then
+        tweenCallback()
+    end
+end
+
+local function applyPersonaToPlayer(personaData)
+    if not personaData then return end
+
+    -- Apply inventory data
+    if personaData.inventory then
+        player:SetAttribute("Inventory", HttpService:JSONEncode(personaData.inventory))
+    end
+
+    -- Apply unlocked realms
+    local realmsData = personaData.unlockedRealms or personaData.realms
+    if realmsData then
+        local realmsFolder = player:FindFirstChild("Realms")
+        if realmsFolder then
+            for realmName, isUnlocked in pairs(realmsData) do
+                local realmFlag = realmsFolder:FindFirstChild(realmName)
+                if not realmFlag then
+                    realmFlag = Instance.new("BoolValue")
+                    realmFlag.Name = realmName
+                    realmFlag.Parent = realmsFolder
                 end
-                if uiBridge.starterBackpack ~= nil then
-                        return uiBridge.starterBackpack
-                end
+                realmFlag.Value = isUnlocked and true or false
+            end
         end
-        return fallbackStarterBackpack
+    end
+
+    updateSelectedPersonaLabel()
 end
 
-local function triggerTweenToEnd()
-        local tween = getCallback("tweenToEnd")
-        if tween then
-                tween()
-        end
+-- ═══════════════════════════════════════════════════════════════
+--                      MAIN UI FUNCTIONS
+-- ═══════════════════════════════════════════════════════════════
+
+local function showDojoInterface()
+    if dojoInterface then 
+        dojoInterface.Visible = true 
+    end
+    callUICallback("showDojoPicker")
+    updateSelectedPersonaLabel()
 end
 
-local function applyPersonaData(p)
-        if not p then return end
-        if p.inventory then
-                player:SetAttribute("Inventory", HttpService:JSONEncode(p.inventory))
-        end
-        local realms = p.unlockedRealms or p.realms
-        if realms then
-                local folder = player:FindFirstChild("Realms")
-                if folder then
-                        for name, value in pairs(realms) do
-                                local flag = folder:FindFirstChild(name)
-                                if not flag then
-                                        flag = Instance.new("BoolValue")
-                                        flag.Name = name
-                                        flag.Parent = folder
-                                end
-                                flag.Value = value and true or false
-                        end
-                end
-        end
+local function showLoadoutInterface(personaType)
+    if dojoInterface then 
+        dojoInterface.Visible = false 
+    end
 
-        updateSelectedPersonaLabel()
-end
+    local showLoadoutCallback = getUICallback("showLoadout")
+    if showLoadoutCallback then
+        showLoadoutCallback(personaType)
+    end
 
-local function getLevel()
-	if levelValue and levelValue.Value then
-		return levelValue.Value
-	end
-	local attr = player:GetAttribute("Level")
-	return typeof(attr) == "number" and attr or 0
-end
+    local buildPreviewCallback = getUICallback("buildCharacterPreview")
+    if buildPreviewCallback then
+        buildPreviewCallback(personaType)
+    end
 
-local function updateLevelLabels()
-	for i, ui in pairs(slotButtons) do
-		if ui and ui.levelLabel then
-			local slot = personaCache.slots[i]
-			local lvl = slot and slot.level or getLevel()
-			ui.levelLabel.Text = ("Level %d"):format(lvl)
-		end
-	end
-end
-
-local function showConfirm(text, onYes)
-	local cover = Instance.new("Frame")
-	cover.Size = UDim2.fromScale(1,1)
-	cover.BackgroundColor3 = Color3.new(0,0,0)
-	cover.BackgroundTransparency = 0.4
-	cover.ZIndex = 200
-	cover.Parent = rootUI
-
-	local box = Instance.new("Frame")
-	box.Size = UDim2.fromScale(0.3,0.2)
-	box.Position = UDim2.fromScale(0.5,0.5)
-	box.AnchorPoint = Vector2.new(0.5,0.5)
-	box.BackgroundColor3 = Color3.fromRGB(24,26,28)
-	box.ZIndex = 201
-	box.Parent = cover
-
-	local msg = Instance.new("TextLabel")
-	msg.Size = UDim2.new(1,0,0.5,0)
-	msg.BackgroundTransparency = 1
-	msg.Text = text
-	msg.Font = Enum.Font.Gotham
-	msg.TextScaled = true
-	msg.TextColor3 = Color3.new(1,1,1)
-	msg.ZIndex = 202
-	msg.Parent = box
-
-	local yes = Instance.new("TextButton")
-	yes.Size = UDim2.new(0.4,0,0.3,0)
-	yes.Position = UDim2.new(0.1,0,0.6,0)
-	yes.Text = "Yes"
-	yes.Font = Enum.Font.GothamSemibold
-	yes.TextScaled = true
-	yes.TextColor3 = Color3.new(1,1,1)
-	yes.BackgroundColor3 = Color3.fromRGB(60,180,110)
-	yes.ZIndex = 202
-	yes.Parent = box
-
-	local no = Instance.new("TextButton")
-	no.Size = UDim2.new(0.4,0,0.3,0)
-	no.Position = UDim2.new(0.5,0,0.6,0)
-	no.Text = "No"
-	no.Font = Enum.Font.GothamSemibold
-	no.TextScaled = true
-	no.TextColor3 = Color3.new(1,1,1)
-	no.BackgroundColor3 = Color3.fromRGB(220,100,100)
-	no.ZIndex = 202
-	no.Parent = box
-
-	local function close()
-		cover:Destroy()
-	end
-	yes.MouseButton1Click:Connect(function()
-		close()
-		if onYes then onYes() end
-	end)
-	no.MouseButton1Click:Connect(close)
-end
-
-local refreshSlots
-
-local function highestUsed()
-        local hi = 0
-        local count = tonumber(personaCache.slotCount) or 0
-        for i = 1, count do
-                if personaCache.slots[i] ~= nil then
-                        hi = i
-                end
-        end
-        return hi
-end
-
-local function getDescription(personaType)
-	local desc
-	if personaType == "Ninja" then
-		-- Expected folder "HumanoidDescriptions" contains shared HumanoidDescription assets.
-		-- Use singular name as a fallback for legacy content.
-		local hdFolder = ReplicatedStorage:FindFirstChild("HumanoidDescriptions")
-			or ReplicatedStorage:FindFirstChild("HumanoidDescription")
-		local hd = hdFolder and hdFolder:FindFirstChild("Ninja")
-		if hd then desc = hd:Clone() end
-	else
-		local ok, hd = pcall(function()
-			return Players:GetHumanoidDescriptionFromUserId(player.UserId)
-		end)
-		if ok then desc = hd end
-	end
-	return desc
-end
-
-local function updateSlots()
-	local hi = math.min(highestUsed(), #slotButtons)
-	local visible = math.min(hi + 1, #slotButtons)
-	for i = 1, #slotButtons do
-		local slot = personaCache.slots[i]
-		local ui = slotButtons[i]
-		if ui then
-			if ui.viewport then
-				ui.viewport:ClearAllChildren()
-				ui.viewport.CurrentCamera = nil
-			end
-			if ui.placeholder then
-				ui.placeholder.Visible = false
-			end
-			ui.frame.Visible = i <= visible
-			if i <= visible then
-				local index = i
-				if slot then
-					ui.useBtn.Visible = true
-					ui.clearBtn.Visible = true
-					ui.robloxBtn.Visible = false
-					ui.starterBtn.Visible = false
-					if ui.placeholder then ui.placeholder.Visible = false end
-                                        if ui.viewport then
-                                                local desc = getDescription(slot.type)
-                                                if desc then
-                                                        local world = Instance.new("WorldModel")
-                                                        world.Parent = ui.viewport
-                                                        local model = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
-                                                        model:PivotTo(CFrame.new(0,0,0) * CFrame.Angles(0, math.pi, 0))
-                                                        model.Parent = world
-                                                        -- Start preloading, but don't block the UI on asset downloads.
-                                                        preloadModelAsync(model)
-                                                        local cam = Instance.new("Camera")
-                                                        cam.CFrame = CFrame.new(Vector3.new(0,2,4), Vector3.new(0,2,0))
-                                                        cam.Parent = ui.viewport
-                                                        ui.viewport.CurrentCamera = cam
-                                                end
-                                        end
-					if not ui.clearConn then
-						ui.clearConn = ui.clearBtn.MouseButton1Click:Connect(function()
-							showConfirm(("Clear slot %d?"):format(index), function()
-                                                                local res = profileRF("clear", {slot = index})
-                                                                if res and res.ok then
-                                                                        if chosenSlot == index then chosenSlot = nil end
-                                                                        refreshSlots(res)
-                                                                else
-                                                                        warn("Clear failed:", res and res.err)
-                                                                end
-                                                        end)
-                                                end)
-                                        end
-                                else
-                                        ui.useBtn.Visible = false
-					ui.clearBtn.Visible = false
-					ui.robloxBtn.Visible = true
-					ui.starterBtn.Visible = true
-					if ui.clearConn then
-						ui.clearConn:Disconnect()
-						ui.clearConn = nil
-					end
-					if ui.placeholder then ui.placeholder.Visible = true end
-				end
-			end
-		end
-	end
-	updateLevelLabels()
-end
-
-refreshSlots = function(data)
-        personaCache = sanitizePersonaData(data)
-        ensureSelectionValid()
-        updateSlots()
-        updateSelectedPersonaLabel()
-end
-
-local function showDojoPicker()
-        if dojo then dojo.Visible = true end
-        callCallback("showDojoPicker")
-        updateSelectedPersonaLabel()
-end
-
-local function showLoadout(personaType)
-        if dojo then dojo.Visible = false end
-        local showLoadoutCallback = getCallback("showLoadout")
-        if showLoadoutCallback then
-                showLoadoutCallback(personaType)
-        end
-
-        local buildPreview = getCallback("buildCharacterPreview")
-        if buildPreview then
-                buildPreview(personaType)
-        end
-
-        local updateBackpack = getCallback("updateBackpack")
-        if updateBackpack then
-                local saved = player:GetAttribute("Inventory")
-                if typeof(saved) == "string" then
-                        local ok, data = pcall(HttpService.JSONDecode, HttpService, saved)
-                        if ok then
-                                updateBackpack(data)
-                        end
-                else
-                        local starter = getStarterBackpack()
-                        if starter then
-                                updateBackpack(starter)
-                                local conn
-                                conn = player:GetAttributeChangedSignal("Inventory"):Connect(function()
-                                        local inv = player:GetAttribute("Inventory")
-                                        if typeof(inv) == "string" then
-                                                local ok, data = pcall(HttpService.JSONDecode, HttpService, inv)
-                                                if ok then
-                                                        updateBackpack(data)
-                                                        if conn then
-                                                                conn:Disconnect()
-                                                                conn = nil
-                                                        end
-                                                end
-                                        end
-                                end)
-                        end
-                end
-        end
-end
-
-function Cosmetics.getSelectedPersona()
-	local personaType = currentChoiceType
-	if chosenSlot and personaCache and personaCache.slots then
-		local slot = personaCache.slots[chosenSlot]
-		if slot and slot.type then personaType = slot.type end
-	end
-	return personaType, chosenSlot
-end
-
-function Cosmetics.refreshSlots(data)
-        refreshSlots(data)
-end
-
-function Cosmetics.showDojoPicker()
-	showDojoPicker()
-end
-
-function Cosmetics.init(config, root, interface)
-        uiBridge = interface
-        rootUI = root
-        if typeof(config) == "table" then
-                fallbackStarterBackpack = config.inventory or config.starterBackpack
+    local updateBackpackCallback = getUICallback("updateBackpack")
+    if updateBackpackCallback then
+        local savedInventory = player:GetAttribute("Inventory")
+        if typeof(savedInventory) == "string" then
+            local success, inventoryData = pcall(HttpService.JSONDecode, HttpService, savedInventory)
+            if success then
+                updateBackpackCallback(inventoryData)
+            end
         else
-                fallbackStarterBackpack = nil
+            local starterBackpack = getStarterBackpack()
+            if starterBackpack then
+                updateBackpackCallback(starterBackpack)
+
+                -- Listen for inventory changes
+                local connection
+                connection = player:GetAttributeChangedSignal("Inventory"):Connect(function()
+                    local newInventory = player:GetAttribute("Inventory")
+                    if typeof(newInventory) == "string" then
+                        local success, data = pcall(HttpService.JSONDecode, HttpService, newInventory)
+                        if success then
+                            updateBackpackCallback(data)
+                            if connection then
+                                connection:Disconnect()
+                                connection = nil
+                            end
+                        end
+                    end
+                end)
+            end
         end
-
-        local stats = player:FindFirstChild("Stats")
-        if stats then
-                levelValue = stats:FindFirstChild("Level")
-		if levelValue then
-			levelValue:GetPropertyChangedSignal("Value"):Connect(updateLevelLabels)
-			updateLevelLabels()
-		end
-	else
-		player.ChildAdded:Connect(function(child)
-			if child.Name == "Stats" then
-				levelValue = child:FindFirstChild("Level")
-				if levelValue then
-					levelValue:GetPropertyChangedSignal("Value"):Connect(updateLevelLabels)
-					updateLevelLabels()
-				end
-			end
-		end)
-	end
-	player:GetAttributeChangedSignal("Level"):Connect(updateLevelLabels)
-
-	dojo = Instance.new("Frame")
-	dojo.Size = UDim2.fromScale(1,1)
-	dojo.BackgroundTransparency = 1
-	dojo.Visible = false
-	dojo.ZIndex = 10
-	dojo.Parent = root
-
-        local dojoTitle = Instance.new("ImageLabel")
-        dojoTitle.Size = UDim2.fromScale(0.7,0.24)
-        dojoTitle.Position = UDim2.fromScale(0.5,0.1)
-        dojoTitle.AnchorPoint = Vector2.new(0.5,0.5)
-        -- Use BootUI logo where starter dojo image was
-        dojoTitle.Image = "rbxassetid://138217463115431"
-        dojoTitle.BackgroundTransparency = 1
-        dojoTitle.ScaleType = Enum.ScaleType.Fit
-        dojoTitle.ZIndex = 11
-        dojoTitle.Parent = dojo
-
-        selectedPersonaLabel = Instance.new("TextLabel")
-        selectedPersonaLabel.Name = "SelectedPersonaLabel"
-        selectedPersonaLabel.Size = UDim2.new(0.7, 0, 0.06, 0)
-        selectedPersonaLabel.Position = UDim2.fromScale(0.5, 0.24)
-        selectedPersonaLabel.AnchorPoint = Vector2.new(0.5, 0)
-        selectedPersonaLabel.BackgroundTransparency = 1
-        selectedPersonaLabel.TextScaled = true
-        selectedPersonaLabel.Font = Enum.Font.GothamSemibold
-        selectedPersonaLabel.TextColor3 = Color3.fromRGB(255, 220, 180)
-        selectedPersonaLabel.Text = ""
-        selectedPersonaLabel.ZIndex = 12
-        selectedPersonaLabel.Parent = dojo
-
-        local picker = Instance.new("Frame")
-        picker.Size = UDim2.fromScale(0.8,0.7)
-        picker.Position = UDim2.fromScale(0.5,0.55)
-        picker.AnchorPoint = Vector2.new(0.5,0.5)
-        picker.BackgroundColor3 = Color3.fromRGB(24,26,28)
-	picker.BackgroundTransparency = 0.6
-	picker.BorderSizePixel = 0
-	picker.ZIndex = 11
-	picker.Parent = dojo
-
-	-- Display starter dojo image at the bottom of the picker
-	local starterDojoImg = Instance.new("ImageLabel")
-	starterDojoImg.Size = UDim2.fromScale(0.7,0.08)
-	starterDojoImg.Position = UDim2.fromScale(0.5,0.92)
-	starterDojoImg.AnchorPoint = Vector2.new(0.5,1)
-	starterDojoImg.Image = "rbxassetid://137361385013636"
-	starterDojoImg.BackgroundTransparency = 1
-	starterDojoImg.ScaleType = Enum.ScaleType.Fit
-	starterDojoImg.ZIndex = 12
-	starterDojoImg.Parent = picker
-
-	local function makeButton(text, y)
-		local b = Instance.new("TextButton")
-		b.Size = UDim2.new(0.9, 0, 0, 56)
-		b.Position = UDim2.fromScale(0.5, y)
-		b.AnchorPoint = Vector2.new(0.5,0.5)
-		b.Text = text
-		b.Font = Enum.Font.GothamSemibold
-		b.TextScaled = true
-		b.TextColor3 = Color3.new(1,1,1)
-		b.BackgroundColor3 = Color3.fromRGB(50,120,255)
-		b.AutoButtonColor = true
-		b.ZIndex = 11
-		b.Parent = picker
-		return b
-	end
-
-	-- Display persona slots above the dojo image
-	slotsContainer = Instance.new("Frame")
-	slotsContainer.Size = UDim2.new(0.9,0,0.9,0)
-	slotsContainer.Position = UDim2.fromScale(0.5,0.44)
-	slotsContainer.AnchorPoint = Vector2.new(0.5,0.5)
-	slotsContainer.BackgroundTransparency = 1
-	slotsContainer.BorderSizePixel = 0
-	slotsContainer.ZIndex = 11
-	slotsContainer.Parent = picker
-
-        -- fetch initial slot data
-        personaCache = sanitizePersonaData(config.personaData)
-
-	slotButtons = {}
-
-        -- create slot 1 (center, larger)
-	do
-		local frame = Instance.new("Frame")
-		frame.Size = UDim2.fromScale(0.4, 0.6)
-		frame.Position = UDim2.fromScale(0.5, 0.5)
-		frame.AnchorPoint = Vector2.new(0.5, 0.5)
-		frame.BackgroundTransparency = 1
-		frame.ZIndex = 11
-		frame.Parent = slotsContainer
-
-		local viewport = Instance.new("ViewportFrame")
-		viewport.Size = UDim2.fromScale(1, 1)
-		viewport.BackgroundTransparency = 1
-		viewport.BorderSizePixel = 2
-		viewport.BorderColor3 = Color3.fromRGB(40, 40, 40)
-		viewport.ZIndex = 9
-		viewport.Parent = frame
-
-		local placeholder = Instance.new("ImageLabel")
-		placeholder.Size = UDim2.fromScale(1,1)
-		placeholder.BackgroundTransparency = 1
-		placeholder.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
-		placeholder.ScaleType = Enum.ScaleType.Fit
-		placeholder.ZIndex = 10
-		placeholder.Parent = frame
-
-		local levelLabel = Instance.new("TextLabel")
-		levelLabel.Name = "LevelLabel"
-		levelLabel.Size = UDim2.new(1,0,0.15,0)
-		levelLabel.Position = UDim2.new(0.5,0,0,0)
-		levelLabel.AnchorPoint = Vector2.new(0.5,1)
-		levelLabel.BackgroundTransparency = 1
-		levelLabel.TextXAlignment = Enum.TextXAlignment.Center
-		levelLabel.Text = ""
-		levelLabel.Font = Enum.Font.Garamond
-		levelLabel.TextScaled = false
-		levelLabel.TextSize = 14
-		levelLabel.TextColor3 = Color3.fromRGB(220,220,220)
-		levelLabel.ZIndex = 11
-		levelLabel.Parent = frame
-
-		local robloxBtn = Instance.new("TextButton")
-		robloxBtn.Size = UDim2.new(0.45,0,0.25,0)
-		robloxBtn.Position = UDim2.new(0.05,0,0.3,0)
-		robloxBtn.Text = "Roblox"
-		robloxBtn.Font = Enum.Font.GothamSemibold
-		robloxBtn.TextScaled = true
-		robloxBtn.TextColor3 = Color3.new(1,1,1)
-		robloxBtn.BackgroundColor3 = Color3.fromRGB(80,120,200)
-		robloxBtn.AutoButtonColor = true
-		robloxBtn.ZIndex = 11
-		robloxBtn.Parent = frame
-
-		local starterBtn = Instance.new("TextButton")
-		starterBtn.Size = UDim2.new(0.45,0,0.25,0)
-		starterBtn.Position = UDim2.new(0.5,0,0.3,0)
-		starterBtn.Text = "Starter"
-		starterBtn.Font = Enum.Font.GothamSemibold
-		starterBtn.TextScaled = true
-		starterBtn.TextColor3 = Color3.new(1,1,1)
-		starterBtn.BackgroundColor3 = Color3.fromRGB(100,100,220)
-		starterBtn.AutoButtonColor = true
-		starterBtn.ZIndex = 11
-		starterBtn.Parent = frame
-
-		local useBtn = Instance.new("TextButton")
-		useBtn.Size = UDim2.new(0.7,0,0.15,0)
-		useBtn.Position = UDim2.new(0.15,0,0.7,0)
-		useBtn.Text = "Use"
-		useBtn.Font = Enum.Font.GothamSemibold
-		useBtn.TextScaled = true
-		useBtn.TextColor3 = Color3.new(1,1,1)
-		useBtn.BackgroundColor3 = Color3.fromRGB(60,180,110)
-		useBtn.AutoButtonColor = true
-		useBtn.ZIndex = 11
-		useBtn.Parent = frame
-
-		local clearBtn = Instance.new("TextButton")
-		clearBtn.Size = UDim2.new(0.5,0,0.08,0)
-		clearBtn.AnchorPoint = Vector2.new(0.5,0)
-		clearBtn.Position = UDim2.new(0.5,0,0.88,0)
-		clearBtn.Text = "Clear"
-		clearBtn.Font = Enum.Font.Gotham
-		clearBtn.TextScaled = true
-		clearBtn.TextColor3 = Color3.new(1,1,1)
-		clearBtn.BackgroundColor3 = Color3.fromRGB(200,80,80)
-		clearBtn.AutoButtonColor = true
-		clearBtn.ZIndex = 11
-		clearBtn.Parent = frame
-
-                slotButtons[1] = {
-                        frame = frame,
-                        viewport = viewport,
-                        placeholder = placeholder,
-			useBtn = useBtn,
-			clearBtn = clearBtn,
-			robloxBtn = robloxBtn,
-			starterBtn = starterBtn,
-			levelLabel = levelLabel
-		}
-	end
-
-	-- create slot 2 (left)
-	do
-		local frame = Instance.new("Frame")
-		frame.Size = UDim2.fromScale(0.25, 0.4)
-		frame.Position = UDim2.fromScale(0.15, 0.5)
-		frame.AnchorPoint = Vector2.new(0.5, 0.5)
-		frame.BackgroundTransparency = 1
-		frame.ZIndex = 11
-		frame.Parent = slotsContainer
-
-		local viewport = Instance.new("ViewportFrame")
-		viewport.Size = UDim2.fromScale(1,1)
-		viewport.BackgroundTransparency = 1
-		viewport.ZIndex = 9
-		viewport.Parent = frame
-
-		local placeholder = Instance.new("ImageLabel")
-		placeholder.Size = UDim2.fromScale(1,1)
-		placeholder.BackgroundTransparency = 1
-		placeholder.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
-		placeholder.ScaleType = Enum.ScaleType.Fit
-		placeholder.ZIndex = 10
-		placeholder.Parent = frame
-
-		local levelLabel = Instance.new("TextLabel")
-		levelLabel.Name = "LevelLabel"
-		levelLabel.Size = UDim2.new(1,0,0.15,0)
-		levelLabel.Position = UDim2.new(0.5,0,0,0)
-		levelLabel.AnchorPoint = Vector2.new(0.5,1)
-		levelLabel.BackgroundTransparency = 1
-		levelLabel.TextXAlignment = Enum.TextXAlignment.Center
-		levelLabel.Text = ""
-		levelLabel.Font = Enum.Font.Garamond
-		levelLabel.TextScaled = false
-		levelLabel.TextSize = 14
-		levelLabel.TextColor3 = Color3.fromRGB(220,220,220)
-		levelLabel.ZIndex = 11
-		levelLabel.Parent = frame
-
-		local robloxBtn = Instance.new("TextButton")
-		robloxBtn.Size = UDim2.new(0.45,0,0.25,0)
-		robloxBtn.Position = UDim2.new(0.05,0,0.3,0)
-		robloxBtn.Text = "Roblox"
-		robloxBtn.Font = Enum.Font.GothamSemibold
-		robloxBtn.TextScaled = true
-		robloxBtn.TextColor3 = Color3.new(1,1,1)
-		robloxBtn.BackgroundColor3 = Color3.fromRGB(80,120,200)
-		robloxBtn.AutoButtonColor = true
-		robloxBtn.ZIndex = 11
-		robloxBtn.Parent = frame
-
-		local starterBtn = Instance.new("TextButton")
-		starterBtn.Size = UDim2.new(0.45,0,0.25,0)
-		starterBtn.Position = UDim2.new(0.5,0,0.3,0)
-		starterBtn.Text = "Starter"
-		starterBtn.Font = Enum.Font.GothamSemibold
-		starterBtn.TextScaled = true
-		starterBtn.TextColor3 = Color3.new(1,1,1)
-		starterBtn.BackgroundColor3 = Color3.fromRGB(100,100,220)
-		starterBtn.AutoButtonColor = true
-		starterBtn.ZIndex = 11
-		starterBtn.Parent = frame
-
-		local useBtn = Instance.new("TextButton")
-		useBtn.Size = UDim2.new(0.7,0,0.15,0)
-		useBtn.Position = UDim2.new(0.15,0,0.7,0)
-		useBtn.Text = "Use"
-		useBtn.Font = Enum.Font.GothamSemibold
-		useBtn.TextScaled = true
-		useBtn.TextColor3 = Color3.new(1,1,1)
-		useBtn.BackgroundColor3 = Color3.fromRGB(60,180,110)
-		useBtn.AutoButtonColor = true
-		useBtn.ZIndex = 11
-		useBtn.Parent = frame
-
-		local clearBtn = Instance.new("TextButton")
-		clearBtn.Size = UDim2.new(0.5,0,0.08,0)
-		clearBtn.AnchorPoint = Vector2.new(0.5,0)
-		clearBtn.Position = UDim2.new(0.5,0,0.88,0)
-		clearBtn.Text = "Clear"
-		clearBtn.Font = Enum.Font.Gotham
-		clearBtn.TextScaled = true
-		clearBtn.TextColor3 = Color3.new(1,1,1)
-		clearBtn.BackgroundColor3 = Color3.fromRGB(200,80,80)
-		clearBtn.AutoButtonColor = true
-		clearBtn.ZIndex = 11
-		clearBtn.Parent = frame
-
-		slotButtons[2] = {
-			frame = frame,
-			viewport = viewport,
-			placeholder = placeholder,
-			useBtn = useBtn,
-			clearBtn = clearBtn,
-			robloxBtn = robloxBtn,
-			starterBtn = starterBtn,
-			levelLabel = levelLabel
-		}
-	end
-
-	-- create slot 3 (right)
-	do
-		local frame = Instance.new("Frame")
-		frame.Size = UDim2.fromScale(0.25, 0.4)
-		frame.Position = UDim2.fromScale(0.85, 0.5)
-		frame.AnchorPoint = Vector2.new(0.5, 0.5)
-		frame.BackgroundTransparency = 1
-		frame.ZIndex = 11
-		frame.Parent = slotsContainer
-
-		local viewport = Instance.new("ViewportFrame")
-		viewport.Size = UDim2.fromScale(1,1)
-		viewport.BackgroundTransparency = 1
-		viewport.ZIndex = 9
-		viewport.Parent = frame
-
-		local placeholder = Instance.new("ImageLabel")
-		placeholder.Size = UDim2.fromScale(1,1)
-		placeholder.BackgroundTransparency = 1
-		placeholder.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
-		placeholder.ScaleType = Enum.ScaleType.Fit
-		placeholder.ZIndex = 10
-		placeholder.Parent = frame
-
-		local levelLabel = Instance.new("TextLabel")
-		levelLabel.Name = "LevelLabel"
-		levelLabel.Size = UDim2.new(1,0,0.15,0)
-		levelLabel.Position = UDim2.new(0.5,0,0,0)
-		levelLabel.AnchorPoint = Vector2.new(0.5,1)
-		levelLabel.BackgroundTransparency = 1
-		levelLabel.TextXAlignment = Enum.TextXAlignment.Center
-		levelLabel.Text = ""
-		levelLabel.Font = Enum.Font.Garamond
-		levelLabel.TextScaled = false
-		levelLabel.TextSize = 14
-		levelLabel.TextColor3 = Color3.fromRGB(220,220,220)
-		levelLabel.ZIndex = 11
-		levelLabel.Parent = frame
-
-		local robloxBtn = Instance.new("TextButton")
-		robloxBtn.Size = UDim2.new(0.45,0,0.25,0)
-		robloxBtn.Position = UDim2.new(0.05,0,0.3,0)
-		robloxBtn.Text = "Roblox"
-		robloxBtn.Font = Enum.Font.GothamSemibold
-		robloxBtn.TextScaled = true
-		robloxBtn.TextColor3 = Color3.new(1,1,1)
-		robloxBtn.BackgroundColor3 = Color3.fromRGB(80,120,200)
-		robloxBtn.AutoButtonColor = true
-		robloxBtn.ZIndex = 11
-		robloxBtn.Parent = frame
-
-		local starterBtn = Instance.new("TextButton")
-		starterBtn.Size = UDim2.new(0.45,0,0.25,0)
-		starterBtn.Position = UDim2.new(0.5,0,0.3,0)
-		starterBtn.Text = "Starter"
-		starterBtn.Font = Enum.Font.GothamSemibold
-		starterBtn.TextScaled = true
-		starterBtn.TextColor3 = Color3.new(1,1,1)
-		starterBtn.BackgroundColor3 = Color3.fromRGB(100,100,220)
-		starterBtn.AutoButtonColor = true
-		starterBtn.ZIndex = 11
-		starterBtn.Parent = frame
-
-		local useBtn = Instance.new("TextButton")
-		useBtn.Size = UDim2.new(0.7,0,0.15,0)
-		useBtn.Position = UDim2.new(0.15,0,0.7,0)
-		useBtn.Text = "Use"
-		useBtn.Font = Enum.Font.GothamSemibold
-		useBtn.TextScaled = true
-		useBtn.TextColor3 = Color3.new(1,1,1)
-		useBtn.BackgroundColor3 = Color3.fromRGB(60,180,110)
-		useBtn.AutoButtonColor = true
-		useBtn.ZIndex = 11
-		useBtn.Parent = frame
-
-		local clearBtn = Instance.new("TextButton")
-		clearBtn.Size = UDim2.new(0.5,0,0.08,0)
-		clearBtn.AnchorPoint = Vector2.new(0.5,0)
-		clearBtn.Position = UDim2.new(0.5,0,0.88,0)
-		clearBtn.Text = "Clear"
-		clearBtn.Font = Enum.Font.Gotham
-		clearBtn.TextScaled = true
-		clearBtn.TextColor3 = Color3.new(1,1,1)
-		clearBtn.BackgroundColor3 = Color3.fromRGB(200,80,80)
-		clearBtn.AutoButtonColor = true
-		clearBtn.ZIndex = 11
-		clearBtn.Parent = frame
-
-		slotButtons[3] = {
-			frame = frame,
-			viewport = viewport,
-			placeholder = placeholder,
-			useBtn = useBtn,
-			clearBtn = clearBtn,
-			robloxBtn = robloxBtn,
-			starterBtn = starterBtn,
-			levelLabel = levelLabel
-		}
-	end
-
-        updateSlots()
-        updateSelectedPersonaLabel()
-
-        for i,entry in pairs(slotButtons) do
-                local index = i
-               entry.useBtn.MouseButton1Click:Connect(function()
-                        local result = profileRF("use", {slot = index})
-                        if not (result and result.ok) then warn("Use slot failed:", result and result.err) return end
-                        chosenSlot = index
-                        currentChoiceType = result.persona and result.persona.type or currentChoiceType
-                        applyPersonaData(result.persona)
-                        triggerTweenToEnd()
-                        showLoadout(result.persona and result.persona.type or currentChoiceType)
-                        updateSelectedPersonaLabel()
-                end)
-               entry.robloxBtn.MouseButton1Click:Connect(function()
-                        local res = profileRF("save", {slot = index, type = "Roblox"})
-                        if res and res.ok then
-                                refreshSlots(res)
-                                local useRes = profileRF("use", {slot = index})
-                                if useRes and useRes.ok then
-                                        chosenSlot = index
-                                        currentChoiceType = "Roblox"
-                                        applyPersonaData(useRes.persona)
-                                        triggerTweenToEnd()
-                                        showLoadout("Roblox")
-                                        updateSelectedPersonaLabel()
-                                else
-                                        warn("Use slot failed:", useRes and useRes.err)
-                                end
-                        else
-                                warn("Save failed:", res and res.err)
-                        end
-                end)
-               entry.starterBtn.MouseButton1Click:Connect(function()
-                        local res = profileRF("save", {slot = index, type = "Ninja"})
-                        if res and res.ok then
-                                refreshSlots(res)
-                                local useRes = profileRF("use", {slot = index})
-                                if useRes and useRes.ok then
-                                        chosenSlot = index
-                                        currentChoiceType = "Ninja"
-                                        applyPersonaData(useRes.persona)
-                                        triggerTweenToEnd()
-                                        showLoadout("Ninja")
-                                        updateSelectedPersonaLabel()
-                                else
-                                        warn("Use slot failed:", useRes and useRes.err)
-                                end
-                        else
-                                warn("Save failed:", res and res.err)
-                        end
-                end)
-	end
+    end
 end
 
-return Cosmetics
+-- ═══════════════════════════════════════════════════════════════
+--                    SLOT BUTTON CREATION
+-- ═══════════════════════════════════════════════════════════════
+
+local function createPersonaSlot(parent, slotIndex, size, position, anchorPoint)
+    local slotFrame = createStyledFrame(parent, size, position, anchorPoint)
+
+    -- Viewport for persona preview
+    local viewport = Instance.new("ViewportFrame")
+    viewport.Size = UDim2.fromScale(1, 1)
+    viewport.BackgroundTransparency = 1
+    viewport.BorderSizePixel = 0
+    viewport.ZIndex = 10
+    viewport.Parent = slotFrame
+
+    -- Placeholder image
+    local placeholder = Instance.new("ImageLabel")
+    placeholder.Size = UDim2.fromScale(0.8, 0.8)
+    placeholder.Position = UDim2.fromScale(0.5, 0.5)
+    placeholder.AnchorPoint = Vector2.new(0.5, 0.5)
+    placeholder.BackgroundTransparency = 1
+    placeholder.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
+    placeholder.ImageColor3 = NINJA_COLORS.TEXT_SECONDARY
+    placeholder.ScaleType = Enum.ScaleType.Fit
+    placeholder.ZIndex = 11
+    placeholder.Parent = slotFrame
+
+    -- Level label
+    local levelLabel = Instance.new("TextLabel")
+    levelLabel.Name = "LevelLabel"
+    levelLabel.Size = UDim2.new(1, -10, 0, 20)
+    levelLabel.Position = UDim2.new(0, 5, 0, 5)
+    levelLabel.BackgroundTransparency = 1
+    levelLabel.Text = "⭐ Level 1"
+    levelLabel.Font = Enum.Font.GothamSemibold
+    levelLabel.TextSize = 12
+    levelLabel.TextColor3 = NINJA_COLORS.ACCENT
+    levelLabel.TextXAlignment = Enum.TextXAlignment.Left
+    levelLabel.ZIndex = 12
+    levelLabel.Parent = slotFrame
+
+    -- Button container
+    local buttonContainer = Instance.new("Frame")
+    buttonContainer.Size = UDim2.new(1, -10, 0.4, 0)
+    buttonContainer.Position = UDim2.new(0, 5, 0.55, 0)
+    buttonContainer.BackgroundTransparency = 1
+    buttonContainer.ZIndex = 12
+    buttonContainer.Parent = slotFrame
+
+    local corners = Instance.new("UICorner")
+    corners.CornerRadius = UDim.new(0, 10)
+    corners.Parent = buttonContainer
+
+    -- Create buttons based on slot size
+    local isLargeSlot = size.X.Scale >= 0.35
+    local buttonSize = isLargeSlot and UDim2.new(0.45, 0, 0.25, 0) or UDim2.new(0.9, 0, 0.3, 0)
+
+    local ninjaButton, robloxButton, useButton, clearButton
+
+    if isLargeSlot then
+        ninjaButton = createNinjaButton(buttonContainer, "🥷 Ninja", 
+            buttonSize, UDim2.new(0, 0, 0, 0), NINJA_COLORS.SECONDARY)
+        robloxButton = createNinjaButton(buttonContainer, "👤 Avatar", 
+            buttonSize, UDim2.new(0.55, 0, 0, 0), Color3.fromRGB(80, 120, 200))
+        useButton = createNinjaButton(buttonContainer, "⚡ Activate", 
+            UDim2.new(0.7, 0, 0.25, 0), UDim2.new(0.15, 0, 0.35, 0), NINJA_COLORS.SUCCESS)
+        clearButton = createNinjaButton(buttonContainer, "🗑️ Clear", 
+            UDim2.new(0.5, 0, 0.2, 0), UDim2.new(0.25, 0, 0.75, 0), NINJA_COLORS.DANGER)
+    else
+        ninjaButton = createNinjaButton(buttonContainer, "🥷", 
+            UDim2.new(0.45, 0, 0.4, 0), UDim2.new(0, 0, 0, 0), NINJA_COLORS.SECONDARY)
+        robloxButton = createNinjaButton(buttonContainer, "👤", 
+            UDim2.new(0.45, 0, 0.4, 0), UDim2.new(0.55, 0, 0, 0), Color3.fromRGB(80, 120, 200))
+        useButton = createNinjaButton(buttonContainer, "⚡", 
+            UDim2.new(0.9, 0, 0.25, 0), UDim2.new(0.05, 0, 0.5, 0), NINJA_COLORS.SUCCESS)
+        clearButton = createNinjaButton(buttonContainer, "🗑️", 
+            UDim2.new(0.4, 0, 0.2, 0), UDim2.new(0.3, 0, 0.8, 0), NINJA_COLORS.DANGER)
+    end
+
+    return {
+        frame = slotFrame,
+        viewport = viewport,
+        placeholder = placeholder,
+        levelLabel = levelLabel,
+        useButton = useButton,
+        clearButton = clearButton,
+        ninjaButton = ninjaButton,
+        robloxButton = robloxButton,
+        clearConnection = nil
+    }
+end
+
+-- ═══════════════════════════════════════════════════════════════
+--                      PUBLIC FUNCTIONS
+-- ═══════════════════════════════════════════════════════════════
+
+function NinjaCosmetics.getSelectedPersona()
+    local personaType = currentChoiceType
+    if chosenSlot and personaCache and personaCache.slots then
+        local slotData = personaCache.slots[chosenSlot]
+        if slotData and slotData.type then 
+            personaType = slotData.type 
+        end
+    end
+    return personaType, chosenSlot
+end
+
+function NinjaCosmetics.refreshSlots(data)
+    refreshSlotData(data)
+end
+
+function NinjaCosmetics.showDojoPicker()
+    showDojoInterface()
+end
+
+function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
+    uiBridge = bridgeInterface
+    rootUI = rootInterface
+
+    -- Setup fallback inventory
+    if typeof(config) == "table" then
+        fallbackStarterBackpack = config.inventory or config.starterBackpack
+    end
+
+    -- Initialize level tracking
+    local statsFolder = player:FindFirstChild("Stats")
+    if statsFolder then
+        levelValue = statsFolder:FindFirstChild("Level")
+        if levelValue then
+            levelValue:GetPropertyChangedSignal("Value"):Connect(updateLevelDisplays)
+            updateLevelDisplays()
+        end
+    else
+        player.ChildAdded:Connect(function(child)
+            if child.Name == "Stats" then
+                levelValue = child:FindFirstChild("Level")
+                if levelValue then
+                    levelValue:GetPropertyChangedSignal("Value"):Connect(updateLevelDisplays)
+                    updateLevelDisplays()
+                end
+            end
+        end)
+    end
+    player:GetAttributeChangedSignal("Level"):Connect(updateLevelDisplays)
+
+    -- ═══════════════════════════════════════════════════════════════
+    --                    MAIN DOJO INTERFACE
+    -- ═══════════════════════════════════════════════════════════════
+
+    dojoInterface = Instance.new("Frame")
+    dojoInterface.Size = UDim2.fromScale(1, 1)
+    dojoInterface.BackgroundTransparency = 1
+    dojoInterface.Visible = false
+    dojoInterface.ZIndex = 10
+    dojoInterface.Parent = rootInterface
+
+    -- Background with ninja aesthetic but transparent for camera scene
+    local background = Instance.new("Frame")
+    background.Size = UDim2.fromScale(1, 1)
+    background.BackgroundTransparency = 1
+    background.BorderSizePixel = 0
+    background.ZIndex = 10
+    background.Parent = dojoInterface
+
+    -- Header with ninja branding
+    local headerFrame = createStyledFrame(dojoInterface, 
+        UDim2.fromScale(0.8, 0.15), 
+        UDim2.fromScale(0.5, 0.08), 
+        Vector2.new(0.5, 0)
+    )
+    headerFrame.BackgroundTransparency = 1
+
+    local dojoTitle = Instance.new("ImageLabel")
+    dojoTitle.Size = UDim2.fromScale(0.7, 0.8)
+    dojoTitle.Position = UDim2.fromScale(0.5, 0.5)
+    dojoTitle.AnchorPoint = Vector2.new(0.5, 0.5)
+    dojoTitle.Image = "rbxassetid://138217463115431" -- BootUI logo
+    dojoTitle.BackgroundTransparency = 1
+    dojoTitle.ScaleType = Enum.ScaleType.Fit
+    dojoTitle.ZIndex = 12
+    dojoTitle.Parent = headerFrame
+
+    local shadowText = Instance.new("TextLabel")
+    shadowText.Size = UDim2.new(0.3, 0, 0.4, 0)
+    shadowText.Position = UDim2.new(0.7, 0, 0.3, 0)
+    shadowText.BackgroundTransparency = 1
+    shadowText.Text = "🌙 Shadow Dojo"
+    shadowText.Font = Enum.Font.GothamSemibold
+    shadowText.TextScaled = true
+    shadowText.TextColor3 = NINJA_COLORS.ACCENT
+    shadowText.ZIndex = 12
+    shadowText.Parent = headerFrame
+
+    -- Selected persona display
+    selectedPersonaLabel = Instance.new("TextLabel")
+    selectedPersonaLabel.Name = "SelectedPersonaLabel"
+    selectedPersonaLabel.Size = UDim2.new(0.8, 0, 0.04, 0)
+    selectedPersonaLabel.Position = UDim2.fromScale(0.5, 0.25)
+    selectedPersonaLabel.AnchorPoint = Vector2.new(0.5, 0)
+    selectedPersonaLabel.BackgroundTransparency = 1
+    selectedPersonaLabel.TextScaled = true
+    selectedPersonaLabel.Font = Enum.Font.GothamSemibold
+    selectedPersonaLabel.TextColor3 = NINJA_COLORS.ACCENT
+    selectedPersonaLabel.Text = ""
+    selectedPersonaLabel.ZIndex = 12
+    selectedPersonaLabel.Parent = dojoInterface
+
+    -- Main content panel
+    local contentPanel = createStyledFrame(dojoInterface, 
+        UDim2.fromScale(0.9, 0.6), 
+        UDim2.fromScale(0.5, 0.55), 
+        Vector2.new(0.5, 0.5)
+    )
+    contentPanel.BackgroundTransparency = 1
+
+    -- Slots container
+    slotsContainer = Instance.new("Frame")
+    slotsContainer.Size = UDim2.new(1, -20, 0.8, 0)
+    slotsContainer.Position = UDim2.new(0, 10, 0, 10)
+    slotsContainer.BackgroundTransparency = 1
+    slotsContainer.ZIndex = 11
+    slotsContainer.Parent = contentPanel
+
+    local slotsCorner = Instance.new("UICorner")
+    slotsCorner.CornerRadius = UDim.new(0, 12)
+    slotsCorner.Parent = slotsContainer
+
+    -- Footer with dojo branding
+    local footerFrame = createStyledFrame(contentPanel, 
+        UDim2.new(0.8, 0, 0.15, 0), 
+        UDim2.fromScale(0.5, 0.9), 
+        Vector2.new(0.5, 0.5)
+    )
+    footerFrame.BackgroundTransparency = 1
+
+    local starterDojoImage = Instance.new("ImageLabel")
+    starterDojoImage.Size = UDim2.fromScale(0.6, 0.8)
+    starterDojoImage.Position = UDim2.fromScale(0.5, 0.5)
+    starterDojoImage.AnchorPoint = Vector2.new(0.5, 0.5)
+    starterDojoImage.Image = "rbxassetid://137361385013636" -- Starter dojo image
+    starterDojoImage.BackgroundTransparency = 1
+    starterDojoImage.ScaleType = Enum.ScaleType.Fit
+    starterDojoImage.ZIndex = 12
+    starterDojoImage.Parent = footerFrame
+
+    local footerText = Instance.new("TextLabel")
+    footerText.Size = UDim2.new(0.35, 0, 0.5, 0)
+    footerText.Position = UDim2.new(0.65, 0, 0.25, 0)
+    footerText.BackgroundTransparency = 1
+    footerText.Text = "🏯 Train in the ancient ways\n🗡️ Master your shadow arts"
+    footerText.Font = Enum.Font.Gotham
+    footerText.TextScaled = true
+    footerText.TextColor3 = NINJA_COLORS.TEXT_SECONDARY
+    footerText.TextWrapped = true
+    footerText.ZIndex = 12
+    footerText.Parent = footerFrame
+
+    -- ═══════════════════════════════════════════════════════════════
+    --                      CREATE PERSONA SLOTS
+    -- ═══════════════════════════════════════════════════════════════
+
+    -- Initialize persona data
+    personaCache = sanitizePersonaData(config.personaData)
+    slotButtons = {}
+
+    -- Slot 1: Center (primary/featured slot)
+    slotButtons[1] = createPersonaSlot(slotsContainer, 1,
+        UDim2.fromScale(0.45, 0.7),
+        UDim2.fromScale(0.5, 0.5),
+        Vector2.new(0.5, 0.5)
+    )
+
+    -- Slot 2: Left side
+    slotButtons[2] = createPersonaSlot(slotsContainer, 2,
+        UDim2.fromScale(0.25, 0.5),
+        UDim2.fromScale(0.15, 0.5),
+        Vector2.new(0.5, 0.5)
+    )
+
+    -- Slot 3: Right side
+    slotButtons[3] = createPersonaSlot(slotsContainer, 3,
+        UDim2.fromScale(0.25, 0.5),
+        UDim2.fromScale(0.85, 0.5),
+        Vector2.new(0.5, 0.5)
+    )
+
+    -- ═══════════════════════════════════════════════════════════════
+    --                    CONNECT SLOT INTERACTIONS
+    -- ═══════════════════════════════════════════════════════════════
+
+    for slotIndex, slotUI in pairs(slotButtons) do
+        local currentIndex = slotIndex
+
+        -- Use button: Activate selected persona
+        slotUI.useButton.MouseButton1Click:Connect(function()
+            local result = invokePersonaService("use", {slot = currentIndex})
+            if not (result and result.ok) then 
+                warn("🥷 Failed to activate shadow warrior from slot", currentIndex, ":", result and result.err)
+                return 
+            end
+
+            chosenSlot = currentIndex
+            currentChoiceType = result.persona and result.persona.type or currentChoiceType
+            applyPersonaToPlayer(result.persona)
+            triggerTransitionAnimation()
+            showLoadoutInterface(result.persona and result.persona.type or currentChoiceType)
+            updateSelectedPersonaLabel()
+        end)
+
+        -- Ninja button: Save ninja persona to slot
+        slotUI.ninjaButton.MouseButton1Click:Connect(function()
+            local saveResult = invokePersonaService("save", {slot = currentIndex, type = "Ninja"})
+            if saveResult and saveResult.ok then
+                refreshSlotData(saveResult)
+                local useResult = invokePersonaService("use", {slot = currentIndex})
+                if useResult and useResult.ok then
+                    chosenSlot = currentIndex
+                    currentChoiceType = "Ninja"
+                    applyPersonaToPlayer(useResult.persona)
+                    triggerTransitionAnimation()
+                    showLoadoutInterface("Ninja")
+                    updateSelectedPersonaLabel()
+                else
+                    warn("🥷 Failed to activate ninja persona:", useResult and useResult.err)
+                end
+            else
+                warn("🥷 Failed to save ninja persona:", saveResult and saveResult.err)
+            end
+        end)
+
+        -- Roblox button: Save Roblox avatar to slot
+        slotUI.robloxButton.MouseButton1Click:Connect(function()
+            local saveResult = invokePersonaService("save", {slot = currentIndex, type = "Roblox"})
+            if saveResult and saveResult.ok then
+                refreshSlotData(saveResult)
+                local useResult = invokePersonaService("use", {slot = currentIndex})
+                if useResult and useResult.ok then
+                    chosenSlot = currentIndex
+                    currentChoiceType = "Roblox"
+                    applyPersonaToPlayer(useResult.persona)
+                    triggerTransitionAnimation()
+                    showLoadoutInterface("Roblox")
+                    updateSelectedPersonaLabel()
+                else
+                    warn("🥷 Failed to activate avatar persona:", useResult and useResult.err)
+                end
+            else
+                warn("🥷 Failed to save avatar persona:", saveResult and saveResult.err)
+            end
+        end)
+    end
+
+    -- Initialize UI state
+    updateSlotDisplays()
+    updateSelectedPersonaLabel()
+
+    -- Add entrance animation
+    local entranceTween = TweenService:Create(dojoInterface,
+        TweenInfo.new(ANIMATIONS.FADE_TIME * 2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {BackgroundTransparency = 0}
+    )
+
+    dojoInterface.Changed:Connect(function(property)
+        if property == "Visible" and dojoInterface.Visible then
+            entranceTween:Play()
+        end
+    end)
+end
+
+return NinjaCosmetics
