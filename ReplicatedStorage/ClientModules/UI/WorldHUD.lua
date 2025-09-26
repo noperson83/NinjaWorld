@@ -5,7 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ShopUI = require(ReplicatedStorage.ClientModules.UI.ShopUI)
 local NinjaQuestUI = require(ReplicatedStorage.ClientModules.UI.NinjaQuestUI)
 local NinjaPouchUI = require(ReplicatedStorage.ClientModules.UI.NinjaPouchUI)
-local TeleportClient = require(ReplicatedStorage.ClientModules.TeleportClient)
+local TeleportUI = require(ReplicatedStorage.ClientModules.UI.TeleportUI)
 
 local WorldHUD = {}
 WorldHUD.__index = WorldHUD
@@ -35,39 +35,6 @@ local function track(self, conn)
 
 	table.insert(self._connections, conn)
 	return conn
-end
-
-local function getEnumValue(enumType, itemName, fallback)
-	local ok, value = pcall(function()
-		return enumType[itemName]
-	end)
-
-	if ok and value ~= nil then
-		return value
-	end
-
-	return fallback
-end
-
-local function createRealmButton(parent, info, order)
-	local btn = Instance.new("TextButton")
-	btn.Name = info.key .. "Button"
-	btn.Size = UDim2.new(1, 0, 0, 44)
-	btn.LayoutOrder = order or 0
-	btn.Text = info.name
-	btn.Font = Enum.Font.GothamSemibold
-	btn.TextScaled = true
-	btn.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
-	btn.TextColor3 = Color3.fromRGB(170, 170, 170)
-	btn.AutoButtonColor = true
-	btn.BorderSizePixel = 0
-	btn.Parent = parent
-
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 8)
-	corner.Parent = btn
-
-	return btn
 end
 
 local function ensureParent()
@@ -113,7 +80,6 @@ function WorldHUD.new(config, dependencies)
 	self.shop = dependencies and dependencies.shop or nil
 	self.currencyService = dependencies and dependencies.currencyService or nil
 	self._connections = {}
-	self._flagConnections = {}
 	self._destroyed = false
 	self.backButtonEnabled = true
 
@@ -159,227 +125,15 @@ function WorldHUD.new(config, dependencies)
 	loadTitle.TextColor3 = Color3.fromRGB(255,200,120)
 	loadTitle.Parent = loadout
 
-	-- Teleport UI
-	local teleportContainer = Instance.new("Frame")
-	teleportContainer.Name = "TeleportContainer"
-	teleportContainer.Size = UDim2.new(0.65, -20, 0.65, 0)
-	teleportContainer.Position = UDim2.new(0, 20, 0, baseY + 80)
-	teleportContainer.BackgroundColor3 = Color3.fromRGB(18, 20, 24)
-	teleportContainer.BackgroundTransparency = 0.05
-	teleportContainer.BorderSizePixel = 0
-	teleportContainer.Visible = false
-	teleportContainer.ZIndex = 25
-	teleportContainer.Parent = loadout
-
-	local teleportCorner = Instance.new("UICorner")
-	teleportCorner.CornerRadius = UDim.new(0, 12)
-	teleportCorner.Parent = teleportContainer
-
-	local teleportStroke = Instance.new("UIStroke")
-	teleportStroke.Color = Color3.fromRGB(70, 90, 140)
-	teleportStroke.Thickness = 2
-	teleportStroke.Transparency = 0.3
-	teleportStroke.Parent = teleportContainer
-
-	local teleportTitle = Instance.new("TextLabel")
-	teleportTitle.Size = UDim2.new(1, -48, 0, 34)
-	teleportTitle.Position = UDim2.new(0, 20, 0, 16)
-	teleportTitle.BackgroundTransparency = 1
-	teleportTitle.Text = "Teleport Hub"
-	teleportTitle.TextXAlignment = Enum.TextXAlignment.Left
-	teleportTitle.Font = Enum.Font.GothamBold
-	teleportTitle.TextScaled = true
-	teleportTitle.TextColor3 = Color3.fromRGB(225, 225, 240)
-	teleportTitle.Parent = teleportContainer
-
-	local teleportCloseButton = Instance.new("TextButton")
-	teleportCloseButton.Name = "TeleportCloseButton"
-	teleportCloseButton.Size = UDim2.new(0, 32, 0, 32)
-	teleportCloseButton.AnchorPoint = Vector2.new(1, 0)
-	teleportCloseButton.Position = UDim2.new(1, -20, 0, 16)
-	teleportCloseButton.BackgroundColor3 = Color3.fromRGB(120, 40, 40)
-	teleportCloseButton.TextColor3 = Color3.new(1, 1, 1)
-	teleportCloseButton.Text = "X"
-	teleportCloseButton.Font = Enum.Font.GothamBold
-	teleportCloseButton.TextScaled = true
-	teleportCloseButton.AutoButtonColor = true
-	teleportCloseButton.Visible = false
-	teleportCloseButton.ZIndex = 30
-	teleportCloseButton.Parent = teleportContainer
-
-	local teleportCloseCorner = Instance.new("UICorner")
-	teleportCloseCorner.CornerRadius = UDim.new(0, 10)
-	teleportCloseCorner.Parent = teleportCloseButton
-
-	local teleportContent = Instance.new("Frame")
-	teleportContent.Name = "TeleportContent"
-	teleportContent.Size = UDim2.new(1, -32, 1, -84)
-	teleportContent.Position = UDim2.new(0, 16, 0, 60)
-	teleportContent.BackgroundTransparency = 1
-	teleportContent.Parent = teleportContainer
-
-	local localColumn = Instance.new("Frame")
-	localColumn.Name = "LocalTeleports"
-	localColumn.Size = UDim2.new(0.48, 0, 1, 0)
-	localColumn.BackgroundTransparency = 1
-	localColumn.Parent = teleportContent
-
-	local worldColumn = Instance.new("Frame")
-	worldColumn.Name = "WorldTeleports"
-	worldColumn.Size = UDim2.new(0.48, 0, 1, 0)
-	worldColumn.Position = UDim2.new(0.52, 0, 0, 0)
-	worldColumn.BackgroundTransparency = 1
-	worldColumn.Parent = teleportContent
-
-	local localTitle = Instance.new("TextLabel")
-	localTitle.Size = UDim2.new(1, 0, 0, 28)
-	localTitle.BackgroundTransparency = 1
-	localTitle.Text = "Locations"
-	localTitle.TextXAlignment = Enum.TextXAlignment.Left
-	localTitle.Font = Enum.Font.GothamSemibold
-	localTitle.TextScaled = true
-	localTitle.TextColor3 = Color3.fromRGB(200, 200, 220)
-	localTitle.Parent = localColumn
-
-	local teleFrame = Instance.new("Frame")
-	teleFrame.Name = "TeleFrame"
-	teleFrame.Size = UDim2.new(1, 0, 1, -36)
-	teleFrame.Position = UDim2.new(0, 0, 0, 36)
-	teleFrame.BackgroundColor3 = Color3.fromRGB(24, 26, 28)
-	teleFrame.BackgroundTransparency = 0.4
-	teleFrame.BorderSizePixel = 0
-	teleFrame.Parent = localColumn
-
-	local teleFrameCorner = Instance.new("UICorner")
-	teleFrameCorner.CornerRadius = UDim.new(0, 10)
-	teleFrameCorner.Parent = teleFrame
-
-	local telePadding = Instance.new("UIPadding")
-	telePadding.PaddingTop = UDim.new(0, 8)
-	telePadding.PaddingBottom = UDim.new(0, 8)
-	telePadding.PaddingLeft = UDim.new(0, 8)
-	telePadding.PaddingRight = UDim.new(0, 8)
-	telePadding.Parent = teleFrame
-
-	local teleGrid = Instance.new("UIGridLayout")
-	teleGrid.CellSize = UDim2.new(0.5, -10, 0, 52)
-	teleGrid.CellPadding = UDim2.new(0, 8, 0, 8)
-	teleGrid.SortOrder = Enum.SortOrder.LayoutOrder
-	teleGrid.HorizontalAlignment = Enum.HorizontalAlignment.Center
-	teleGrid.VerticalAlignment = Enum.VerticalAlignment.Top
-	teleGrid.Parent = teleFrame
-
-	local zoneButtonsInfo = {
-		{name = "Starter", label = "Starter Zone"},
-		{name = "Dojo", label = "Dojo Entrance"},
-		{name = "Water", label = "Water Island"},
-		{name = "Fire", label = "Fire Island"},
-		{name = "Wind", label = "Wind Island"},
-		{name = "Grow", label = "Growth Island"},
-		{name = "Ice", label = "Ice Island"},
-		{name = "Light", label = "Light Island"},
-		{name = "Metal", label = "Metal Island"},
-		{name = "Atom", label = "Atoms Island"},
-	}
-
-	for index, info in ipairs(zoneButtonsInfo) do
-		local button = Instance.new("TextButton")
-		button.Name = info.name .. "Button"
-		button.Size = UDim2.new(0, 0, 0, 0)
-		button.LayoutOrder = index
-		button.BackgroundColor3 = Color3.fromRGB(50, 120, 255)
-		button.BackgroundTransparency = 0.2
-		button.TextColor3 = Color3.new(1, 1, 1)
-		button.Font = Enum.Font.GothamSemibold
-		button.TextScaled = true
-		button.AutoButtonColor = true
-		button.Text = info.label
-		button.Parent = teleFrame
-
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0, 8)
-		corner.Parent = button
-	end
-
-	local worldTitle = Instance.new("TextLabel")
-	worldTitle.Size = UDim2.new(1, 0, 0, 28)
-	worldTitle.BackgroundTransparency = 1
-	worldTitle.Text = "Realms"
-	worldTitle.TextXAlignment = Enum.TextXAlignment.Left
-	worldTitle.Font = Enum.Font.GothamSemibold
-	worldTitle.TextScaled = true
-	worldTitle.TextColor3 = Color3.fromRGB(200, 200, 220)
-	worldTitle.Parent = worldColumn
-
-	local worldFrame = Instance.new("ScrollingFrame")
-	worldFrame.Name = "WorldTeleFrame"
-	worldFrame.Size = UDim2.new(1, 0, 1, -92)
-	worldFrame.Position = UDim2.new(0, 0, 0, 36)
-	worldFrame.BackgroundColor3 = Color3.fromRGB(24, 26, 28)
-	worldFrame.BackgroundTransparency = 0.4
-	worldFrame.BorderSizePixel = 0
-	worldFrame.ScrollBarThickness = 6
-	worldFrame.ScrollingDirection = Enum.ScrollingDirection.Y
-	worldFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-	worldFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-	worldFrame.Parent = worldColumn
-
-	local worldCorner = Instance.new("UICorner")
-	worldCorner.CornerRadius = UDim.new(0, 10)
-	worldCorner.Parent = worldFrame
-
-	local worldPadding = Instance.new("UIPadding")
-	worldPadding.PaddingTop = UDim.new(0, 8)
-	worldPadding.PaddingBottom = UDim.new(0, 8)
-	worldPadding.PaddingLeft = UDim.new(0, 8)
-	worldPadding.PaddingRight = UDim.new(0, 8)
-	worldPadding.Parent = worldFrame
-
-	local worldLayout = Instance.new("UIListLayout")
-	worldLayout.FillDirection = Enum.FillDirection.Vertical
-	worldLayout.Padding = UDim.new(0, 8)
-	worldLayout.HorizontalAlignment = getEnumValue(Enum.HorizontalAlignment, "Stretch", Enum.HorizontalAlignment.Left)
-	worldLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	worldLayout.Parent = worldFrame
-
-	local enterButtonHolder = Instance.new("Frame")
-	enterButtonHolder.Name = "EnterRealmButtonHolder"
-	enterButtonHolder.Size = UDim2.new(1, 0, 0, 56)
-	enterButtonHolder.AnchorPoint = Vector2.new(0, 1)
-	enterButtonHolder.Position = UDim2.new(0, 0, 1, 0)
-	enterButtonHolder.BackgroundTransparency = 1
-	enterButtonHolder.Parent = worldColumn
-
-	local enterButtonPadding = Instance.new("UIPadding")
-	enterButtonPadding.PaddingTop = UDim.new(0, 8)
-	enterButtonPadding.PaddingBottom = UDim.new(0, 8)
-	enterButtonPadding.PaddingLeft = UDim.new(0, 8)
-	enterButtonPadding.PaddingRight = UDim.new(0, 8)
-	enterButtonPadding.Parent = enterButtonHolder
-
-	local enterRealmButton = Instance.new("TextButton")
-	enterRealmButton.Name = "EnterRealmButton"
-	enterRealmButton.Size = UDim2.new(1, 0, 1, 0)
-	enterRealmButton.LayoutOrder = 1000
-	enterRealmButton.Text = "Select a realm"
-	enterRealmButton.Font = Enum.Font.GothamBold
-	enterRealmButton.TextScaled = true
-	enterRealmButton.TextColor3 = Color3.fromRGB(220, 220, 230)
-	enterRealmButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-	enterRealmButton.AutoButtonColor = false
-	enterRealmButton.Active = false
-	enterRealmButton.Parent = enterButtonHolder
-
-	local enterCorner = Instance.new("UICorner")
-	enterCorner.CornerRadius = UDim.new(0, 8)
-	enterCorner.Parent = enterRealmButton
-
-	TeleportClient.bindZoneButtons(root)
-	TeleportClient.bindWorldButtons(root)
-
-	self.teleportContainer = teleportContainer
-	self.teleportCloseButton = teleportCloseButton
-	self.enterRealmButton = enterRealmButton
+        -- Teleport UI
+        local teleportUI = TeleportUI.init(loadout, baseY, {
+                REALM_INFO = REALM_INFO,
+                getRealmFolder = getRealmFolder,
+        })
+        self.teleportUI = teleportUI
+        local teleportCloseButton = teleportUI and teleportUI.closeButton or nil
+        self.teleportCloseButton = teleportCloseButton
+        self.enterRealmButton = teleportUI and teleportUI.enterRealmButton or nil
 
 	local quest = NinjaQuestUI.init(loadout, baseY)
 	self.quest = quest
@@ -430,11 +184,12 @@ function WorldHUD.new(config, dependencies)
 	self.teleportOpenButton = teleOpenButton
 	self.shopButton = shopButton
 
-	local function setTeleportsVisible(visible)
-		teleportContainer.Visible = visible and true or false
-		teleportCloseButton.Visible = visible and true or false
-		teleOpenButton.Visible = not visible
-	end
+        local function setTeleportsVisible(visible)
+                if teleportUI then
+                        teleportUI:setVisible(visible)
+                end
+                teleOpenButton.Visible = not visible
+        end
 
 	if quest and quest.closeButton then
 		track(self, quest.closeButton.MouseButton1Click:Connect(function()
@@ -480,9 +235,11 @@ function WorldHUD.new(config, dependencies)
 		self:toggleShop()
 	end))
 
-	track(self, teleportCloseButton.MouseButton1Click:Connect(function()
-		setTeleportsVisible(false)
-	end))
+        if teleportCloseButton then
+                track(self, teleportCloseButton.MouseButton1Click:Connect(function()
+                        setTeleportsVisible(false)
+                end))
+        end
 
 	track(self, teleOpenButton.MouseButton1Click:Connect(function()
 		setTeleportsVisible(true)
@@ -505,117 +262,11 @@ function WorldHUD.new(config, dependencies)
 	backButton.Parent = loadout
 	self.backButton = backButton
 
-	local realmButtons = {}
-	self.realmButtons = realmButtons
-	local realmDisplayLookup = {}
-	self.realmDisplayLookup = realmDisplayLookup
-	for _, info in ipairs(REALM_INFO) do
-		realmDisplayLookup[info.key] = info.name
-	end
-
-	local function isRealmUnlocked(key)
-		local realmsFolder = getRealmFolder()
-		if not realmsFolder then return false end
-		local flag = realmsFolder:FindFirstChild(key)
-		return flag and flag.Value or false
-	end
-
-	local function updateRealmButton(key)
-		local btn = realmButtons[key]
-		if not btn then return end
-		local unlocked = isRealmUnlocked(key)
-		btn.Active = unlocked
-		btn.AutoButtonColor = unlocked
-		btn.BackgroundColor3 = unlocked and Color3.fromRGB(50,120,255) or Color3.fromRGB(40,40,48)
-		btn.TextColor3 = unlocked and Color3.new(1,1,1) or Color3.fromRGB(170,170,170)
-	end
-
-	local function setSelected(key)
-		self.selectedRealm = key
-		for k, b in pairs(realmButtons) do
-			if k == key then
-				b.BackgroundColor3 = Color3.fromRGB(80,160,255)
-			else
-				updateRealmButton(k)
-			end
-		end
-		local hasPlace = (key == "StarterDojo") or (TeleportClient.WorldPlaceIds[key] and TeleportClient.WorldPlaceIds[key] > 0)
-		enterRealmButton.Active = hasPlace
-		enterRealmButton.AutoButtonColor = hasPlace
-		enterRealmButton.BackgroundColor3 = hasPlace and Color3.fromRGB(50,120,255) or Color3.fromRGB(80,80,80)
-		enterRealmButton.TextColor3 = hasPlace and Color3.new(1,1,1) or Color3.fromRGB(220,220,230)
-		enterRealmButton.Text = "Enter " .. (realmDisplayLookup[key] or "Realm")
-	end
-	self._setSelectedRealm = setSelected
-
-	track(self, enterRealmButton:GetPropertyChangedSignal("Text"):Connect(function()
-		local key = self.selectedRealm
-		if not key then return end
-		local desired = "Enter " .. (realmDisplayLookup[key] or key)
-		if enterRealmButton.Text ~= desired then
-			enterRealmButton.Text = desired
-		end
-	end))
-
-	for index, info in ipairs(REALM_INFO) do
-		local btn = createRealmButton(worldFrame, info, index)
-		realmButtons[info.key] = btn
-		track(self, btn.Activated:Connect(function()
-			if not btn.Active then return end
-			setSelected(info.key)
-		end))
-		local realmsFolder = getRealmFolder()
-		if realmsFolder then
-			local flag = realmsFolder:FindFirstChild(info.key)
-			if flag then
-				local conn = flag:GetPropertyChangedSignal("Value"):Connect(function()
-					updateRealmButton(info.key)
-				end)
-				self._flagConnections[#self._flagConnections + 1] = conn
-			end
-		end
-		updateRealmButton(info.key)
-	end
-
-	enterRealmButton.Active = false
-	enterRealmButton.AutoButtonColor = false
-
-	-- If no realm has been selected yet, default to the first unlocked realm
-	if not self.selectedRealm then
-		local defaultRealm
-		local realmsFolder = getRealmFolder()
-		if realmsFolder then
-			for _, info in ipairs(REALM_INFO) do
-				local flag = realmsFolder:FindFirstChild(info.key)
-				if flag and flag.Value then
-					defaultRealm = info.key
-					break
-				end
-			end
-		end
-
-		if not defaultRealm and REALM_INFO[1] then
-			defaultRealm = REALM_INFO[1].key
-		end
-
-		if defaultRealm then
-			setSelected(defaultRealm)
-		end
-	end
-
-	local realmsFolder = getRealmFolder()
-	if realmsFolder then
-		track(self, realmsFolder.ChildAdded:Connect(function(child)
-			local btn = realmButtons[child.Name]
-			if btn then
-				local conn = child:GetPropertyChangedSignal("Value"):Connect(function()
-					updateRealmButton(child.Name)
-				end)
-				self._flagConnections[#self._flagConnections + 1] = conn
-				updateRealmButton(child.Name)
-			end
-		end))
-	end
+        local realmDisplayLookup = {}
+        self.realmDisplayLookup = realmDisplayLookup
+        for _, info in ipairs(REALM_INFO) do
+                realmDisplayLookup[info.key] = info.name
+        end
 
 	if self.config and self.config.showShop then
 		self:toggleShop()
@@ -735,35 +386,37 @@ function WorldHUD:updateCurrency(coins, orbs, elements)
 end
 
 function WorldHUD:getSelectedRealm()
-	return self.selectedRealm
+        if self.teleportUI and self.teleportUI.getSelectedRealm then
+                return self.teleportUI:getSelectedRealm()
+        end
+        return nil
 end
 
 function WorldHUD:getRealmDisplayName(key)
-	return self.realmDisplayLookup and self.realmDisplayLookup[key]
+        return self.realmDisplayLookup and self.realmDisplayLookup[key]
 end
 
 function WorldHUD:setSelectedRealm(key)
-	if self._setSelectedRealm then
-		self._setSelectedRealm(key)
-	end
+        if self.teleportUI and self.teleportUI.setSelectedRealm then
+                self.teleportUI:setSelectedRealm(key)
+        end
 end
 
 function WorldHUD:destroy()
 	if self._destroyed then return end
 	self._destroyed = true
-	for _, conn in ipairs(self._connections) do
-		if conn.Disconnect then conn:Disconnect() end
-	end
-	for _, conn in ipairs(self._flagConnections) do
-		if conn.Disconnect then conn:Disconnect() end
-	end
-	self._connections = {}
-	self._flagConnections = {}
-	if self.gui then
-		self.gui:Destroy()
-	end
-	self.gui = nil
-	self.root = nil
+        for _, conn in ipairs(self._connections) do
+                if conn.Disconnect then conn:Disconnect() end
+        end
+        self._connections = {}
+        if self.teleportUI and self.teleportUI.destroy then
+                self.teleportUI:destroy()
+        end
+        if self.gui then
+                self.gui:Destroy()
+        end
+        self.gui = nil
+        self.root = nil
 	self.loadout = nil
 	self.shopButton = nil
 	self.shopFrame = nil
@@ -771,17 +424,16 @@ function WorldHUD:destroy()
 	self.enterRealmButton = nil
 	self.quest = nil
 	self.backpack = nil
-	self.togglePanel = nil
-	self.questOpenButton = nil
-	self.backpackOpenButton = nil
-	self.teleportOpenButton = nil
-	self.teleportContainer = nil
-	self.teleportCloseButton = nil
-	self.backButtonEnabled = nil
-	self._setSelectedRealm = nil
-	if currentHud == self then
-		currentHud = nil
-	end
+        self.togglePanel = nil
+        self.questOpenButton = nil
+        self.backpackOpenButton = nil
+        self.teleportOpenButton = nil
+        self.teleportCloseButton = nil
+        self.teleportUI = nil
+        self.backButtonEnabled = nil
+        if currentHud == self then
+                currentHud = nil
+        end
 end
 
 return WorldHUD
