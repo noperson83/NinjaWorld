@@ -127,10 +127,15 @@ function WorldHUD.new(config, dependencies)
 	loadTitle.Parent = loadout
 
 	-- Teleport UI
-	local teleportUI = TeleportUI.init(loadout, baseY, {
-		REALM_INFO = REALM_INFO,
-		getRealmFolder = getRealmFolder,
-	})
+        local setTeleportsVisible
+
+        local teleportUI = TeleportUI.init(loadout, baseY, {
+                REALM_INFO = REALM_INFO,
+                getRealmFolder = getRealmFolder,
+                onTeleport = function()
+                        setTeleportsVisible(false)
+                end,
+        })
 	self.teleportUI = teleportUI
 	local teleportCloseButton = teleportUI and teleportUI.closeButton or nil
 	self.teleportCloseButton = teleportCloseButton
@@ -185,12 +190,12 @@ function WorldHUD.new(config, dependencies)
 	self.teleportOpenButton = teleOpenButton
 	self.shopButton = shopButton
 
-	local function setTeleportsVisible(visible)
-		if teleportUI then
-			teleportUI:setVisible(visible)
-		end
-		teleOpenButton.Visible = not visible
-	end
+        setTeleportsVisible = function(visible)
+                if teleportUI then
+                        teleportUI:setVisible(visible)
+                end
+                teleOpenButton.Visible = not visible
+        end
 
 	if quest and quest.closeButton then
 		track(self, quest.closeButton.MouseButton1Click:Connect(function()
