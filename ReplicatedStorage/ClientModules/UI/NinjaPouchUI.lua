@@ -16,17 +16,50 @@ local function createCorner(parent, radius)
 end
 
 local function createStroke(parent, thickness, color)
-	local stroke = Instance.new("UIStroke")
-	stroke.Thickness = thickness or 1
-	stroke.Color = color or Color3.fromRGB(100, 100, 100)
-	stroke.Parent = parent
-	return stroke
+        local stroke = Instance.new("UIStroke")
+        stroke.Thickness = thickness or 1
+        stroke.Color = color or Color3.fromRGB(100, 100, 100)
+        stroke.Parent = parent
+        return stroke
+end
+
+local function styleNinjaCloseButton(button)
+        if not button then
+                return
+        end
+
+        button.Text = "X"
+        button.Font = Enum.Font.GothamBold
+        button.TextScaled = true
+        button.TextColor3 = Color3.fromRGB(255, 245, 245)
+        button.TextStrokeTransparency = 0.6
+        button.BackgroundColor3 = Color3.fromRGB(28, 28, 36)
+        button.BackgroundTransparency = 0.05
+        button.AutoButtonColor = true
+        button.BorderSizePixel = 0
+
+        for _, child in ipairs(button:GetChildren()) do
+                if child:IsA("UICorner") or child:IsA("UIStroke") then
+                        child:Destroy()
+                end
+        end
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(1, 0)
+        corner.Parent = button
+
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = Color3.fromRGB(220, 70, 70)
+        stroke.Thickness = 2
+        stroke.Transparency = 0.1
+        stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        stroke.Parent = button
 end
 
 function NinjaPouchUI.init(parent, baseY)
-	local self = {}
-	self.data = {gold = 0, shurikens = 0, kunai = 0, scrolls = 0}
-	self.currentTab = "Tools"
+        local self = {}
+        self.data = {gold = 0, shurikens = 0, kunai = 0, scrolls = 0}
+        self.currentTab = "Tools"
 
 	-- Main pouch container
 	local pouch = Instance.new("Frame")
@@ -73,24 +106,17 @@ function NinjaPouchUI.init(parent, baseY)
 	title.Parent = pouch
 
 	-- Close button
-	local closeButton = Instance.new("TextButton")
-	closeButton.Name = "PouchCloseButton"
-	closeButton.Size = UDim2.new(0, 30, 0, 30)
-	closeButton.AnchorPoint = Vector2.new(1, 0)
-	closeButton.Position = UDim2.new(1, -8, 0, 8)
-	closeButton.Text = "✕"
-	closeButton.Font = Enum.Font.GothamBold
-	closeButton.TextScaled = true
-	closeButton.TextColor3 = Color3.fromRGB(255, 100, 100)
-	closeButton.BackgroundColor3 = Color3.fromRGB(40, 15, 15)
-	closeButton.BackgroundTransparency = 0.2
-	closeButton.BorderSizePixel = 0
-	closeButton.Parent = pouch
-	createCorner(closeButton, 15)
+        local closeButton = Instance.new("TextButton")
+        closeButton.Name = "PouchCloseButton"
+        closeButton.Size = UDim2.new(0, 30, 0, 30)
+        closeButton.AnchorPoint = Vector2.new(1, 0)
+        closeButton.Position = UDim2.new(1, -8, 0, 8)
+        closeButton.Parent = pouch
+        styleNinjaCloseButton(closeButton)
 
-	-- Stealth meter
-	local stealthFrame = Instance.new("Frame")
-	stealthFrame.Size = UDim2.new(1, -30, 0, 12)
+        -- Stealth meter
+        local stealthFrame = Instance.new("Frame")
+        stealthFrame.Size = UDim2.new(1, -30, 0, 12)
 	stealthFrame.Position = UDim2.new(0, 15, 0, 60)
 	stealthFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 	stealthFrame.BorderSizePixel = 0

@@ -52,23 +52,56 @@ local function createStroke(parent, thickness, color)
 end
 
 local function createGradient(parent, colors, transparency)
-	local gradient = Instance.new("UIGradient")
-	gradient.Color = colors or ColorSequence.new{
-		ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 25, 35)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 25))
+        local gradient = Instance.new("UIGradient")
+        gradient.Color = colors or ColorSequence.new{
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 25, 35)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 25))
 	}
 	if transparency then
 		gradient.Transparency = transparency
 	end
 	gradient.Rotation = 45
-	gradient.Parent = parent
-	return gradient
+        gradient.Parent = parent
+        return gradient
+end
+
+local function styleNinjaCloseButton(button)
+        if not button then
+                return
+        end
+
+        button.Text = "X"
+        button.Font = Enum.Font.GothamBold
+        button.TextScaled = true
+        button.TextColor3 = Color3.fromRGB(255, 245, 245)
+        button.TextStrokeTransparency = 0.6
+        button.BackgroundColor3 = Color3.fromRGB(28, 28, 36)
+        button.BackgroundTransparency = 0.05
+        button.AutoButtonColor = true
+        button.BorderSizePixel = 0
+
+        for _, child in ipairs(button:GetChildren()) do
+                if child:IsA("UICorner") or child:IsA("UIStroke") then
+                        child:Destroy()
+                end
+        end
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(1, 0)
+        corner.Parent = button
+
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = Color3.fromRGB(220, 70, 70)
+        stroke.Thickness = 2
+        stroke.Transparency = 0.1
+        stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        stroke.Parent = button
 end
 
 -- Build the ninja marketplace interface
 function NinjaMarketplaceUI.init(config, shop, bootUI, defaultTab)
-	local root = bootUI and bootUI.root
-	if not root then return end
+        local root = bootUI and bootUI.root
+        if not root then return end
 
 	-- Main marketplace frame
 	frame = Instance.new("Frame")
@@ -146,28 +179,20 @@ function NinjaMarketplaceUI.init(config, shop, bootUI, defaultTab)
 	subtitle.Parent = header
 
 	-- Close button
-	local closeBtn = Instance.new("TextButton")
-	closeBtn.Name = "MarketplaceClose"
-	closeBtn.Size = UDim2.new(0, 45, 0, 45)
-	closeBtn.AnchorPoint = Vector2.new(1, 0)
-	closeBtn.Position = UDim2.new(1, -10, 0, 7.5)
-	closeBtn.Text = "✕"
-	closeBtn.Font = Enum.Font.GothamBold
-	closeBtn.TextScaled = true
-	closeBtn.TextColor3 = Color3.fromRGB(255, 150, 150)
-	closeBtn.BackgroundColor3 = Color3.fromRGB(80, 25, 25)
-	closeBtn.BackgroundTransparency = 0.1
-	closeBtn.BorderSizePixel = 0
+        local closeBtn = Instance.new("TextButton")
+        closeBtn.Name = "MarketplaceClose"
+        closeBtn.Size = UDim2.new(0, 45, 0, 45)
+        closeBtn.AnchorPoint = Vector2.new(1, 0)
+        closeBtn.Position = UDim2.new(1, -10, 0, 7.5)
         closeBtn.ZIndex = BASE_Z_INDEX + 4
-	closeBtn.AutoButtonColor = true
-	closeBtn.Parent = header
-	createCorner(closeBtn, 22.5)
-	createStroke(closeBtn, 2, Color3.fromRGB(120, 40, 40))
+        closeBtn.AutoButtonColor = true
+        closeBtn.Parent = header
+        styleNinjaCloseButton(closeBtn)
 
-	-- Tab bar
-	local tabBar = Instance.new("Frame")
-	tabBar.Name = "TabBar"
-	tabBar.Size = UDim2.new(1, -20, 0, 45)
+        -- Tab bar
+        local tabBar = Instance.new("Frame")
+        tabBar.Name = "TabBar"
+        tabBar.Size = UDim2.new(1, -20, 0, 45)
 	tabBar.Position = UDim2.new(0, 10, 0, 70)
 	tabBar.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 	tabBar.BackgroundTransparency = 0.3
