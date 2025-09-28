@@ -554,8 +554,43 @@ end
 function WorldHUD:handlePostTeleport(teleportContext)
         self:closeAllInterfaces()
 
-        -- Keep the main loadout menu available after teleporting so the player
+        local inWorld = false
+        if teleportContext then
+                if teleportContext.source == "Zone" then
+                        inWorld = teleportContext.name ~= "Dojo"
+                elseif teleportContext.source == "Realm" then
+                        inWorld = true
+                end
+        end
+
+        if inWorld then
+                self:setWorldMode(true)
+                self.menuAutoExpand = false
+
+                if not self:playLoadoutDissolve() then
+                        if self.loadout then
+                                self.loadout.Visible = false
+                        end
+                        self:setMenuExpanded(false)
+                        if self.setShopButtonVisible then
+                                self:setShopButtonVisible(false)
+                        end
+                        if self.backButton then
+                                self.backButton.Active = false
+                        end
+                        self:updateLoadoutHeaderVisibility()
+                end
+
+                if self.togglePanel then
+                        self.togglePanel.Visible = false
+                end
+
+                return
+        end
+
+        -- Keep the main loadout menu available when returning to the dojo so the player
         -- can immediately access quests, pouch, teleports, and shop again.
+        self:setWorldMode(false)
         self.menuAutoExpand = true
         self:setMenuExpanded(true)
 
@@ -574,20 +609,9 @@ function WorldHUD:handlePostTeleport(teleportContext)
                 self.togglePanel.Visible = true
         end
 
-	local inWorld = false
-	if teleportContext then
-		if teleportContext.source == "Zone" then
-			inWorld = teleportContext.name ~= "Dojo"
-		elseif teleportContext.source == "Realm" then
-			inWorld = true
-		end
-	end
-
-	self:setWorldMode(inWorld)
-
-	if self.setShopButtonVisible then
-		self:setShopButtonVisible(true)
-	end
+        if self.setShopButtonVisible then
+                self:setShopButtonVisible(true)
+        end
 end
 
 function WorldHUD.get()
