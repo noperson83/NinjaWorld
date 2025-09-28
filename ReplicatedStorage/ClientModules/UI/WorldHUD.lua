@@ -858,8 +858,18 @@ function WorldHUD.new(config, dependencies)
 	self.teleportCloseButton = teleportCloseButton
 	self.enterRealmButton = teleportUI and teleportUI.enterRealmButton or nil
 
-	local quest = NinjaQuestUI.init(loadout, baseY)
-	self.quest = quest
+        local quest = NinjaQuestUI.init(loadout, baseY, {
+                openAbilityShop = function(abilityName)
+                        if self:showShop("Abilities") then
+                                if abilityName and NinjaMarketplaceUI.focusAbility then
+                                        NinjaMarketplaceUI.focusAbility(abilityName)
+                                elseif NinjaMarketplaceUI.setTab then
+                                        NinjaMarketplaceUI.setTab("Abilities")
+                                end
+                        end
+                end,
+        })
+        self.quest = quest
 
 	local backpack = NinjaPouchUI.init(loadout, baseY)
 	self.backpack = backpack
@@ -1209,19 +1219,20 @@ function WorldHUD:setBackButtonEnabled(enabled)
 	self:updateLoadoutHeaderVisibility()
 end
 
-function WorldHUD:toggleShop(defaultTab)
-	if not self.shop then
-		warn("WorldHUD: shop instance missing")
-		return
-	end
-	if not self.shopFrame or not self.shopFrame.Parent then
-		local fakeBoot = {root = self.root}
-		self.shopFrame = NinjaMarketplaceUI.init(self.config, self.shop, fakeBoot, defaultTab)
-	else
-		self.shopFrame.Visible = not self.shopFrame.Visible
-	end
-        if self.shopFrame and self.shopFrame.Visible and defaultTab and NinjaMarketplaceUI.setTab then
-                NinjaMarketplaceUI.setTab(defaultTab)
+function WorldHUD:showShop(defaultTab)
+        if not self.shop then
+                warn("WorldHUD: shop instance missing")
+                return false
+        end
+
+        local fakeBoot = {root = self.root}
+        if not self.shopFrame or not self.shopFrame.Parent then
+                self.shopFrame = NinjaMarketplaceUI.init(self.config, self.shop, fakeBoot, defaultTab)
+        else
+                self.shopFrame.Visible = true
+                if defaultTab and NinjaMarketplaceUI.setTab then
+                        NinjaMarketplaceUI.setTab(defaultTab)
+                end
         end
 
         if self.shopFrame and self.shopFrame.Visible then
@@ -1230,6 +1241,19 @@ function WorldHUD:toggleShop(defaultTab)
         end
 
         return self.shopFrame and self.shopFrame.Visible
+end
+
+function WorldHUD:toggleShop(defaultTab)
+        if not self.shop then
+                warn("WorldHUD: shop instance missing")
+                return
+        end
+        if self.shopFrame and self.shopFrame.Visible then
+                self.shopFrame.Visible = false
+                return false
+        end
+
+        return self:showShop(defaultTab)
 end
 
 function WorldHUD:setBackpackData(data)

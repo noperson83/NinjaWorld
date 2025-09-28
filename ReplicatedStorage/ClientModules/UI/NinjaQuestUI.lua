@@ -4,6 +4,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ContentProvider = game:GetService("ContentProvider")
 
+local Abilities = require(ReplicatedStorage.ClientModules.Abilities)
+
 local function createCorner(parent, radius)
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0, radius or 8)
@@ -66,7 +68,9 @@ local function styleNinjaCloseButton(button)
         stroke.Parent = button
 end
 
-function NinjaQuestUI.init(parent, baseY)
+function NinjaQuestUI.init(parent, baseY, options)
+        options = options or {}
+
         local questRoot = Instance.new("Frame")
         questRoot.Name = "NinjaQuestUIRoot"
         questRoot.Size = UDim2.fromScale(1, 1)
@@ -179,9 +183,44 @@ function NinjaQuestUI.init(parent, baseY)
 		return btn
 	end
 
-	local viewportContainer = Instance.new("Frame")
-	viewportContainer.Size = UDim2.new(1, -10, 1, -115)
-	viewportContainer.Position = UDim2.new(0, 5, 0, 105)
+        local abilityContainer = Instance.new("Frame")
+        abilityContainer.Name = "AbilityStatusRow"
+        abilityContainer.Size = UDim2.new(1, -20, 0, 56)
+        abilityContainer.Position = UDim2.new(0, 10, 0, 105)
+        abilityContainer.BackgroundTransparency = 1
+        abilityContainer.ZIndex = 6
+        abilityContainer.Parent = previewCard
+
+        local abilityHeader = Instance.new("TextLabel")
+        abilityHeader.Name = "AbilityHeader"
+        abilityHeader.Size = UDim2.new(1, 0, 0, 20)
+        abilityHeader.BackgroundTransparency = 1
+        abilityHeader.TextXAlignment = Enum.TextXAlignment.Left
+        abilityHeader.Text = "⚡ Abilities"
+        abilityHeader.Font = Enum.Font.GothamSemibold
+        abilityHeader.TextScaled = true
+        abilityHeader.TextColor3 = Color3.fromRGB(200, 200, 220)
+        abilityHeader.ZIndex = 7
+        abilityHeader.Parent = abilityContainer
+
+        local abilityRow = Instance.new("Frame")
+        abilityRow.Name = "AbilityRow"
+        abilityRow.Size = UDim2.new(1, 0, 0, 32)
+        abilityRow.Position = UDim2.new(0, 0, 0, 24)
+        abilityRow.BackgroundTransparency = 1
+        abilityRow.ZIndex = 7
+        abilityRow.Parent = abilityContainer
+
+        local abilityLayout = Instance.new("UIListLayout")
+        abilityLayout.FillDirection = Enum.FillDirection.Horizontal
+        abilityLayout.Padding = UDim.new(0, 8)
+        abilityLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+        abilityLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+        abilityLayout.Parent = abilityRow
+
+        local viewportContainer = Instance.new("Frame")
+        viewportContainer.Size = UDim2.new(1, -10, 1, -175)
+        viewportContainer.Position = UDim2.new(0, 5, 0, 165)
 	viewportContainer.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
 	viewportContainer.BackgroundTransparency = 0.3
 	viewportContainer.BorderSizePixel = 0
@@ -327,22 +366,138 @@ function NinjaQuestUI.init(parent, baseY)
 		end)
 	end
 
-	local function wireEmoteButtons()
-		local emoteOrder = {"Idle", "Bow", "Strike", "Stealth", "Victory", "Focus"}
-		for _, emoteName in ipairs(emoteOrder) do
-			local emoteData = NINJA_EMOTES[emoteName]
-			local btn = createEmoteButton(emoteData.desc, emoteData.icon)
-			btn.MouseButton1Click:Connect(function()
-				task.spawn(function()
-					playEmote(emoteName)
-				end)
-			end)
-		end
-	end
+        local function wireEmoteButtons()
+                local emoteOrder = {"Idle", "Bow", "Strike", "Stealth", "Victory", "Focus"}
+                for _, emoteName in ipairs(emoteOrder) do
+                        local emoteData = NINJA_EMOTES[emoteName]
+                        local btn = createEmoteButton(emoteData.desc, emoteData.icon)
+                        btn.MouseButton1Click:Connect(function()
+                                task.spawn(function()
+                                        playEmote(emoteName)
+                                end)
+                        end)
+                end
+        end
 
-	local questController = {}
-	questController.root = questRoot
-	questController.closeButton = closeButton
+        local abilityButtons = {}
+        local abilityDefinitions = {
+                Toss = {icon = "🌀", label = "Toss"},
+                Star = {icon = "🌠", label = "Star"},
+                Rain = {icon = "🌧️", label = "Rain"},
+                Beast = {icon = "🦊", label = "Beast"},
+                Dragon = {icon = "🐉", label = "Dragon"},
+        }
+
+        local function updateAbilityButtonState(abilityName)
+                local button = abilityButtons[abilityName]
+                if not button then
+                        return
+                end
+
+                local unlocked = false
+                if Abilities and Abilities.isUnlocked then
+                        local ok, result = pcall(Abilities.isUnlocked, abilityName)
+                        unlocked = ok and result or false
+                end
+                if not unlocked then
+                        local player = Players.LocalPlayer
+                        local abilitiesFolder = player and player:FindFirstChild("Abilities")
+                        local valueObject = abilitiesFolder and abilitiesFolder:FindFirstChild(abilityName)
+                        if valueObject and valueObject:IsA("BoolValue") then
+                                unlocked = valueObject.Value
+                        end
+                end
+
+                button.AutoButtonColor = unlocked
+                button.BackgroundColor3 = unlocked and Color3.fromRGB(80, 50, 120) or Color3.fromRGB(35, 35, 45)
+                button.BackgroundTransparency = unlocked and 0.1 or 0.35
+                button.TextColor3 = unlocked and Color3.fromRGB(230, 220, 255) or Color3.fromRGB(140, 140, 160)
+                button.TextTransparency = unlocked and 0 or 0.2
+                button:SetAttribute("Unlocked", unlocked)
+        end
+
+        local function createAbilityButton(abilityName, def)
+                local btn = Instance.new("TextButton")
+                btn.Name = abilityName .. "AbilityButton"
+                btn.Size = UDim2.new(0, 105, 1, 0)
+                btn.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+                btn.BackgroundTransparency = 0.35
+                btn.Text = string.format("%s %s", def.icon or "⚡", def.label or abilityName)
+                btn.TextColor3 = Color3.fromRGB(140, 140, 160)
+                btn.Font = Enum.Font.GothamSemibold
+                btn.TextScaled = true
+                btn.AutoButtonColor = false
+                btn.BorderSizePixel = 0
+                btn.ZIndex = 8
+                btn.Parent = abilityRow
+                createCorner(btn, 8)
+                createStroke(btn, 1, Color3.fromRGB(60, 60, 80))
+
+                btn.MouseButton1Click:Connect(function()
+                        task.spawn(function()
+                                if typeof(options.openAbilityShop) == "function" then
+                                        options.openAbilityShop(abilityName)
+                                end
+                        end)
+                end)
+
+                abilityButtons[abilityName] = btn
+                updateAbilityButtonState(abilityName)
+        end
+
+        for abilityName, def in pairs(abilityDefinitions) do
+                createAbilityButton(abilityName, def)
+        end
+
+        local player = Players.LocalPlayer
+        local abilitiesFolder = player and player:FindFirstChild("Abilities")
+
+        local abilityConnections = {}
+
+        local function trackAbilityValue(valueObject)
+                if not valueObject or not abilityDefinitions[valueObject.Name] then
+                        return
+                end
+                table.insert(abilityConnections, valueObject:GetPropertyChangedSignal("Value"):Connect(function()
+                        updateAbilityButtonState(valueObject.Name)
+                end))
+                updateAbilityButtonState(valueObject.Name)
+        end
+
+        if abilitiesFolder then
+                for _, child in ipairs(abilitiesFolder:GetChildren()) do
+                        if child:IsA("BoolValue") then
+                                trackAbilityValue(child)
+                        end
+                end
+                abilityConnections[#abilityConnections + 1] = abilitiesFolder.ChildAdded:Connect(function(child)
+                        if child:IsA("BoolValue") then
+                                task.delay(0, function()
+                                        trackAbilityValue(child)
+                                end)
+                        end
+                end)
+        end
+
+        if Abilities and Abilities.unlocked then
+                for abilityName in pairs(abilityDefinitions) do
+                        if Abilities.unlocked[abilityName] then
+                                updateAbilityButtonState(abilityName)
+                        end
+                end
+        end
+
+        questRoot.Destroying:Connect(function()
+                for _, connection in ipairs(abilityConnections) do
+                        if connection.Disconnect then
+                                connection:Disconnect()
+                        end
+                end
+        end)
+
+        local questController = {}
+        questController.root = questRoot
+        questController.closeButton = closeButton
 
 	local function setVisible(visible)
 		questRoot.Visible = visible and true or false
