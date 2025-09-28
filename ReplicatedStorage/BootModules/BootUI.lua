@@ -776,6 +776,13 @@ if enterRealmButton then
             TweenService:Create(fade, TweenInfo.new(0.25), {BackgroundTransparency = 0}):Play()
             task.wait(0.28)
             local _, chosenSlot = Cosmetics.getSelectedPersona()
+            local hudBeforeTeleport = BootUI.hud
+            if hudBeforeTeleport and hudBeforeTeleport.handlePostTeleport then
+                hudBeforeTeleport:handlePostTeleport({
+                    source = "Realm",
+                    realm = realmName,
+                })
+            end
             DojoClient.hide()
             local ok, err = pcall(function()
                 TeleportService:Teleport(placeId, player, {slot = chosenSlot})
