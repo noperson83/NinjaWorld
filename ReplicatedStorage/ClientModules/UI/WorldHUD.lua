@@ -448,13 +448,7 @@ function WorldHUD:playLoadoutDissolve(duration)
                 if self.loadout then
                         self.loadout.Visible = false
                 end
-                if self.loadTitle then
-                        self.loadTitle.Visible = false
-                end
-                if self.backButton then
-                        self.backButton.Visible = false
-                        self.backButton.Active = false
-                end
+                self:updateLoadoutHeaderVisibility()
                 self:setMenuExpanded(false)
                 if self.setShopButtonVisible then
                         self:setShopButtonVisible(false)
@@ -503,13 +497,7 @@ function WorldHUD:playLoadoutDissolve(duration)
                 if self.loadout then
                         self.loadout.Visible = false
                 end
-                if self.loadTitle then
-                        self.loadTitle.Visible = false
-                end
-                if self.backButton then
-                        self.backButton.Visible = false
-                        self.backButton.Active = false
-                end
+                self:updateLoadoutHeaderVisibility()
 
                 for _, entry in ipairs(targets) do
                         local instance = entry.instance
@@ -563,7 +551,7 @@ function WorldHUD:prepareLoadoutPanels()
         self:applyMenuAutoState()
 end
 
-function WorldHUD:handlePostTeleport()
+function WorldHUD:handlePostTeleport(teleportContext)
         self:closeAllInterfaces()
 
         -- Keep the main loadout menu available after teleporting so the player
@@ -586,19 +574,20 @@ function WorldHUD:handlePostTeleport()
                 self.togglePanel.Visible = true
         end
 
-        if self.loadTitle then
-                self.loadTitle.Visible = true
-        end
+	local inWorld = false
+	if teleportContext then
+		if teleportContext.source == "Zone" then
+			inWorld = teleportContext.name ~= "Dojo"
+		elseif teleportContext.source == "Realm" then
+			inWorld = true
+		end
+	end
 
-        if self.backButton then
-                local showBack = self.backButtonEnabled ~= false
-                self.backButton.Visible = showBack
-                self.backButton.Active = showBack
-        end
+	self:setWorldMode(inWorld)
 
-        if self.setShopButtonVisible then
-                self:setShopButtonVisible(true)
-        end
+	if self.setShopButtonVisible then
+		self:setShopButtonVisible(true)
+	end
 end
 
 function WorldHUD.get()
@@ -626,8 +615,9 @@ function WorldHUD.new(config, dependencies)
 	self.currencyService = dependencies and dependencies.currencyService or nil
 	self._connections = {}
 	self._destroyed = false
-        self.backButtonEnabled = true
-        self.menuAutoExpand = true
+	self.backButtonEnabled = true
+	self.menuAutoExpand = true
+	self.worldModeActive = false
 
         local playerGui = ensureParent()
 
@@ -693,9 +683,9 @@ function WorldHUD.new(config, dependencies)
         local teleportUI = TeleportUI.init(loadout, baseY, {
                 REALM_INFO = REALM_INFO,
                 getRealmFolder = getRealmFolder,
-                onTeleport = function()
+                onTeleport = function(teleportContext)
                         if self and self.handlePostTeleport then
-                                self:handlePostTeleport()
+                                self:handlePostTeleport(teleportContext)
                         elseif self then
                                 self:setTeleportVisible(false)
                         end
@@ -882,43 +872,46 @@ function WorldHUD:setShopButtonVisible(visible)
 	end
 end
 
+function WorldHUD:updateLoadoutHeaderVisibility()
+	local loadoutVisible = self.loadout and self.loadout.Visible
+	local headerVisible = loadoutVisible and not self.worldModeActive
+
+	if self.loadTitle then
+		self.loadTitle.Visible = headerVisible
+	end
+
+	if self.backButton then
+		local showBack = headerVisible and (self.backButtonEnabled ~= false)
+		self.backButton.Visible = showBack
+		self.backButton.Active = showBack
+	end
+end
+
+function WorldHUD:setWorldMode(inWorld)
+	self.worldModeActive = inWorld and true or false
+	self:updateLoadoutHeaderVisibility()
+end
+
 function WorldHUD:showLoadout()
-        if self.loadout then
-                self.loadout.Visible = true
-        end
-        if self.backButton then
-                local showBack = self.backButtonEnabled ~= false
-                self.backButton.Visible = showBack
-                self.backButton.Active = showBack
-        end
-        if self.loadTitle then
-                self.loadTitle.Visible = true
-        end
-        self:applyMenuAutoState()
-        self:setShopButtonVisible(true)
+	if self.loadout then
+		self.loadout.Visible = true
+	end
+	self:setWorldMode(false)
+	self:applyMenuAutoState()
+	self:setShopButtonVisible(true)
 end
 
 function WorldHUD:hideLoadout()
-        if self.loadout then
+	if self.loadout then
 		self.loadout.Visible = false
 	end
-        if self.backButton then
-                self.backButton.Visible = false
-                self.backButton.Active = false
-        end
-        if self.loadTitle then
-                self.loadTitle.Visible = false
-        end
-        self:setShopButtonVisible(false)
+	self:updateLoadoutHeaderVisibility()
+	self:setShopButtonVisible(false)
 end
 
 function WorldHUD:setBackButtonEnabled(enabled)
 	self.backButtonEnabled = enabled and true or false
-	if self.backButton then
-		local showBack = self.backButtonEnabled and self.loadout and self.loadout.Visible
-		self.backButton.Visible = showBack
-		self.backButton.Active = showBack
-	end
+	self:updateLoadoutHeaderVisibility()
 end
 
 function WorldHUD:toggleShop(defaultTab)
@@ -999,10 +992,11 @@ function WorldHUD:destroy()
         self.teleportOpenButton = nil
         self.teleportCloseButton = nil
         self.teleportUI = nil
-	self.backButtonEnabled = nil
-	if currentHud == self then
-		currentHud = nil
-	end
+        self.backButtonEnabled = nil
+	self.worldModeActive = nil
+        if currentHud == self then
+                currentHud = nil
+        end
 end
 
 return WorldHUD
