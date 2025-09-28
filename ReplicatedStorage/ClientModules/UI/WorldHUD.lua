@@ -416,10 +416,16 @@ local function isInterfaceVisible(interface)
 end
 
 function WorldHUD:setQuestVisible(visible)
+        if visible then
+                self:hideAbilityInterface()
+        end
         setInterfaceVisible(self.quest, visible)
 end
 
 function WorldHUD:setBackpackVisible(visible)
+        if visible then
+                self:hideAbilityInterface()
+        end
         setInterfaceVisible(self.backpack, visible)
 end
 
@@ -427,6 +433,7 @@ function WorldHUD:setTeleportVisible(visible)
         setInterfaceVisible(self.teleportUI, visible)
 
         if visible then
+                self:hideAbilityInterface()
                 setInterfaceVisible(self.quest, false)
                 setInterfaceVisible(self.backpack, false)
                 if self.shopFrame then
@@ -439,6 +446,7 @@ function WorldHUD:closeAllInterfaces()
         self:setQuestVisible(false)
         self:setBackpackVisible(false)
         self:setTeleportVisible(false)
+        self:hideAbilityInterface()
         if self.shopFrame then
                 self.shopFrame.Visible = false
         end
@@ -762,8 +770,9 @@ function WorldHUD.new(config, dependencies)
 
 	local self = setmetatable({}, WorldHUD)
 	self.config = config or {}
-	self.shop = dependencies and dependencies.shop or nil
-	self.currencyService = dependencies and dependencies.currencyService or nil
+        self.shop = dependencies and dependencies.shop or nil
+        self.currencyService = dependencies and dependencies.currencyService or nil
+        self.abilityInterface = dependencies and dependencies.abilityInterface or nil
 	self._connections = {}
 	self._destroyed = false
 	self.backButtonEnabled = true
@@ -858,7 +867,7 @@ function WorldHUD.new(config, dependencies)
 	-- Enhanced floating button panel positioned on left center
         local togglePanel = Instance.new("Frame")
         togglePanel.Name = "PanelToggleButtons"
-        togglePanel.Size = UDim2.new(0, 180, 0, 280)
+        togglePanel.Size = UDim2.new(0, 180, 0, self.abilityInterface and 345 or 280)
         togglePanel.AnchorPoint = Vector2.new(1, 0)
         togglePanel.Position = UDim2.new(1, -30, 0, baseY + 10)
         togglePanel.BackgroundTransparency = 1
@@ -889,21 +898,31 @@ function WorldHUD.new(config, dependencies)
         end))
 
         -- Create styled buttons with proper spacing
-	local questButton, questContainer = createStyledButton(togglePanel, "Quests", UDim2.new(0, 0, 0, 0), 41)
-	local pouchButton, pouchContainer = createStyledButton(togglePanel, "Pouch", UDim2.new(0, 0, 0, 65), 41)
-	local teleButton, teleContainer = createStyledButton(togglePanel, "Teleports", UDim2.new(0, 0, 0, 130), 41)
-	local shopButton, shopContainer = createStyledButton(togglePanel, "Shop", UDim2.new(0, 0, 0, 195), 41)
+        local questButton, questContainer = createStyledButton(togglePanel, "Quests", UDim2.new(0, 0, 0, 0), 41)
+        local pouchButton, pouchContainer = createStyledButton(togglePanel, "Pouch", UDim2.new(0, 0, 0, 65), 41)
+        local teleButton, teleContainer = createStyledButton(togglePanel, "Teleports", UDim2.new(0, 0, 0, 130), 41)
+        local shopButton, shopContainer = createStyledButton(togglePanel, "Shop", UDim2.new(0, 0, 0, 195), 41)
+        local abilityButton, abilityContainer
+        if self.abilityInterface then
+                abilityButton, abilityContainer = createStyledButton(togglePanel, "Abilities", UDim2.new(0, 0, 0, 260), 41)
+        end
 
         -- Set initial visibility
         questButton.Visible = true
         pouchButton.Visible = true  -- Changed from backpack to pouch
         teleButton.Visible = true
         shopButton.Visible = true
+        if abilityButton then
+                abilityButton.Visible = true
+        end
 
 	self.questOpenButton = questButton
 	self.backpackOpenButton = pouchButton  -- Keep internal reference name for compatibility
 	self.teleportOpenButton = teleButton
-	self.shopButton = shopButton
+        self.shopButton = shopButton
+        if abilityButton then
+                self.abilityButton = abilityButton
+        end
 
         setTeleportsVisible = function(visible)
                 self:setTeleportVisible(visible)
@@ -915,14 +934,14 @@ function WorldHUD.new(config, dependencies)
 
         if quest and quest.closeButton then
                 track(self, quest.closeButton.MouseButton1Click:Connect(function()
-                        setInterfaceVisible(quest, false)
+                        self:setQuestVisible(false)
                         hideTeleport()
                 end))
         end
 
         track(self, questButton.MouseButton1Click:Connect(function()
                 local shouldShow = not isInterfaceVisible(quest)
-                setInterfaceVisible(quest, shouldShow)
+                self:setQuestVisible(shouldShow)
                 if shouldShow then
                         hideTeleport()
                 end
@@ -930,14 +949,14 @@ function WorldHUD.new(config, dependencies)
 
         if backpack and backpack.closeButton then
                 track(self, backpack.closeButton.MouseButton1Click:Connect(function()
-                        setInterfaceVisible(backpack, false)
+                        self:setBackpackVisible(false)
                         hideTeleport()
                 end))
         end
 
         track(self, pouchButton.MouseButton1Click:Connect(function()
                 local shouldShow = not isInterfaceVisible(backpack)
-                setInterfaceVisible(backpack, shouldShow)
+                self:setBackpackVisible(shouldShow)
                 if shouldShow then
                         hideTeleport()
                 end
@@ -949,6 +968,15 @@ function WorldHUD.new(config, dependencies)
                         hideTeleport()
                 end
         end))
+
+        if abilityButton then
+                track(self, abilityButton.MouseButton1Click:Connect(function()
+                        local visible = self:toggleAbilityInterface()
+                        if visible then
+                                hideTeleport()
+                        end
+                end))
+        end
 
 	if teleportCloseButton then
 		track(self, teleportCloseButton.MouseButton1Click:Connect(function()
@@ -1000,7 +1028,7 @@ function WorldHUD:getBackpackInterface()
 end
 
 function WorldHUD:createCosmeticsInterface()
-	local hud = self
+        local hud = self
         return {
                 showDojoPicker = function()
                         if hud then
@@ -1037,9 +1065,90 @@ function WorldHUD:createCosmeticsInterface()
 end
 
 function WorldHUD:setShopButtonVisible(visible)
-	if self.shopButton then
-		self.shopButton.Visible = visible and true or false
-	end
+        if self.shopButton then
+                self.shopButton.Visible = visible and true or false
+        end
+end
+
+function WorldHUD:isAbilityInterfaceVisible()
+        local abilityInterface = self.abilityInterface
+        if not abilityInterface then
+                return false
+        end
+
+        if typeof(abilityInterface.isVisible) == "function" then
+                local ok, result = pcall(function()
+                        return abilityInterface.isVisible()
+                end)
+                if ok then
+                        return result and true or false
+                end
+        end
+
+        local frame = abilityInterface.frame
+        return (frame and frame.Visible) or false
+end
+
+function WorldHUD:hideAbilityInterface()
+        local abilityInterface = self.abilityInterface
+        if not abilityInterface then
+                return
+        end
+
+        if typeof(abilityInterface.hide) == "function" then
+                abilityInterface.hide()
+                return
+        end
+
+        if typeof(abilityInterface.toggle) == "function" and self:isAbilityInterfaceVisible() then
+                abilityInterface.toggle()
+                return
+        end
+
+        local frame = abilityInterface.frame
+        if frame then
+                frame.Visible = false
+        end
+end
+
+function WorldHUD:toggleAbilityInterface()
+        local abilityInterface = self.abilityInterface
+        if not abilityInterface then
+                return false
+        end
+
+        local visible
+        if typeof(abilityInterface.toggle) == "function" then
+                visible = abilityInterface.toggle()
+        else
+                local currentlyVisible = self:isAbilityInterfaceVisible()
+                if currentlyVisible then
+                        if typeof(abilityInterface.hide) == "function" then
+                                abilityInterface.hide()
+                        elseif abilityInterface.frame then
+                                abilityInterface.frame.Visible = false
+                        end
+                        visible = false
+                else
+                        if typeof(abilityInterface.show) == "function" then
+                                abilityInterface.show()
+                        elseif abilityInterface.frame then
+                                abilityInterface.frame.Visible = true
+                        end
+                        visible = true
+                end
+        end
+
+        if visible then
+                self:setQuestVisible(false)
+                self:setBackpackVisible(false)
+                self:setTeleportVisible(false)
+                if self.shopFrame then
+                        self.shopFrame.Visible = false
+                end
+        end
+
+        return visible and true or false
 end
 
 function WorldHUD:updateLoadoutHeaderVisibility()
@@ -1067,6 +1176,7 @@ function WorldHUD:setWorldMode(inWorld)
         self.worldModeActive = inWorld and true or false
         if self.worldModeActive then
                 self:detachLoadoutHeader()
+                self:hideAbilityInterface()
         else
                 self:ensureLoadoutHeader()
         end
@@ -1091,6 +1201,7 @@ function WorldHUD:hideLoadout()
         self:updateLoadoutHeaderVisibility()
         self:setShopButtonVisible(false)
         self:updatePersonaButtonVisibility()
+        self:hideAbilityInterface()
 end
 
 function WorldHUD:setBackButtonEnabled(enabled)
@@ -1114,6 +1225,7 @@ function WorldHUD:toggleShop(defaultTab)
         end
 
         if self.shopFrame and self.shopFrame.Visible then
+                self:hideAbilityInterface()
                 self:setTeleportVisible(false)
         end
 
