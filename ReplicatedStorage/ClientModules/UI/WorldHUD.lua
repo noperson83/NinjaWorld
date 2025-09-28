@@ -571,6 +571,13 @@ function WorldHUD:handlePostTeleport()
         self.menuAutoExpand = true
         self:setMenuExpanded(true)
 
+        -- The call to closeAllInterfaces hides the quick-access buttons that live
+        -- inside the loadout menu. Explicitly re-enable them here so they remain
+        -- available after a teleport (such as when entering the dojo).
+        self:setQuestVisible(true)
+        self:setBackpackVisible(true)
+        self:setTeleportVisible(true)
+
         if self.loadout then
                 self.loadout.Visible = true
         end
