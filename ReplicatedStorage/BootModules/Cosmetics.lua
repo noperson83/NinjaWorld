@@ -911,7 +911,8 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
         Vector2.new(0.5, 0)
     )
     headerFrame.BackgroundTransparency = 1
-    headerFrame.AutomaticSize = Enum.AutomaticSize.Y
+    headerFrame.Size = UDim2.new(0, 0, 0, 0)
+    headerFrame.AutomaticSize = Enum.AutomaticSize.XY
 
     local headerPadding = Instance.new("UIPadding")
     headerPadding.PaddingLeft = UDim.new(0, 12)
@@ -938,7 +939,7 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
     dojoTitle.Parent = headerFrame
 
     local shadowText = Instance.new("TextLabel")
-    shadowText.Size = UDim2.new(0.3, 0, 0, 0)
+    shadowText.Size = UDim2.new(0, 0, 0, 0)
     shadowText.BackgroundTransparency = 1
     shadowText.Text = "🌙 Shadow Dojo"
     shadowText.Font = Enum.Font.GothamSemibold
@@ -947,9 +948,27 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
     shadowText.TextColor3 = NINJA_COLORS.ACCENT
     shadowText.ZIndex = 12
     shadowText.LayoutOrder = 2
-    shadowText.AutomaticSize = Enum.AutomaticSize.Y
+    shadowText.AutomaticSize = Enum.AutomaticSize.XY
+    shadowText.TextXAlignment = Enum.TextXAlignment.Right
     shadowText.Parent = headerFrame
     shadowDojoLabel = shadowText
+
+    local function updateHeaderLayout()
+        local availableWidth = dojoInterface.AbsoluteSize.X
+        if availableWidth < 500 then
+            headerLayout.FillDirection = Enum.FillDirection.Vertical
+            headerLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+            shadowText.TextXAlignment = Enum.TextXAlignment.Center
+        else
+            headerLayout.FillDirection = Enum.FillDirection.Horizontal
+            headerLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+            shadowText.TextXAlignment = Enum.TextXAlignment.Right
+        end
+    end
+
+    dojoInterface:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateHeaderLayout)
+    headerFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateHeaderLayout)
+    updateHeaderLayout()
 
     -- Selected persona display
     selectedPersonaLabel = Instance.new("TextLabel")
