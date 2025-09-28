@@ -320,10 +320,12 @@ local function showNinjaConfirmation(message, onConfirm)
 	overlay.BackgroundColor3 = Color3.new(0, 0, 0)
 	overlay.BackgroundTransparency = 0.3
 	overlay.ZIndex = 300
+	overlay.Active = true
+	overlay.Modal = true
 	overlay.Parent = rootUI
 
 	local dialog = createStyledFrame(overlay, 
-		UDim2.fromScale(0.35, 0.25), 
+		UDim2.fromScale(0.35, 0.3), 
 		UDim2.fromScale(0.5, 0.5), 
 		Vector2.new(0.5, 0.5)
 	)
@@ -341,7 +343,7 @@ local function showNinjaConfirmation(message, onConfirm)
 	title.Parent = dialog
 
 	local messageLabel = Instance.new("TextLabel")
-	messageLabel.Size = UDim2.new(1, -20, 0.4, 0)
+	messageLabel.Size = UDim2.new(1, -20, 0.35, 0)
 	messageLabel.Position = UDim2.new(0, 10, 0.3, 0)
 	messageLabel.BackgroundTransparency = 1
 	messageLabel.Text = message
@@ -363,22 +365,44 @@ local function showNinjaConfirmation(message, onConfirm)
 		end)
 	end
 
-	createNinjaButton(dialog, "✅ Proceed", 
-		UDim2.new(0.35, 0, 0.25, 0), 
-		UDim2.new(0.1, 0, 0.7, 0), 
+	local buttonContainer = Instance.new("Frame")
+	buttonContainer.Name = "ConfirmationButtons"
+	buttonContainer.Size = UDim2.new(1, -20, 0, 0)
+	buttonContainer.Position = UDim2.new(0, 10, 0.68, 0)
+	buttonContainer.BackgroundTransparency = 1
+	buttonContainer.ZIndex = dialog.ZIndex + 1
+	buttonContainer.AutomaticSize = Enum.AutomaticSize.Y
+	buttonContainer.Parent = dialog
+
+	local buttonLayout = Instance.new("UIListLayout")
+	buttonLayout.FillDirection = Enum.FillDirection.Vertical
+	buttonLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	buttonLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+	buttonLayout.Padding = UDim.new(0, 8)
+	buttonLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	buttonLayout.Parent = buttonContainer
+
+	local proceedButton = createNinjaButton(buttonContainer, "✅ Proceed", 
+		UDim2.new(1, 0, 0, 44), 
+		UDim2.new(0, 0, 0, 0), 
 		NINJA_COLORS.SUCCESS, 
 		function()
 			closeDialog()
 			if onConfirm then onConfirm() end
 		end
 	)
+	proceedButton.LayoutOrder = 1
+	proceedButton.ZIndex = dialog.ZIndex + 2
 
-	createNinjaButton(dialog, "❌ Cancel", 
-		UDim2.new(0.35, 0, 0.25, 0), 
-		UDim2.new(0.55, 0, 0.7, 0), 
+	local cancelButton = createNinjaButton(buttonContainer, "❌ Cancel", 
+		UDim2.new(1, 0, 0, 44), 
+		UDim2.new(0, 0, 0, 0), 
 		NINJA_COLORS.DANGER, 
 		closeDialog
 	)
+	cancelButton.LayoutOrder = 2
+	cancelButton.ZIndex = dialog.ZIndex + 2
+
 end
 
 -- ═══════════════════════════════════════════════════════════════
