@@ -72,6 +72,39 @@ local function track(self, conn)
         return conn
 end
 
+local function styleNinjaCloseButton(button)
+        if not button then
+                return
+        end
+
+        button.Text = "X"
+        button.Font = Enum.Font.GothamBold
+        button.TextScaled = true
+        button.TextColor3 = Color3.fromRGB(255, 245, 245)
+        button.TextStrokeTransparency = 0.6
+        button.BackgroundColor3 = Color3.fromRGB(28, 28, 36)
+        button.BackgroundTransparency = 0.05
+        button.AutoButtonColor = true
+        button.BorderSizePixel = 0
+
+        for _, child in ipairs(button:GetChildren()) do
+                if child:IsA("UICorner") or child:IsA("UIStroke") then
+                        child:Destroy()
+                end
+        end
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(1, 0)
+        corner.Parent = button
+
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = Color3.fromRGB(220, 70, 70)
+        stroke.Thickness = 2
+        stroke.Transparency = 0.1
+        stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        stroke.Parent = button
+end
+
 function TeleportUI:setVisible(visible)
         if self._destroyed then return end
         if self.root then
@@ -172,19 +205,10 @@ function TeleportUI.init(parent, baseY, dependencies)
         teleportCloseButton.Size = UDim2.new(0, 32, 0, 32)
         teleportCloseButton.AnchorPoint = Vector2.new(1, 0)
         teleportCloseButton.Position = UDim2.new(1, -20, 0, 16)
-        teleportCloseButton.BackgroundColor3 = Color3.fromRGB(120, 40, 40)
-        teleportCloseButton.TextColor3 = Color3.new(1, 1, 1)
-        teleportCloseButton.Text = "X"
-        teleportCloseButton.Font = Enum.Font.GothamBold
-        teleportCloseButton.TextScaled = true
-        teleportCloseButton.AutoButtonColor = true
         teleportCloseButton.Visible = false
         teleportCloseButton.ZIndex = BASE_Z_INDEX + 5
         teleportCloseButton.Parent = teleportContainer
-
-        local teleportCloseCorner = Instance.new("UICorner")
-        teleportCloseCorner.CornerRadius = UDim.new(0, 10)
-        teleportCloseCorner.Parent = teleportCloseButton
+        styleNinjaCloseButton(teleportCloseButton)
 
         local teleportContent = Instance.new("Frame")
         teleportContent.Name = "TeleportContent"

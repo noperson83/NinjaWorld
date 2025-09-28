@@ -20,24 +20,57 @@ local function createStroke(parent, thickness, color)
 end
 
 local function createGlow(parent, size, transparency)
-	local glow = Instance.new("ImageLabel")
-	glow.Name = "Glow"
-	glow.Size = UDim2.new(1, size or 20, 1, size or 20)
-	glow.Position = UDim2.new(0, -(size or 20) / 2, 0, -(size or 20) / 2)
+        local glow = Instance.new("ImageLabel")
+        glow.Name = "Glow"
+        glow.Size = UDim2.new(1, size or 20, 1, size or 20)
+        glow.Position = UDim2.new(0, -(size or 20) / 2, 0, -(size or 20) / 2)
 	glow.BackgroundTransparency = 1
 	glow.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
 	glow.ImageColor3 = Color3.fromRGB(100, 50, 200)
 	glow.ImageTransparency = transparency or 0.85
 	glow.ZIndex = parent.ZIndex - 1
-	glow.Parent = parent
-	return glow
+        glow.Parent = parent
+        return glow
+end
+
+local function styleNinjaCloseButton(button)
+        if not button then
+                return
+        end
+
+        button.Text = "X"
+        button.Font = Enum.Font.GothamBold
+        button.TextScaled = true
+        button.TextColor3 = Color3.fromRGB(255, 245, 245)
+        button.TextStrokeTransparency = 0.6
+        button.BackgroundColor3 = Color3.fromRGB(28, 28, 36)
+        button.BackgroundTransparency = 0.05
+        button.AutoButtonColor = true
+        button.BorderSizePixel = 0
+
+        for _, child in ipairs(button:GetChildren()) do
+                if child:IsA("UICorner") or child:IsA("UIStroke") then
+                        child:Destroy()
+                end
+        end
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(1, 0)
+        corner.Parent = button
+
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = Color3.fromRGB(220, 70, 70)
+        stroke.Thickness = 2
+        stroke.Transparency = 0.1
+        stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        stroke.Parent = button
 end
 
 function NinjaQuestUI.init(parent, baseY)
-	local questRoot = Instance.new("Frame")
-	questRoot.Name = "NinjaQuestUIRoot"
-	questRoot.Size = UDim2.fromScale(1, 1)
-	questRoot.BackgroundTransparency = 1
+        local questRoot = Instance.new("Frame")
+        questRoot.Name = "NinjaQuestUIRoot"
+        questRoot.Size = UDim2.fromScale(1, 1)
+        questRoot.BackgroundTransparency = 1
 	questRoot.ZIndex = 5
 	questRoot.Parent = parent
 
@@ -75,26 +108,18 @@ function NinjaQuestUI.init(parent, baseY)
 	headerTitle.ZIndex = 7
 	headerTitle.Parent = previewHeader
 
-	local closeButton = Instance.new("TextButton")
-	closeButton.Name = "QuestCloseButton"
-	closeButton.Size = UDim2.new(0, 32, 0, 32)
-	closeButton.AnchorPoint = Vector2.new(1, 0)
-	closeButton.Position = UDim2.new(1, -20, 0, 16)
-	closeButton.BackgroundColor3 = Color3.fromRGB(120, 40, 40)
-	closeButton.BackgroundTransparency = 0
-	closeButton.TextColor3 = Color3.new(1, 1, 1)
-	closeButton.Font = Enum.Font.GothamBold
-	closeButton.TextScaled = true
-	closeButton.Text = "X"
-	closeButton.AutoButtonColor = true
-	closeButton.ZIndex = 8
-	closeButton.BorderSizePixel = 0
-	closeButton.Parent = previewHeader
-	createCorner(closeButton, 10)
+        local closeButton = Instance.new("TextButton")
+        closeButton.Name = "QuestCloseButton"
+        closeButton.Size = UDim2.new(0, 32, 0, 32)
+        closeButton.AnchorPoint = Vector2.new(1, 0)
+        closeButton.Position = UDim2.new(1, -20, 0, 16)
+        closeButton.ZIndex = 8
+        closeButton.Parent = previewHeader
+        styleNinjaCloseButton(closeButton)
 
-	local emoteContainer = Instance.new("ScrollingFrame")
-	emoteContainer.Name = "EmoteButtonRow"
-	emoteContainer.Size = UDim2.new(1, -20, 0, 46)
+        local emoteContainer = Instance.new("ScrollingFrame")
+        emoteContainer.Name = "EmoteButtonRow"
+        emoteContainer.Size = UDim2.new(1, -20, 0, 46)
 	emoteContainer.Position = UDim2.new(0, 10, 0, 55)
 	emoteContainer.BackgroundTransparency = 1
 	emoteContainer.ZIndex = 6
