@@ -855,26 +855,6 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
         dojoTitleConstraint.MaxSize = Vector2.new(360, 120)
         dojoTitleConstraint.Parent = dojoTitle
 
-        local shadowText = Instance.new("TextLabel")
-        shadowText.AutomaticSize = Enum.AutomaticSize.XY
-        shadowText.Size = UDim2.new(0, 0, 0, 0)
-        shadowText.BackgroundTransparency = 1
-        shadowText.Text = "🌙 Shadow Dojo"
-        shadowText.Font = Enum.Font.GothamSemibold
-        shadowText.TextScaled = false
-        shadowText.TextSize = 36
-        shadowText.TextWrapped = true
-        shadowText.LayoutOrder = 2
-        shadowText.TextXAlignment = Enum.TextXAlignment.Center
-        shadowText.TextColor3 = NINJA_COLORS.ACCENT
-        shadowText.ZIndex = 12
-        shadowText.Parent = headerFrame
-
-        local shadowTextConstraint = Instance.new("UITextSizeConstraint")
-        shadowTextConstraint.MaxTextSize = 36
-        shadowTextConstraint.MinTextSize = 24
-        shadowTextConstraint.Parent = shadowText
-
         local function updateHeaderLayout()
                 local headerWidth = headerFrame.AbsoluteSize.X
 
@@ -882,19 +862,6 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
                         headerLayout.FillDirection = Enum.FillDirection.Vertical
                 else
                         headerLayout.FillDirection = Enum.FillDirection.Horizontal
-                end
-
-                local newTextSize = 36
-                if headerWidth < 420 then
-                        newTextSize = 24
-                elseif headerWidth < 600 then
-                        newTextSize = 28
-                elseif headerWidth < 900 then
-                        newTextSize = 32
-                end
-
-                if shadowText.TextSize ~= newTextSize then
-                        shadowText.TextSize = newTextSize
                 end
         end
 
@@ -949,19 +916,7 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
 	starterDojoImage.ZIndex = 12
 	starterDojoImage.Parent = footerFrame
 
-	local footerText = Instance.new("TextLabel")
-	footerText.Size = UDim2.new(0.35, 0, 0.5, 0)
-	footerText.Position = UDim2.new(0.65, 0, 0.25, 0)
-	footerText.BackgroundTransparency = 1
-	footerText.Text = "🏯 Train in the ancient ways\n🗡️ Master your shadow arts"
-	footerText.Font = Enum.Font.Gotham
-	footerText.TextScaled = true
-	footerText.TextColor3 = NINJA_COLORS.TEXT_SECONDARY
-	footerText.TextWrapped = true
-	footerText.ZIndex = 12
-	footerText.Parent = footerFrame
-
-	-- ═══════════════════════════════════════════════════════════════
+        -- ═══════════════════════════════════════════════════════════════
 	--                      CREATE PERSONA SLOTS
 	-- ═══════════════════════════════════════════════════════════════
 
