@@ -1,4 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+
 local AbilityMetadata = require(ReplicatedStorage.ClientModules.AbilityMetadata)
 local bootModules = ReplicatedStorage:WaitForChild("BootModules")
 
@@ -32,6 +34,7 @@ local NinjaMarketplaceUI = {}
 
 local tabFrames = {}
 local tabButtons = {}
+local abilityCards = {}
 local frame
 local BASE_Z_INDEX = 45
 
@@ -103,7 +106,9 @@ function NinjaMarketplaceUI.init(config, shop, bootUI, defaultTab)
         local root = bootUI and bootUI.root
         if not root then return end
 
-	-- Main marketplace frame
+        abilityCards = {}
+
+        -- Main marketplace frame
 	frame = Instance.new("Frame")
 	frame.Name = "NinjaMarketplace"
 	frame.Size = UDim2.fromScale(0.45, 0.6)
@@ -394,15 +399,16 @@ function NinjaMarketplaceUI.init(config, shop, bootUI, defaultTab)
 			rarity = info.rarity or "Rare"
 		}
 
-		local card = createItemCard(ability, itemInfo, "Abilities", function()
-			if shop:Purchase(ability, info.cost) and learnRF then
-				local start = os.clock()
-				learnRF:InvokeServer(ability)
-				warn(string.format("LearnAbility took %.3fs", os.clock() - start))
-			end
-		end)
-		card.Parent = abilitiesFrame
-	end
+                local card = createItemCard(ability, itemInfo, "Abilities", function()
+                        if shop:Purchase(ability, info.cost) and learnRF then
+                                local start = os.clock()
+                                learnRF:InvokeServer(ability)
+                                warn(string.format("LearnAbility took %.3fs", os.clock() - start))
+                        end
+                end)
+                card.Parent = abilitiesFrame
+                abilityCards[ability] = card
+        end
 
 	-- Populate Elements tab
 	local elementsFrame = tabFrames["Elements"]
@@ -460,12 +466,54 @@ function NinjaMarketplaceUI.init(config, shop, bootUI, defaultTab)
 	-- Set default tab
 	NinjaMarketplaceUI.setTab(defaultTab or "Elements")
 
-	-- Close button functionality
-	closeBtn.Activated:Connect(function()
-		frame.Visible = false
-	end)
+        -- Close button functionality
+        closeBtn.Activated:Connect(function()
+                frame.Visible = false
+        end)
 
-	return frame
+        return frame
+end
+
+function NinjaMarketplaceUI.focusAbility(abilityName)
+        if not abilityName then
+                return
+        end
+
+        if NinjaMarketplaceUI.setTab then
+                NinjaMarketplaceUI.setTab("Abilities")
+        end
+
+        local card = abilityCards[abilityName]
+        if not card or not card.Parent then
+                return
+        end
+
+        local scroller = card.Parent
+        if scroller and scroller:IsA("ScrollingFrame") then
+                local relativeY = card.AbsolutePosition.Y - scroller.AbsolutePosition.Y
+                scroller.CanvasPosition = Vector2.new(0, math.max(0, relativeY - 20))
+        end
+
+        local highlight = card:FindFirstChild("FocusStroke")
+        if not highlight then
+                highlight = Instance.new("UIStroke")
+                highlight.Name = "FocusStroke"
+                highlight.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+                highlight.Parent = card
+        end
+
+        highlight.Thickness = 3
+        highlight.Color = Color3.fromRGB(255, 200, 60)
+        highlight.Transparency = 0
+
+        local tweenInfo = TweenInfo.new(0.35, Enum.EasingStyle.Sine, Enum.EasingDirection.Out, 3, true, 0)
+        local tween = TweenService:Create(highlight, tweenInfo, {Transparency = 0.6})
+        tween:Play()
+        tween.Completed:Connect(function()
+                if highlight and highlight.Parent == card then
+                        highlight.Transparency = 0.6
+                end
+        end)
 end
 
 return NinjaMarketplaceUI
