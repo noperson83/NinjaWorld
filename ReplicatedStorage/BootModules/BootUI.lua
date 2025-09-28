@@ -716,8 +716,14 @@ if enterRealmButton then
             task.wait(0.28)
 
             local personaType, chosenSlot = Cosmetics.getSelectedPersona()
-            BootUI.hideLoadout()
             local currentHud = BootUI.hud
+            local dissolvePlayed = false
+            if currentHud and currentHud.playLoadoutDissolve then
+                dissolvePlayed = currentHud:playLoadoutDissolve(0.35)
+            end
+            if not dissolvePlayed then
+                BootUI.hideLoadout()
+            end
             if currentHud and currentHud.setBackButtonEnabled then
                 currentHud:setBackButtonEnabled(false)
             end
@@ -740,10 +746,9 @@ if enterRealmButton then
             local fadeTween = TweenService:Create(fade, TweenInfo.new(0.35), {BackgroundTransparency = 1})
             fadeTween.Completed:Connect(function(playbackState)
                 if playbackState == Enum.PlaybackState.Completed then
-                    BootUI.showLoadout()
-                    local currentHud = BootUI.hud
-                    if currentHud and currentHud.setBackButtonEnabled then
-                        currentHud:setBackButtonEnabled(true)
+                    local hudAfter = BootUI.hud
+                    if hudAfter and hudAfter.setBackButtonEnabled then
+                        hudAfter:setBackButtonEnabled(true)
                     end
                 end
             end)
