@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local ContentProvider = game:GetService("ContentProvider")
+local Workspace = game:GetService("Workspace")
 
 -- ═══════════════════════════════════════════════════════════════
 --                      CONFIGURATION
@@ -54,6 +55,90 @@ local slotButtons = {}
 local uiBridge = nil
 local rootUI = nil
 local slotsContainer = nil
+local headerLayout = nil
+local footerLayout = nil
+local shadowDojoLabel = nil
+local footerTextLabel = nil
+local donationButtonRef = nil
+local viewportConnection = nil
+local cameraChangedConnection = nil
+local responsiveListenerActive = false
+
+local SMALL_SCREEN_WIDTH = 900
+
+local function applyResponsiveLayout(viewportSize)
+    if typeof(viewportSize) ~= "Vector2" then
+        return
+    end
+
+    local isSmall = viewportSize.X <= SMALL_SCREEN_WIDTH
+
+    if headerLayout then
+        headerLayout.FillDirection = isSmall and Enum.FillDirection.Vertical or Enum.FillDirection.Horizontal
+        headerLayout.Padding = UDim.new(0, isSmall and 6 or 12)
+        headerLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+        headerLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    end
+
+    if shadowDojoLabel then
+        shadowDojoLabel.TextXAlignment = isSmall and Enum.TextXAlignment.Center or Enum.TextXAlignment.Left
+        shadowDojoLabel.Size = isSmall and UDim2.new(1, 0, 0, 0) or UDim2.new(0.3, 0, 0, 0)
+    end
+
+    if footerLayout then
+        footerLayout.FillDirection = isSmall and Enum.FillDirection.Vertical or Enum.FillDirection.Horizontal
+        footerLayout.Padding = UDim.new(0, isSmall and 8 or 16)
+        footerLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+        footerLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    end
+
+    if footerTextLabel then
+        footerTextLabel.TextXAlignment = isSmall and Enum.TextXAlignment.Center or Enum.TextXAlignment.Left
+        footerTextLabel.Size = isSmall and UDim2.new(0.9, 0, 0, 0) or UDim2.new(0.35, 0, 0.5, 0)
+    end
+
+    if donationButtonRef then
+        donationButtonRef.Size = isSmall and UDim2.new(0.6, 0, 0.6, 0) or UDim2.new(0.25, 0, 0.6, 0)
+    end
+end
+
+local function attachViewportListener(camera)
+    if viewportConnection then
+        viewportConnection:Disconnect()
+        viewportConnection = nil
+    end
+
+    if not camera then
+        return
+    end
+
+    applyResponsiveLayout(camera.ViewportSize)
+    viewportConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+        applyResponsiveLayout(camera.ViewportSize)
+    end)
+end
+
+local function ensureResponsiveListeners()
+    if responsiveListenerActive then
+        local camera = Workspace.CurrentCamera
+        if camera then
+            applyResponsiveLayout(camera.ViewportSize)
+        end
+        return
+    end
+
+    responsiveListenerActive = true
+    attachViewportListener(Workspace.CurrentCamera)
+
+    if cameraChangedConnection then
+        cameraChangedConnection:Disconnect()
+        cameraChangedConnection = nil
+    end
+
+    cameraChangedConnection = Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+        attachViewportListener(Workspace.CurrentCamera)
+    end)
+end
 
 -- ═══════════════════════════════════════════════════════════════
 --                     UTILITY FUNCTIONS
@@ -658,8 +743,9 @@ end
 --                    SLOT BUTTON CREATION
 -- ═══════════════════════════════════════════════════════════════
 
-local function createPersonaSlot(parent, slotIndex, size, position, anchorPoint)
+local function createPersonaSlot(parent, slotIndex, size, position, anchorPoint, layoutOrder)
     local slotFrame = createStyledFrame(parent, size, position, anchorPoint)
+    slotFrame.LayoutOrder = layoutOrder or slotIndex
 
     -- Viewport for persona preview
     local viewport = Instance.new("ViewportFrame")
@@ -819,12 +905,26 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
     background.Parent = dojoInterface
 
     -- Header with ninja branding
-    local headerFrame = createStyledFrame(dojoInterface, 
-        UDim2.fromScale(0.8, 0.15), 
-        UDim2.fromScale(0.5, 0.08), 
+    local headerFrame = createStyledFrame(dojoInterface,
+        UDim2.fromScale(0.8, 0.15),
+        UDim2.fromScale(0.5, 0.08),
         Vector2.new(0.5, 0)
     )
     headerFrame.BackgroundTransparency = 1
+    headerFrame.AutomaticSize = Enum.AutomaticSize.Y
+
+    local headerPadding = Instance.new("UIPadding")
+    headerPadding.PaddingLeft = UDim.new(0, 12)
+    headerPadding.PaddingRight = UDim.new(0, 12)
+    headerPadding.Parent = headerFrame
+
+    headerLayout = Instance.new("UIListLayout")
+    headerLayout.FillDirection = Enum.FillDirection.Horizontal
+    headerLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    headerLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    headerLayout.Padding = UDim.new(0, 12)
+    headerLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    headerLayout.Parent = headerFrame
 
     local dojoTitle = Instance.new("ImageLabel")
     dojoTitle.Size = UDim2.fromScale(0.7, 0.8)
@@ -834,23 +934,27 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
     dojoTitle.BackgroundTransparency = 1
     dojoTitle.ScaleType = Enum.ScaleType.Fit
     dojoTitle.ZIndex = 12
+    dojoTitle.LayoutOrder = 1
     dojoTitle.Parent = headerFrame
 
     local shadowText = Instance.new("TextLabel")
-    shadowText.Size = UDim2.new(0.3, 0, 0.4, 0)
-    shadowText.Position = UDim2.new(0.7, 0, 0.3, 0)
+    shadowText.Size = UDim2.new(0.3, 0, 0, 0)
     shadowText.BackgroundTransparency = 1
     shadowText.Text = "🌙 Shadow Dojo"
     shadowText.Font = Enum.Font.GothamSemibold
     shadowText.TextScaled = true
+    shadowText.TextWrapped = true
     shadowText.TextColor3 = NINJA_COLORS.ACCENT
     shadowText.ZIndex = 12
+    shadowText.LayoutOrder = 2
+    shadowText.AutomaticSize = Enum.AutomaticSize.Y
     shadowText.Parent = headerFrame
+    shadowDojoLabel = shadowText
 
     -- Selected persona display
     selectedPersonaLabel = Instance.new("TextLabel")
     selectedPersonaLabel.Name = "SelectedPersonaLabel"
-    selectedPersonaLabel.Size = UDim2.new(0.8, 0, 0.04, 0)
+    selectedPersonaLabel.Size = UDim2.new(0.85, 0, 0, 0)
     selectedPersonaLabel.Position = UDim2.fromScale(0.5, 0.25)
     selectedPersonaLabel.AnchorPoint = Vector2.new(0.5, 0)
     selectedPersonaLabel.BackgroundTransparency = 1
@@ -859,6 +963,9 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
     selectedPersonaLabel.TextColor3 = NINJA_COLORS.ACCENT
     selectedPersonaLabel.Text = ""
     selectedPersonaLabel.ZIndex = 12
+    selectedPersonaLabel.TextXAlignment = Enum.TextXAlignment.Center
+    selectedPersonaLabel.TextWrapped = true
+    selectedPersonaLabel.AutomaticSize = Enum.AutomaticSize.Y
     selectedPersonaLabel.Parent = dojoInterface
 
     -- Main content panel
@@ -872,22 +979,47 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
     -- Slots container
     slotsContainer = Instance.new("Frame")
     slotsContainer.Size = UDim2.new(1, -20, 0.8, 0)
-    slotsContainer.Position = UDim2.new(0, 10, 0, 10)
+    slotsContainer.Position = UDim2.fromScale(0.5, 0.5)
+    slotsContainer.AnchorPoint = Vector2.new(0.5, 0.5)
     slotsContainer.BackgroundTransparency = 1
     slotsContainer.ZIndex = 11
     slotsContainer.Parent = contentPanel
+
+    local slotsLayout = Instance.new("UIListLayout")
+    slotsLayout.FillDirection = Enum.FillDirection.Horizontal
+    slotsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    slotsLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    slotsLayout.Padding = UDim.new(0, 16)
+    slotsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    slotsLayout.Parent = slotsContainer
 
     local slotsCorner = Instance.new("UICorner")
     slotsCorner.CornerRadius = UDim.new(0, 12)
     slotsCorner.Parent = slotsContainer
 
     -- Footer with dojo branding
-    local footerFrame = createStyledFrame(contentPanel, 
-        UDim2.new(0.8, 0, 0.15, 0), 
-        UDim2.fromScale(0.5, 0.9), 
+    local footerFrame = createStyledFrame(contentPanel,
+        UDim2.new(0.8, 0, 0.15, 0),
+        UDim2.fromScale(0.5, 0.9),
         Vector2.new(0.5, 0.5)
     )
     footerFrame.BackgroundTransparency = 1
+    footerFrame.AutomaticSize = Enum.AutomaticSize.Y
+
+    footerLayout = Instance.new("UIListLayout")
+    footerLayout.FillDirection = Enum.FillDirection.Horizontal
+    footerLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    footerLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    footerLayout.Padding = UDim.new(0, 16)
+    footerLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    footerLayout.Parent = footerFrame
+
+    local donationButton = createNinjaButton(footerFrame, "💖 Roblox Donations",
+        UDim2.new(0.25, 0, 0.6, 0), UDim2.new(0, 0, 0, 0), NINJA_COLORS.ACCENT)
+    donationButton.LayoutOrder = 1
+    donationButton.TextWrapped = true
+    donationButton.AutoButtonColor = true
+    donationButtonRef = donationButton
 
     local starterDojoImage = Instance.new("ImageLabel")
     starterDojoImage.Size = UDim2.fromScale(0.6, 0.8)
@@ -897,11 +1029,11 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
     starterDojoImage.BackgroundTransparency = 1
     starterDojoImage.ScaleType = Enum.ScaleType.Fit
     starterDojoImage.ZIndex = 12
+    starterDojoImage.LayoutOrder = 2
     starterDojoImage.Parent = footerFrame
 
     local footerText = Instance.new("TextLabel")
     footerText.Size = UDim2.new(0.35, 0, 0.5, 0)
-    footerText.Position = UDim2.new(0.65, 0, 0.25, 0)
     footerText.BackgroundTransparency = 1
     footerText.Text = "🏯 Train in the ancient ways\n🗡️ Master your shadow arts"
     footerText.Font = Enum.Font.Gotham
@@ -909,7 +1041,11 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
     footerText.TextColor3 = NINJA_COLORS.TEXT_SECONDARY
     footerText.TextWrapped = true
     footerText.ZIndex = 12
+    footerText.TextXAlignment = Enum.TextXAlignment.Left
+    footerText.LayoutOrder = 3
+    footerText.AutomaticSize = Enum.AutomaticSize.Y
     footerText.Parent = footerFrame
+    footerTextLabel = footerText
 
     -- ═══════════════════════════════════════════════════════════════
     --                      CREATE PERSONA SLOTS
@@ -922,22 +1058,25 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
     -- Slot 1: Center (primary/featured slot)
     slotButtons[1] = createPersonaSlot(slotsContainer, 1,
         UDim2.fromScale(0.45, 0.7),
-        UDim2.fromScale(0.5, 0.5),
-        Vector2.new(0.5, 0.5)
+        nil,
+        nil,
+        2
     )
 
     -- Slot 2: Left side
     slotButtons[2] = createPersonaSlot(slotsContainer, 2,
         UDim2.fromScale(0.25, 0.5),
-        UDim2.fromScale(0.15, 0.5),
-        Vector2.new(0.5, 0.5)
+        nil,
+        nil,
+        1
     )
 
     -- Slot 3: Right side
     slotButtons[3] = createPersonaSlot(slotsContainer, 3,
         UDim2.fromScale(0.25, 0.5),
-        UDim2.fromScale(0.85, 0.5),
-        Vector2.new(0.5, 0.5)
+        nil,
+        nil,
+        3
     )
 
     -- ═══════════════════════════════════════════════════════════════
@@ -1021,6 +1160,8 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
             entranceTween:Play()
         end
     end)
+
+    ensureResponsiveListeners()
 end
 
 return NinjaCosmetics
