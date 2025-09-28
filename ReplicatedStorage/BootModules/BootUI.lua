@@ -241,59 +241,6 @@ function BootUI.applyFetchedData(data)
         BootUI.config.personaData = sanitized
         BootUI.personaData = sanitized
         Cosmetics.refreshSlots(sanitized)
-        local function describeMainPersona()
-            if typeof(sanitized) ~= "table" then
-                return "Main persona: unavailable"
-            end
-
-            local slots = sanitized.slots
-            if typeof(slots) ~= "table" then
-                return "Main persona: no slots"
-            end
-
-            local preferred = sanitized.activeSlot or sanitized.selectedSlot or sanitized.currentSlot or sanitized.lastUsedSlot
-            preferred = tonumber(preferred)
-            local chosen = preferred and slots[preferred] or nil
-            local chosenIndex = preferred
-
-            if not chosen then
-                local limit = tonumber(sanitized.slotCount) or #slots
-                for index = 1, limit do
-                    local slot = slots[index]
-                    if slot ~= nil then
-                        chosen = slot
-                        chosenIndex = index
-                        break
-                    end
-                end
-            end
-
-            if not chosen then
-                return "Main persona: empty"
-            end
-
-            local details = {}
-            table.insert(details, string.format("Main persona (slot %d): %s", chosenIndex or 0, tostring(chosen.type or "Unknown")))
-
-            if typeof(chosen.level) == "number" then
-                table.insert(details, string.format("Level %d", chosen.level))
-            end
-            if typeof(chosen.exp) == "number" then
-                table.insert(details, string.format("XP %d", chosen.exp))
-            end
-            if typeof(chosen.power) == "number" then
-                table.insert(details, string.format("Power %d", chosen.power))
-            end
-            if typeof(chosen.wins) == "number" then
-                table.insert(details, string.format("Wins %d", chosen.wins))
-            end
-            if typeof(chosen.coins) == "number" then
-                table.insert(details, string.format("Coins %d", chosen.coins))
-            end
-
-            return table.concat(details, " | ")
-        end
-
         Cosmetics.showDojoPicker()
     end
 end
