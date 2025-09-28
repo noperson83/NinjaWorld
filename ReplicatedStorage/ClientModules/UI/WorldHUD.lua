@@ -551,6 +551,76 @@ function WorldHUD:prepareLoadoutPanels()
         self:applyMenuAutoState()
 end
 
+function WorldHUD:ensureLoadoutHeader()
+        local loadout = self.loadout
+        if not loadout then
+                return
+        end
+
+        if not self.loadTitle then
+                local baseY = self.baseY or 0
+                local loadTitle = Instance.new("TextLabel")
+                loadTitle.Size = UDim2.new(1, -40, 0, 70)
+                loadTitle.Position = UDim2.new(0.5, 0, 0, baseY)
+                loadTitle.AnchorPoint = Vector2.new(0.5, 0)
+                loadTitle.BackgroundColor3 = BUTTON_STYLE.primaryColor
+                loadTitle.BackgroundTransparency = 0.1
+                loadTitle.TextXAlignment = Enum.TextXAlignment.Center
+                loadTitle.Text = "⚔ NINJA LOADOUT ⚔"
+                loadTitle.Font = Enum.Font.GothamBold
+                loadTitle.TextScaled = true
+                loadTitle.TextColor3 = BUTTON_STYLE.accentColor
+                loadTitle.ZIndex = 25
+                loadTitle.Parent = loadout
+                self.loadTitle = loadTitle
+
+                local titleCorner = Instance.new("UICorner")
+                titleCorner.CornerRadius = UDim.new(0, 15)
+                titleCorner.Parent = loadTitle
+
+                local titleStroke = Instance.new("UIStroke")
+                titleStroke.Color = BUTTON_STYLE.accentColor
+                titleStroke.Thickness = 2
+                titleStroke.Transparency = 0.5
+                titleStroke.Parent = loadTitle
+        elseif not self.loadTitle.Parent then
+                self.loadTitle.Parent = loadout
+        end
+
+        if not self.backButtonContainer then
+                local backButton, backContainer = createStyledButton(loadout, "◀ Back", UDim2.new(0, 20, 1, -80), 40)
+                backButton.Size = UDim2.new(0, 200, 0, 50)
+                backContainer.Size = UDim2.new(0, 200, 0, 50)
+                self.backButton = backButton
+                self.backButtonContainer = backContainer
+        elseif not self.backButtonContainer.Parent then
+                self.backButtonContainer.Parent = loadout
+        end
+
+        if self.backButton then
+                self.backButton.Visible = false
+                self.backButton.Active = false
+        end
+        if self.backButtonContainer then
+                self.backButtonContainer.Visible = false
+        end
+end
+
+function WorldHUD:detachLoadoutHeader()
+        if self.loadTitle then
+                self.loadTitle.Visible = false
+                self.loadTitle.Parent = nil
+        end
+        if self.backButton then
+                self.backButton.Visible = false
+                self.backButton.Active = false
+        end
+        if self.backButtonContainer then
+                self.backButtonContainer.Visible = false
+                self.backButtonContainer.Parent = nil
+        end
+end
+
 function WorldHUD:handlePostTeleport(teleportContext)
         self:closeAllInterfaces()
 
@@ -566,23 +636,6 @@ function WorldHUD:handlePostTeleport(teleportContext)
         if inWorld then
                 self:setWorldMode(true)
                 self.menuAutoExpand = false
-
-                -- Ensure the loadout header and back button disappear immediately when
-                -- transitioning into a realm.  Relying solely on updateLoadoutHeaderVisibility
-                -- isn't enough because other scripts can momentarily re-enable the loadout
-                -- frame during the dissolve animation, letting the header/back flash on
-                -- screen.  Explicitly hiding the controls guarantees the player never sees
-                -- them while a world teleport is in progress.
-                if self.loadTitle then
-                        self.loadTitle.Visible = false
-                end
-                if self.backButton then
-                        self.backButton.Visible = false
-                        self.backButton.Active = false
-                end
-                if self.backButtonContainer then
-                        self.backButtonContainer.Visible = false
-                end
 
                 if not self:playLoadoutDissolve() then
                         if self.loadout then
@@ -688,35 +741,9 @@ function WorldHUD.new(config, dependencies)
 	loadout.Parent = root
 	self.loadout = loadout
 
-	local baseY = GuiService:GetGuiInset().Y + 20
-	self.baseY = baseY
-
-	-- Enhanced title with ninja styling
-	local loadTitle = Instance.new("TextLabel")
-	loadTitle.Size = UDim2.new(1,-40,0,70)
-	loadTitle.Position = UDim2.new(0.5,0,0,baseY)
-	loadTitle.AnchorPoint = Vector2.new(0.5,0)
-	loadTitle.BackgroundColor3 = BUTTON_STYLE.primaryColor
-	loadTitle.BackgroundTransparency = 0.1
-	loadTitle.TextXAlignment = Enum.TextXAlignment.Center
-	loadTitle.Text = "⚔ NINJA LOADOUT ⚔"
-	loadTitle.Font = Enum.Font.GothamBold
-        loadTitle.TextScaled = true
-        loadTitle.TextColor3 = BUTTON_STYLE.accentColor
-        loadTitle.ZIndex = 25
-        loadTitle.Parent = loadout
-        self.loadTitle = loadTitle
-
-	-- Title styling
-	local titleCorner = Instance.new("UICorner")
-	titleCorner.CornerRadius = UDim.new(0, 15)
-	titleCorner.Parent = loadTitle
-
-	local titleStroke = Instance.new("UIStroke")
-	titleStroke.Color = BUTTON_STYLE.accentColor
-	titleStroke.Thickness = 2
-	titleStroke.Transparency = 0.5
-	titleStroke.Parent = loadTitle
+        local baseY = GuiService:GetGuiInset().Y + 20
+        self.baseY = baseY
+        self:ensureLoadoutHeader()
 
 	-- Teleport UI
 	local setTeleportsVisible
@@ -838,16 +865,8 @@ function WorldHUD.new(config, dependencies)
         setInterfaceVisible(backpack, false)
         setTeleportsVisible(false)
 
-        -- Enhanced back button
-        local backButton, backContainer = createStyledButton(loadout, "◀ Back", UDim2.new(0, 20, 1, -80), 40)
-        backButton.Size = UDim2.new(0, 200, 0, 50)
-        backContainer.Size = UDim2.new(0, 200, 0, 50)
-
-        self.backButton = backButton
-        self.backButtonContainer = backContainer
-
-	local realmDisplayLookup = {}
-	self.realmDisplayLookup = realmDisplayLookup
+        local realmDisplayLookup = {}
+        self.realmDisplayLookup = realmDisplayLookup
 	for _, info in ipairs(REALM_INFO) do
 		realmDisplayLookup[info.key] = info.name
 	end
@@ -936,8 +955,13 @@ function WorldHUD:updateLoadoutHeaderVisibility()
 end
 
 function WorldHUD:setWorldMode(inWorld)
-	self.worldModeActive = inWorld and true or false
-	self:updateLoadoutHeaderVisibility()
+        self.worldModeActive = inWorld and true or false
+        if self.worldModeActive then
+                self:detachLoadoutHeader()
+        else
+                self:ensureLoadoutHeader()
+        end
+        self:updateLoadoutHeaderVisibility()
 end
 
 function WorldHUD:showLoadout()
@@ -1018,9 +1042,15 @@ function WorldHUD:destroy()
 	if self.teleportUI and self.teleportUI.destroy then
 		self.teleportUI:destroy()
 	end
-	if self.gui then
-		self.gui:Destroy()
-	end
+        if self.gui then
+                self.gui:Destroy()
+        end
+        if self.loadTitle then
+                self.loadTitle:Destroy()
+        end
+        if self.backButtonContainer then
+                self.backButtonContainer:Destroy()
+        end
         self.gui = nil
         self.root = nil
         self.loadout = nil
