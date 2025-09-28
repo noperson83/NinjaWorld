@@ -743,6 +743,16 @@ if enterRealmButton then
 
             DojoClient.hide()
             restoreUIBlur()
+            local hudAfterTeleport = BootUI.hud
+            if hudAfterTeleport and hudAfterTeleport.handlePostTeleport then
+                -- Re-open the loadout menu shortly after spawning so the quick-access
+                -- buttons (quests, pouch, teleports, shop) remain available in the dojo.
+                task.defer(function()
+                    if hudAfterTeleport and hudAfterTeleport.handlePostTeleport then
+                        hudAfterTeleport:handlePostTeleport()
+                    end
+                end)
+            end
             local fadeTween = TweenService:Create(fade, TweenInfo.new(0.35), {BackgroundTransparency = 1})
             fadeTween.Completed:Connect(function(playbackState)
                 if playbackState == Enum.PlaybackState.Completed then
