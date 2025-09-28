@@ -370,6 +370,21 @@ if not cosmeticsInterface.getStarterBackpack then
     end
 end
 
+if not cosmeticsInterface.updatePersonaData then
+    cosmeticsInterface.updatePersonaData = function(newData)
+        if typeof(newData) ~= "table" then
+            BootUI.personaData = nil
+            BootUI.config = BootUI.config or {}
+            BootUI.config.personaData = nil
+            return
+        end
+
+        BootUI.config = BootUI.config or {}
+        BootUI.config.personaData = newData
+        BootUI.personaData = newData
+    end
+end
+
 BootUI.cosmeticsInterface = cosmeticsInterface
 
 BootUI.populateBackpackUI(config.inventory)

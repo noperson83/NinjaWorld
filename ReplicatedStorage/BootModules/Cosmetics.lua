@@ -103,10 +103,10 @@ end
 
 -- Enhanced persona data sanitizer
 local function sanitizePersonaData(data)
-	local result = {}
-	local slots = nil
+        local result = {}
+        local slots = nil
 
-	-- Extract slots data
+        -- Extract slots data
 	if typeof(data) == "table" then
 		for key, value in pairs(data) do
 			if key == "slots" and typeof(value) == "table" then
@@ -148,8 +148,28 @@ local function sanitizePersonaData(data)
 		slotCount = DEFAULT_SLOT_COUNT
 	end
 
-	result.slotCount = slotCount
-	return result
+        result.slotCount = slotCount
+        return result
+end
+
+local function clonePersonaData(data)
+        if typeof(data) ~= "table" then
+                return data
+        end
+
+        local cloned = table.clone(data)
+
+        if typeof(data.slots) == "table" then
+                cloned.slots = table.clone(data.slots)
+
+                for index, slot in pairs(cloned.slots) do
+                        if typeof(slot) == "table" then
+                                cloned.slots[index] = table.clone(slot)
+                        end
+                end
+        end
+
+        return cloned
 end
 
 -- ═══════════════════════════════════════════════════════════════
@@ -549,10 +569,11 @@ local function updateSlotDisplays()
 end
 
 local function refreshSlotData(newData)
-	personaCache = sanitizePersonaData(newData)
-	ensureValidSelection()
-	updateSlotDisplays()
-	updateSelectedPersonaLabel()
+        personaCache = sanitizePersonaData(newData)
+        ensureValidSelection()
+        updateSlotDisplays()
+        updateSelectedPersonaLabel()
+        callUICallback("updatePersonaData", clonePersonaData(personaCache))
 end
 
 -- ═══════════════════════════════════════════════════════════════
