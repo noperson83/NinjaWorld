@@ -866,31 +866,46 @@ function WorldHUD.new(config, dependencies)
                 self:setTeleportVisible(visible)
         end
 
+        local function hideTeleport()
+                setTeleportsVisible(false)
+        end
+
         if quest and quest.closeButton then
                 track(self, quest.closeButton.MouseButton1Click:Connect(function()
                         setInterfaceVisible(quest, false)
+                        hideTeleport()
                 end))
         end
 
         track(self, questButton.MouseButton1Click:Connect(function()
                 local shouldShow = not isInterfaceVisible(quest)
                 setInterfaceVisible(quest, shouldShow)
+                if shouldShow then
+                        hideTeleport()
+                end
         end))
 
         if backpack and backpack.closeButton then
                 track(self, backpack.closeButton.MouseButton1Click:Connect(function()
                         setInterfaceVisible(backpack, false)
+                        hideTeleport()
                 end))
         end
 
         track(self, pouchButton.MouseButton1Click:Connect(function()
                 local shouldShow = not isInterfaceVisible(backpack)
                 setInterfaceVisible(backpack, shouldShow)
+                if shouldShow then
+                        hideTeleport()
+                end
         end))
 
-	track(self, shopButton.MouseButton1Click:Connect(function()
-		self:toggleShop()
-	end))
+        track(self, shopButton.MouseButton1Click:Connect(function()
+                local visible = self:toggleShop()
+                if visible then
+                        hideTeleport()
+                end
+        end))
 
 	if teleportCloseButton then
 		track(self, teleportCloseButton.MouseButton1Click:Connect(function()
@@ -1039,10 +1054,15 @@ function WorldHUD:toggleShop(defaultTab)
 	else
 		self.shopFrame.Visible = not self.shopFrame.Visible
 	end
-	if self.shopFrame and self.shopFrame.Visible and defaultTab and NinjaMarketplaceUI.setTab then
-		NinjaMarketplaceUI.setTab(defaultTab)
-	end
-	return self.shopFrame and self.shopFrame.Visible
+        if self.shopFrame and self.shopFrame.Visible and defaultTab and NinjaMarketplaceUI.setTab then
+                NinjaMarketplaceUI.setTab(defaultTab)
+        end
+
+        if self.shopFrame and self.shopFrame.Visible then
+                self:setTeleportVisible(false)
+        end
+
+        return self.shopFrame and self.shopFrame.Visible
 end
 
 function WorldHUD:setBackpackData(data)
