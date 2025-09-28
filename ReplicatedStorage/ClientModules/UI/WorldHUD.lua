@@ -580,6 +580,9 @@ function WorldHUD:handlePostTeleport(teleportContext)
                         self.backButton.Visible = false
                         self.backButton.Active = false
                 end
+                if self.backButtonContainer then
+                        self.backButtonContainer.Visible = false
+                end
 
                 if not self:playLoadoutDissolve() then
                         if self.loadout then
@@ -835,12 +838,13 @@ function WorldHUD.new(config, dependencies)
         setInterfaceVisible(backpack, false)
         setTeleportsVisible(false)
 
-	-- Enhanced back button
+        -- Enhanced back button
         local backButton, backContainer = createStyledButton(loadout, "◀ Back", UDim2.new(0, 20, 1, -80), 40)
-	backButton.Size = UDim2.new(0, 200, 0, 50)
-	backContainer.Size = UDim2.new(0, 200, 0, 50)
-	
-	self.backButton = backButton
+        backButton.Size = UDim2.new(0, 200, 0, 50)
+        backContainer.Size = UDim2.new(0, 200, 0, 50)
+
+        self.backButton = backButton
+        self.backButtonContainer = backContainer
 
 	local realmDisplayLookup = {}
 	self.realmDisplayLookup = realmDisplayLookup
@@ -918,11 +922,17 @@ function WorldHUD:updateLoadoutHeaderVisibility()
 		self.loadTitle.Visible = headerVisible
 	end
 
-	if self.backButton then
-		local showBack = headerVisible and (self.backButtonEnabled ~= false)
-		self.backButton.Visible = showBack
-		self.backButton.Active = showBack
-	end
+        local backContainer = self.backButtonContainer
+        if self.backButton then
+                local showBack = headerVisible and (self.backButtonEnabled ~= false)
+                self.backButton.Visible = showBack
+                self.backButton.Active = showBack
+                if backContainer then
+                        backContainer.Visible = showBack
+                end
+        elseif backContainer then
+                backContainer.Visible = false
+        end
 end
 
 function WorldHUD:setWorldMode(inWorld)
@@ -1018,6 +1028,7 @@ function WorldHUD:destroy()
         self.shopButton = nil
         self.shopFrame = nil
         self.backButton = nil
+        self.backButtonContainer = nil
         self.enterRealmButton = nil
         self.quest = nil
         self.backpack = nil
