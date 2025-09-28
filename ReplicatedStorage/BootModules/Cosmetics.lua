@@ -315,16 +315,16 @@ end
 -- ═══════════════════════════════════════════════════════════════
 
 local function showNinjaConfirmation(message, onConfirm)
-        local overlay = Instance.new("TextButton")
-        overlay.Size = UDim2.fromScale(1, 1)
-        overlay.BackgroundColor3 = Color3.new(0, 0, 0)
-        overlay.BackgroundTransparency = 0.3
-        overlay.ZIndex = 300
-        overlay.Active = true
-        overlay.Modal = true
-        overlay.AutoButtonColor = false
-        overlay.Text = ""
-        overlay.Parent = rootUI
+	local overlay = Instance.new("TextButton")
+	overlay.Size = UDim2.fromScale(1, 1)
+	overlay.BackgroundColor3 = Color3.new(0, 0, 0)
+	overlay.BackgroundTransparency = 0.3
+	overlay.ZIndex = 300
+	overlay.Active = true
+	overlay.Modal = true
+	overlay.AutoButtonColor = false
+	overlay.Text = ""
+	overlay.Parent = rootUI
 
 	local dialog = createStyledFrame(overlay, 
 		UDim2.fromScale(0.35, 0.3), 
@@ -845,74 +845,74 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
 	background.Parent = dojoInterface
 
 	-- Header with ninja branding
-        local headerFrame = createStyledFrame(dojoInterface,
-                UDim2.new(0, 0, 0, 0),
-                UDim2.fromScale(0.5, 0.08),
-                Vector2.new(0.5, 0)
-        )
-        headerFrame.AutomaticSize = Enum.AutomaticSize.XY
-        headerFrame.BackgroundTransparency = .2
+	local headerFrame = createStyledFrame(dojoInterface,
+		UDim2.new(0, 0, 0, 0),
+		UDim2.fromScale(0.5, 0.02),
+		Vector2.new(0.5, 0)
+	)
+	headerFrame.AutomaticSize = Enum.AutomaticSize.XY
+	headerFrame.BackgroundTransparency = .2
 
-        local headerPadding = Instance.new("UIPadding")
-        headerPadding.PaddingTop = UDim.new(0, 12)
-        headerPadding.PaddingBottom = UDim.new(0, 12)
-        headerPadding.PaddingLeft = UDim.new(0, 16)
-        headerPadding.PaddingRight = UDim.new(0, 16)
-        headerPadding.Parent = headerFrame
+	local headerPadding = Instance.new("UIPadding")
+	headerPadding.PaddingTop = UDim.new(0, .1)
+	headerPadding.PaddingBottom = UDim.new(0, .1)
+	headerPadding.PaddingLeft = UDim.new(0, 16)
+	headerPadding.PaddingRight = UDim.new(0, 16)
+	headerPadding.Parent = headerFrame
 
-        local headerLayout = Instance.new("UIListLayout")
-        headerLayout.FillDirection = Enum.FillDirection.Horizontal
-        headerLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-        headerLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-        headerLayout.Padding = UDim.new(0, 12)
-        headerLayout.SortOrder = Enum.SortOrder.LayoutOrder
-        headerLayout.Parent = headerFrame
+	local headerLayout = Instance.new("UIListLayout")
+	headerLayout.FillDirection = Enum.FillDirection.Horizontal
+	headerLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	headerLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+	headerLayout.Padding = UDim.new(0, 12)
+	headerLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	headerLayout.Parent = headerFrame
 
-        local dojoTitle = Instance.new("ImageLabel")
-        dojoTitle.Size = UDim2.fromOffset(360, 120)
-        dojoTitle.Image = "rbxassetid://138217463115431" -- BootUI logo
-        dojoTitle.BackgroundTransparency = 1
-        dojoTitle.ScaleType = Enum.ScaleType.Fit
-        dojoTitle.ZIndex = 12
-        dojoTitle.LayoutOrder = 1
-        dojoTitle.Parent = headerFrame
+	local dojoTitle = Instance.new("ImageLabel")
+	dojoTitle.Size = UDim2.fromOffset(360, 120)
+	dojoTitle.Image = "rbxassetid://138217463115431" -- BootUI logo
+	dojoTitle.BackgroundTransparency = 1
+	dojoTitle.ScaleType = Enum.ScaleType.Fit
+	dojoTitle.ZIndex = 12
+	dojoTitle.LayoutOrder = 1
+	dojoTitle.Parent = headerFrame
 
-        local dojoTitleConstraint = Instance.new("UISizeConstraint")
-        dojoTitleConstraint.MaxSize = Vector2.new(360, 120)
-        dojoTitleConstraint.Parent = dojoTitle
+	local dojoTitleConstraint = Instance.new("UISizeConstraint")
+	dojoTitleConstraint.MaxSize = Vector2.new(360, 120)
+	dojoTitleConstraint.Parent = dojoTitle
 
-        local function updateHeaderLayout()
-                local headerWidth = headerFrame.AbsoluteSize.X
+	local function updateHeaderLayout()
+		local headerWidth = headerFrame.AbsoluteSize.X
 
-                if headerWidth < 600 then
-                        headerLayout.FillDirection = Enum.FillDirection.Vertical
-                else
-                        headerLayout.FillDirection = Enum.FillDirection.Horizontal
-                end
-        end
+		if headerWidth < 600 then
+			headerLayout.FillDirection = Enum.FillDirection.Vertical
+		else
+			headerLayout.FillDirection = Enum.FillDirection.Horizontal
+		end
+	end
 
-        headerFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateHeaderLayout)
-        updateHeaderLayout()
+	headerFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateHeaderLayout)
+	updateHeaderLayout()
 
-        -- Main content panel
-        local contentPanel = createStyledFrame(dojoInterface,
-                UDim2.fromScale(0.9, 0.6),
-                UDim2.fromScale(0.5, 0.55),
-                Vector2.new(0.5, 0.5)
-        )
-        contentPanel.BackgroundTransparency = .2
+	-- Main content panel
+	local contentPanel = createStyledFrame(dojoInterface,
+		UDim2.fromScale(0.9, 0.8),
+		UDim2.fromScale(0.5, 0.55),
+		Vector2.new(0.5, 0.5)
+	)
+	contentPanel.BackgroundTransparency = .2
 
-        contentPanel.AnchorPoint = Vector2.new(0.5, 0)
+	contentPanel.AnchorPoint = Vector2.new(0.5, 0)
 
-        local function updateContentPanelPosition()
-                local headerHeight = headerFrame.AbsoluteSize.Y
-                contentPanel.Position = UDim2.new(0.5, 0, 0, headerHeight + 20)
-        end
+	local function updateContentPanelPosition()
+		local headerHeight = headerFrame.AbsoluteSize.Y
+		contentPanel.Position = UDim2.new(0.5, 0, 0, headerHeight + 20)
+	end
 
-        updateContentPanelPosition()
-        headerFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateContentPanelPosition)
+	updateContentPanelPosition()
+	headerFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateContentPanelPosition)
 
-        -- Slots container
+	-- Slots container
 	slotsContainer = Instance.new("Frame")
 	slotsContainer.Size = UDim2.new(1, -20, 0.8, 0)
 	slotsContainer.Position = UDim2.new(0, 10, 0, 10)
@@ -934,7 +934,7 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
 
 	local starterDojoImage = Instance.new("ImageLabel")
 	starterDojoImage.Size = UDim2.fromScale(0.6, 0.8)
-	starterDojoImage.Position = UDim2.fromScale(0.5, 0.5)
+	starterDojoImage.Position = UDim2.fromScale(0.5	, 0.5)
 	starterDojoImage.AnchorPoint = Vector2.new(0.5, 0.5)
 	starterDojoImage.Image = "rbxassetid://137361385013636" -- Starter dojo image
 	starterDojoImage.BackgroundTransparency = 1
@@ -942,7 +942,7 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
 	starterDojoImage.ZIndex = 12
 	starterDojoImage.Parent = footerFrame
 
-        -- ═══════════════════════════════════════════════════════════════
+	-- ═══════════════════════════════════════════════════════════════
 	--                      CREATE PERSONA SLOTS
 	-- ═══════════════════════════════════════════════════════════════
 
