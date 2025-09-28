@@ -1607,15 +1607,18 @@ function ActionUI.init()
                 enableDefaultJump()
         end
 
-	if actions then
-		-- Combat actions
-		local actionMap = {
-			PunchButton = {func = CombatController.perform, param = "Punch", cooldown = 1},  -- Example cooldown
-			KickButton = {func = CombatController.perform, param = "Kick", cooldown = 2},
-			RollButton = {func = CombatController.perform, param = "Roll", cooldown = 3},
-			CrouchButton = {func = CombatController.perform, param = "Crouch", cooldown = 0},  -- No cooldown
-			SlideButton = {func = CombatController.perform, param = "Slide", cooldown = 4},
-		}
+        local actionMap
+        local abilityMap
+
+        if actions then
+                -- Combat actions
+                actionMap = {
+                        PunchButton = {func = CombatController.perform, param = "Punch", cooldown = 1},  -- Example cooldown
+                        KickButton = {func = CombatController.perform, param = "Kick", cooldown = 2},
+                        RollButton = {func = CombatController.perform, param = "Roll", cooldown = 3},
+                        CrouchButton = {func = CombatController.perform, param = "Crouch", cooldown = 0},  -- No cooldown
+                        SlideButton = {func = CombatController.perform, param = "Slide", cooldown = 4},
+                }
 
                 for buttonName, data in pairs(actionMap) do
                         local btn = actions:FindFirstChild(buttonName)
@@ -1639,13 +1642,13 @@ function ActionUI.init()
                 end
 
                 -- Abilities (with example cooldowns)
-                local abilityMap = {
-			TossButton = {func = Abilities.Toss, cooldown = 5},
-			StarButton = {func = Abilities.Star, cooldown = 10},
-			RainButton = {func = Abilities.Rain, cooldown = 15},
-			BeastButton = {func = Abilities.Beast, cooldown = 20},
-			DragonButton = {func = Abilities.Dragon, cooldown = 25},
-		}
+                abilityMap = {
+                        TossButton = {func = Abilities.Toss, cooldown = 5},
+                        StarButton = {func = Abilities.Star, cooldown = 10},
+                        RainButton = {func = Abilities.Rain, cooldown = 15},
+                        BeastButton = {func = Abilities.Beast, cooldown = 20},
+                        DragonButton = {func = Abilities.Dragon, cooldown = 25},
+                }
 
                 for buttonName, data in pairs(abilityMap) do
                         local btn = actions:FindFirstChild(buttonName)
@@ -1663,7 +1666,7 @@ function ActionUI.init()
                 end
         end
 
-	-- Keybinds (updated to check cooldowns)
+        -- Keybinds (updated to check cooldowns)
         local function createKeybindEntry(buttonName, mapping)
                 if not mapping then
                         return nil
@@ -1677,23 +1680,29 @@ function ActionUI.init()
                 }
         end
 
-        local abilityKeybinds = {
-                [Enum.KeyCode.F] = createKeybindEntry("TossButton", abilityMap.TossButton),
-                [Enum.KeyCode.G] = createKeybindEntry("StarButton", abilityMap.StarButton),
-                [Enum.KeyCode.Z] = createKeybindEntry("RainButton", abilityMap.RainButton),
-                [Enum.KeyCode.B] = createKeybindEntry("BeastButton", abilityMap.BeastButton),
-                [Enum.KeyCode.X] = createKeybindEntry("DragonButton", abilityMap.DragonButton),
-        }
+        local abilityKeybinds = {}
+        if abilityMap then
+                abilityKeybinds = {
+                        [Enum.KeyCode.F] = createKeybindEntry("TossButton", abilityMap.TossButton),
+                        [Enum.KeyCode.G] = createKeybindEntry("StarButton", abilityMap.StarButton),
+                        [Enum.KeyCode.Z] = createKeybindEntry("RainButton", abilityMap.RainButton),
+                        [Enum.KeyCode.B] = createKeybindEntry("BeastButton", abilityMap.BeastButton),
+                        [Enum.KeyCode.X] = createKeybindEntry("DragonButton", abilityMap.DragonButton),
+                }
+        end
 
-        local combatKeybinds = {
-                [Enum.KeyCode.E] = createKeybindEntry("PunchButton", actionMap.PunchButton),
-                [Enum.KeyCode.T] = createKeybindEntry("PunchButton", actionMap.PunchButton),
-                [Enum.KeyCode.Q] = createKeybindEntry("KickButton", actionMap.KickButton),
-                [Enum.KeyCode.R] = createKeybindEntry("RollButton", actionMap.RollButton),
-                [Enum.KeyCode.C] = createKeybindEntry("CrouchButton", actionMap.CrouchButton),
-                [Enum.KeyCode.LeftControl] = createKeybindEntry("SlideButton", actionMap.SlideButton),
-                [Enum.KeyCode.Space] = {func = performCustomJump, button = "JumpButton", cooldown = 0},
-        }
+        local combatKeybinds = {}
+        if actionMap then
+                combatKeybinds = {
+                        [Enum.KeyCode.E] = createKeybindEntry("PunchButton", actionMap.PunchButton),
+                        [Enum.KeyCode.T] = createKeybindEntry("PunchButton", actionMap.PunchButton),
+                        [Enum.KeyCode.Q] = createKeybindEntry("KickButton", actionMap.KickButton),
+                        [Enum.KeyCode.R] = createKeybindEntry("RollButton", actionMap.RollButton),
+                        [Enum.KeyCode.C] = createKeybindEntry("CrouchButton", actionMap.CrouchButton),
+                        [Enum.KeyCode.LeftControl] = createKeybindEntry("SlideButton", actionMap.SlideButton),
+                        [Enum.KeyCode.Space] = {func = performCustomJump, button = "JumpButton", cooldown = 0},
+                }
+        end
 
 	local ignoredInputKeys = {
 		[Enum.KeyCode.W] = true,
