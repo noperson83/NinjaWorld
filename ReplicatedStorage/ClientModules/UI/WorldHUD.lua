@@ -328,7 +328,7 @@ local function createMenuToggleButton(parent, position, zIndex)
         local container = Instance.new("Frame")
         container.Name = "MenuToggleContainer"
         container.Size = UDim2.new(0, 64, 0, 64)
-        container.AnchorPoint = Vector2.new(0, 0.5)
+        container.AnchorPoint = Vector2.new(1, 0)
         container.Position = position
         container.BackgroundTransparency = 1
         container.ZIndex = zIndex
@@ -536,10 +536,21 @@ function WorldHUD:setMenuExpanded(expanded)
                 self.menuButtonStroke.Thickness = targetThickness
                 self.menuButtonStroke.Color = self.menuExpanded and BUTTON_STYLE.accentColor or BUTTON_STYLE.secondaryColor
         end
+        if self.menuExpanded then
+                self.menuAutoExpand = true
+        end
 end
 
 function WorldHUD:toggleMenu()
         self:setMenuExpanded(not self.menuExpanded)
+end
+
+function WorldHUD:applyMenuAutoState()
+        if self.menuAutoExpand == false then
+                self:setMenuExpanded(false)
+        else
+                self:setMenuExpanded(true)
+        end
 end
 
 function WorldHUD:prepareLoadoutPanels()
@@ -549,11 +560,12 @@ function WorldHUD:prepareLoadoutPanels()
         if self.shopFrame then
                 self.shopFrame.Visible = false
         end
-        self:setMenuExpanded(true)
+        self:applyMenuAutoState()
 end
 
 function WorldHUD:handlePostTeleport()
         self:closeAllInterfaces()
+        self.menuAutoExpand = false
         local didAnimate = self:playLoadoutDissolve()
         if not didAnimate then
                 if self.loadout then
@@ -598,9 +610,10 @@ function WorldHUD.new(config, dependencies)
 	self.currencyService = dependencies and dependencies.currencyService or nil
 	self._connections = {}
 	self._destroyed = false
-	self.backButtonEnabled = true
+        self.backButtonEnabled = true
+        self.menuAutoExpand = true
 
-	local playerGui = ensureParent()
+        local playerGui = ensureParent()
 
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "WorldHUD"
@@ -684,17 +697,17 @@ function WorldHUD.new(config, dependencies)
 	self.backpack = backpack
 
 	-- Enhanced floating button panel positioned on left center
-	local togglePanel = Instance.new("Frame")
-	togglePanel.Name = "PanelToggleButtons"
-	togglePanel.Size = UDim2.new(0, 180, 0, 280)
-	togglePanel.AnchorPoint = Vector2.new(0, 0.5)
-	togglePanel.Position = UDim2.new(0, 30, 0.5, 0)
-	togglePanel.BackgroundTransparency = 1
+        local togglePanel = Instance.new("Frame")
+        togglePanel.Name = "PanelToggleButtons"
+        togglePanel.Size = UDim2.new(0, 180, 0, 280)
+        togglePanel.AnchorPoint = Vector2.new(1, 0)
+        togglePanel.Position = UDim2.new(1, -30, 0, baseY + 10)
+        togglePanel.BackgroundTransparency = 1
         togglePanel.ZIndex = 40
         togglePanel.Parent = loadout
         self.togglePanel = togglePanel
 
-        local menuButton, menuContainer, _, menuStroke = createMenuToggleButton(loadout, UDim2.new(0, 30, 0.5, -180), 45)
+        local menuButton, menuContainer, _, menuStroke = createMenuToggleButton(loadout, UDim2.new(1, -30, 0, baseY), 45)
         self.menuButton = menuButton
         self.menuContainer = menuContainer
         self.menuButtonStroke = menuStroke
@@ -865,7 +878,7 @@ function WorldHUD:showLoadout()
         if self.loadTitle then
                 self.loadTitle.Visible = true
         end
-        self:setMenuExpanded(true)
+        self:applyMenuAutoState()
         self:setShopButtonVisible(true)
 end
 
