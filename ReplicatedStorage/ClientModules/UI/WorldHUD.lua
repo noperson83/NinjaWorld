@@ -245,11 +245,72 @@ local function isInterfaceVisible(interface)
         return false
 end
 
+function WorldHUD:setQuestVisible(visible)
+        setInterfaceVisible(self.quest, visible)
+end
+
+function WorldHUD:setBackpackVisible(visible)
+        setInterfaceVisible(self.backpack, visible)
+end
+
+function WorldHUD:setTeleportVisible(visible)
+        setInterfaceVisible(self.teleportUI, visible)
+end
+
+function WorldHUD:closeAllInterfaces()
+        self:setQuestVisible(false)
+        self:setBackpackVisible(false)
+        self:setTeleportVisible(false)
+        if self.shopFrame then
+                self.shopFrame.Visible = false
+        end
+end
+
+local function getMenuText(expanded)
+        return expanded and "Menu ▼" or "Menu ▲"
+end
+
+function WorldHUD:setMenuExpanded(expanded)
+        self.menuExpanded = expanded and true or false
+        if self.togglePanel then
+                self.togglePanel.Visible = self.menuExpanded
+        end
+        if self.menuButton then
+                self.menuButton.Text = getMenuText(self.menuExpanded)
+        end
+end
+
+function WorldHUD:toggleMenu()
+        self:setMenuExpanded(not self.menuExpanded)
+end
+
+function WorldHUD:prepareLoadoutPanels()
+        self:setQuestVisible(true)
+        self:setBackpackVisible(true)
+        self:setTeleportVisible(true)
+        if self.shopFrame then
+                self.shopFrame.Visible = false
+        end
+        self:setMenuExpanded(true)
+end
+
+function WorldHUD:handlePostTeleport()
+        self:closeAllInterfaces()
+        if self.loadTitle then
+                self.loadTitle.Visible = false
+        end
+        if self.backButton then
+                self.backButton.Visible = false
+                self.backButton.Active = false
+        end
+        self:setMenuExpanded(true)
+end
+
 function WorldHUD.get()
-	if currentHud and currentHud._destroyed then
-		currentHud = nil
-	end
-	return currentHud
+        if currentHud and currentHud._destroyed then
+                currentHud = nil
+        end
+        return currentHud
 end
 
 function WorldHUD.new(config, dependencies)
@@ -313,10 +374,11 @@ function WorldHUD.new(config, dependencies)
 	loadTitle.TextXAlignment = Enum.TextXAlignment.Center
 	loadTitle.Text = "⚔ NINJA LOADOUT ⚔"
 	loadTitle.Font = Enum.Font.GothamBold
-	loadTitle.TextScaled = true
-	loadTitle.TextColor3 = BUTTON_STYLE.accentColor
-	loadTitle.ZIndex = 25
-	loadTitle.Parent = loadout
+        loadTitle.TextScaled = true
+        loadTitle.TextColor3 = BUTTON_STYLE.accentColor
+        loadTitle.ZIndex = 25
+        loadTitle.Parent = loadout
+        self.loadTitle = loadTitle
 
 	-- Title styling
 	local titleCorner = Instance.new("UICorner")
@@ -332,13 +394,17 @@ function WorldHUD.new(config, dependencies)
 	-- Teleport UI
 	local setTeleportsVisible
 
-	local teleportUI = TeleportUI.init(loadout, baseY, {
-		REALM_INFO = REALM_INFO,
-		getRealmFolder = getRealmFolder,
-		onTeleport = function()
-			setTeleportsVisible(false)
-		end,
-	})
+        local teleportUI = TeleportUI.init(loadout, baseY, {
+                REALM_INFO = REALM_INFO,
+                getRealmFolder = getRealmFolder,
+                onTeleport = function()
+                        if self and self.handlePostTeleport then
+                                self:handlePostTeleport()
+                        elseif self then
+                                self:setTeleportVisible(false)
+                        end
+                end,
+        })
 	self.teleportUI = teleportUI
 	local teleportCloseButton = teleportUI and teleportUI.closeButton or nil
 	self.teleportCloseButton = teleportCloseButton
@@ -357,11 +423,21 @@ function WorldHUD.new(config, dependencies)
 	togglePanel.AnchorPoint = Vector2.new(0, 0.5)
 	togglePanel.Position = UDim2.new(0, 30, 0.5, 0)
 	togglePanel.BackgroundTransparency = 1
-	togglePanel.ZIndex = 40
-	togglePanel.Parent = loadout
-	self.togglePanel = togglePanel
+        togglePanel.ZIndex = 40
+        togglePanel.Parent = loadout
+        self.togglePanel = togglePanel
 
-	-- Create styled buttons with proper spacing
+        local menuButton, menuContainer = createStyledButton(loadout, "Menu", UDim2.new(0, 30, 0.5, -180), 45)
+        menuContainer.Size = UDim2.new(0, 160, 0, 50)
+        self.menuButton = menuButton
+        self.menuContainer = menuContainer
+        self.menuExpanded = true
+        self:setMenuExpanded(true)
+        track(self, menuButton.MouseButton1Click:Connect(function()
+                self:toggleMenu()
+        end))
+
+        -- Create styled buttons with proper spacing
 	local questButton, questContainer = createStyledButton(togglePanel, "Quests", UDim2.new(0, 0, 0, 0), 41)
 	local pouchButton, pouchContainer = createStyledButton(togglePanel, "Pouch", UDim2.new(0, 0, 0, 65), 41)
 	local teleButton, teleContainer = createStyledButton(togglePanel, "Teleports", UDim2.new(0, 0, 0, 130), 41)
@@ -379,7 +455,7 @@ function WorldHUD.new(config, dependencies)
 	self.shopButton = shopButton
 
         setTeleportsVisible = function(visible)
-                setInterfaceVisible(teleportUI, visible)
+                self:setTeleportVisible(visible)
         end
 
         if quest and quest.closeButton then
@@ -462,17 +538,23 @@ end
 
 function WorldHUD:createCosmeticsInterface()
 	local hud = self
-	return {
-		showDojoPicker = function()
-			if hud and hud.hideLoadout then
-				hud:hideLoadout()
-			end
-		end,
-		showLoadout = function(personaType)
-			if hud and hud.showLoadout then
-				hud:showLoadout()
-			end
-		end,
+        return {
+                showDojoPicker = function()
+                        if hud and hud.hideLoadout then
+                                hud:hideLoadout()
+                                if hud.closeAllInterfaces then
+                                        hud:closeAllInterfaces()
+                                end
+                        end
+                end,
+                showLoadout = function(personaType)
+                        if hud and hud.showLoadout then
+                                hud:showLoadout()
+                                if hud.prepareLoadoutPanels then
+                                        hud:prepareLoadoutPanels()
+                                end
+                        end
+                end,
 		updateBackpack = function(data)
 			if hud and hud.setBackpackData then
 				hud:setBackpackData(data)
@@ -493,26 +575,33 @@ function WorldHUD:setShopButtonVisible(visible)
 end
 
 function WorldHUD:showLoadout()
-	if self.loadout then
-		self.loadout.Visible = true
-	end
-	if self.backButton then
-		local showBack = self.backButtonEnabled ~= false
-		self.backButton.Visible = showBack
-		self.backButton.Active = showBack
-	end
-	self:setShopButtonVisible(true)
+        if self.loadout then
+                self.loadout.Visible = true
+        end
+        if self.backButton then
+                local showBack = self.backButtonEnabled ~= false
+                self.backButton.Visible = showBack
+                self.backButton.Active = showBack
+        end
+        if self.loadTitle then
+                self.loadTitle.Visible = true
+        end
+        self:setMenuExpanded(true)
+        self:setShopButtonVisible(true)
 end
 
 function WorldHUD:hideLoadout()
-	if self.loadout then
+        if self.loadout then
 		self.loadout.Visible = false
 	end
-	if self.backButton then
-		self.backButton.Visible = false
-		self.backButton.Active = false
-	end
-	self:setShopButtonVisible(false)
+        if self.backButton then
+                self.backButton.Visible = false
+                self.backButton.Active = false
+        end
+        if self.loadTitle then
+                self.loadTitle.Visible = false
+        end
+        self:setShopButtonVisible(false)
 end
 
 function WorldHUD:setBackButtonEnabled(enabled)
@@ -583,21 +672,25 @@ function WorldHUD:destroy()
 	if self.gui then
 		self.gui:Destroy()
 	end
-	self.gui = nil
-	self.root = nil
-	self.loadout = nil
-	self.shopButton = nil
-	self.shopFrame = nil
-	self.backButton = nil
-	self.enterRealmButton = nil
-	self.quest = nil
-	self.backpack = nil
-	self.togglePanel = nil
-	self.questOpenButton = nil
-	self.backpackOpenButton = nil
-	self.teleportOpenButton = nil
-	self.teleportCloseButton = nil
-	self.teleportUI = nil
+        self.gui = nil
+        self.root = nil
+        self.loadout = nil
+        self.loadTitle = nil
+        self.shopButton = nil
+        self.shopFrame = nil
+        self.backButton = nil
+        self.enterRealmButton = nil
+        self.quest = nil
+        self.backpack = nil
+        self.togglePanel = nil
+        self.menuButton = nil
+        self.menuContainer = nil
+        self.menuExpanded = nil
+        self.questOpenButton = nil
+        self.backpackOpenButton = nil
+        self.teleportOpenButton = nil
+        self.teleportCloseButton = nil
+        self.teleportUI = nil
 	self.backButtonEnabled = nil
 	if currentHud == self then
 		currentHud = nil
