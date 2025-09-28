@@ -318,7 +318,7 @@ local function showNinjaConfirmation(message, onConfirm)
 	local overlay = Instance.new("TextButton")
 	overlay.Size = UDim2.fromScale(1, 1)
 	overlay.BackgroundColor3 = Color3.new(0, 0, 0)
-	overlay.BackgroundTransparency = 0.3
+	overlay.BackgroundTransparency = 0.8
 	overlay.ZIndex = 300
 	overlay.Active = true
 	overlay.Modal = true
@@ -854,17 +854,17 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
 	headerFrame.BackgroundTransparency = .2
 
 	local headerPadding = Instance.new("UIPadding")
-	headerPadding.PaddingTop = UDim.new(0, .1)
-	headerPadding.PaddingBottom = UDim.new(0, .1)
-	headerPadding.PaddingLeft = UDim.new(0, 16)
-	headerPadding.PaddingRight = UDim.new(0, 16)
+	headerPadding.PaddingTop = UDim.new(0, .02)
+	headerPadding.PaddingBottom = UDim.new(0, .02)
+	headerPadding.PaddingLeft = UDim.new(0, 8)
+	headerPadding.PaddingRight = UDim.new(0, 8)
 	headerPadding.Parent = headerFrame
 
 	local headerLayout = Instance.new("UIListLayout")
 	headerLayout.FillDirection = Enum.FillDirection.Horizontal
 	headerLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	headerLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-	headerLayout.Padding = UDim.new(0, 12)
+	headerLayout.Padding = UDim.new(0, 8)
 	headerLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	headerLayout.Parent = headerFrame
 
@@ -898,15 +898,15 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
 	local contentPanel = createStyledFrame(dojoInterface,
 		UDim2.fromScale(0.9, 0.8),
 		UDim2.fromScale(0.5, 0.55),
-		Vector2.new(0.5, 0.5)
+		Vector2.new(0.2, 0.2)
 	)
-	contentPanel.BackgroundTransparency = .2
+	contentPanel.BackgroundTransparency = .8
 
 	contentPanel.AnchorPoint = Vector2.new(0.5, 0)
 
 	local function updateContentPanelPosition()
 		local headerHeight = headerFrame.AbsoluteSize.Y
-		contentPanel.Position = UDim2.new(0.5, 0, 0, headerHeight + 20)
+		contentPanel.Position = UDim2.new(0.5, 0, 0, headerHeight + 22)
 	end
 
 	updateContentPanelPosition()
@@ -916,7 +916,7 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
 	slotsContainer = Instance.new("Frame")
 	slotsContainer.Size = UDim2.new(1, -20, 0.8, 0)
 	slotsContainer.Position = UDim2.new(0, 10, 0, 10)
-	slotsContainer.BackgroundTransparency = 1
+	slotsContainer.BackgroundTransparency = .8
 	slotsContainer.ZIndex = 11
 	slotsContainer.Parent = contentPanel
 
@@ -926,11 +926,11 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
 
 	-- Footer with dojo branding
 	local footerFrame = createStyledFrame(contentPanel, 
-		UDim2.new(0.8, 0, 0.15, 0), 
+		UDim2.new(0.9, 0, 0.15, 0), 
 		UDim2.fromScale(0.5, 0.9), 
 		Vector2.new(0.5, 0.5)
 	)
-	footerFrame.BackgroundTransparency = 1
+	footerFrame.BackgroundTransparency = .2
 
 	local starterDojoImage = Instance.new("ImageLabel")
 	starterDojoImage.Size = UDim2.fromScale(0.6, 0.8)
@@ -952,21 +952,21 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
 
 	-- Slot 1: Center (primary/featured slot)
 	slotButtons[1] = createPersonaSlot(slotsContainer, 1,
-		UDim2.fromScale(0.45, 0.7),
+		UDim2.fromScale(0.45, 1),
 		UDim2.fromScale(0.5, 0.5),
 		Vector2.new(0.5, 0.5)
 	)
 
 	-- Slot 2: Left side
 	slotButtons[2] = createPersonaSlot(slotsContainer, 2,
-		UDim2.fromScale(0.25, 0.5),
+		UDim2.fromScale(0.25, 0.7),
 		UDim2.fromScale(0.15, 0.5),
 		Vector2.new(0.5, 0.5)
 	)
 
 	-- Slot 3: Right side
 	slotButtons[3] = createPersonaSlot(slotsContainer, 3,
-		UDim2.fromScale(0.25, 0.5),
+		UDim2.fromScale(0.25, 0.7),
 		UDim2.fromScale(0.85, 0.5),
 		Vector2.new(0.5, 0.5)
 	)
