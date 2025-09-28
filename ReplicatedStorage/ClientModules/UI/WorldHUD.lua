@@ -13,6 +13,17 @@ WorldHUD.__index = WorldHUD
 
 local currentHud
 
+local TEXT_CLASSES = {
+        TextLabel = true,
+        TextButton = true,
+        TextBox = true,
+}
+
+local IMAGE_CLASSES = {
+        ImageLabel = true,
+        ImageButton = true,
+}
+
 local player = Players.LocalPlayer
 
 local REALM_INFO = {
@@ -54,12 +65,118 @@ local BUTTON_STYLE = {
 }
 
 local function track(self, conn)
-	if conn == nil then
-		return nil
-	end
+        if conn == nil then
+                return nil
+        end
 
-	table.insert(self._connections, conn)
-	return conn
+        table.insert(self._connections, conn)
+        return conn
+end
+
+local function captureTransparencyTargets(container)
+        if not container then
+                return {}
+        end
+
+        local targets = {}
+
+        local function addTarget(instance)
+                local entry = {instance = instance}
+
+                if instance:IsA("GuiObject") then
+                        if instance.BackgroundTransparency ~= nil then
+                                entry.backgroundTransparency = instance.BackgroundTransparency
+                        end
+
+                        if TEXT_CLASSES[instance.ClassName] then
+                                entry.textTransparency = instance.TextTransparency
+                                entry.textStrokeTransparency = instance.TextStrokeTransparency
+                        end
+
+                        if IMAGE_CLASSES[instance.ClassName] then
+                                entry.imageTransparency = instance.ImageTransparency
+                        end
+                elseif instance:IsA("UIStroke") then
+                        entry.strokeTransparency = instance.Transparency
+                else
+                        return
+                end
+
+                targets[#targets + 1] = entry
+        end
+
+        addTarget(container)
+        for _, descendant in ipairs(container:GetDescendants()) do
+                if descendant:IsA("GuiObject") or descendant:IsA("UIStroke") then
+                        addTarget(descendant)
+                end
+        end
+
+        return targets
+end
+
+local function applyTransparencyEntry(entry)
+        local instance = entry.instance
+        if not instance then
+                return
+        end
+
+        if entry.backgroundTransparency ~= nil and instance:IsA("GuiObject") then
+                instance.BackgroundTransparency = entry.backgroundTransparency
+        end
+
+        if entry.textTransparency ~= nil and TEXT_CLASSES[instance.ClassName] then
+                instance.TextTransparency = entry.textTransparency
+        end
+
+        if entry.textStrokeTransparency ~= nil and TEXT_CLASSES[instance.ClassName] then
+                instance.TextStrokeTransparency = entry.textStrokeTransparency
+        end
+
+        if entry.imageTransparency ~= nil and IMAGE_CLASSES[instance.ClassName] then
+                instance.ImageTransparency = entry.imageTransparency
+        end
+
+        if entry.strokeTransparency ~= nil and instance:IsA("UIStroke") then
+                instance.Transparency = entry.strokeTransparency
+        end
+end
+
+local function tweenTransparencyEntry(entry, tweenInfo)
+        local instance = entry.instance
+        if not (instance and instance.Parent) then
+                return nil
+        end
+
+        local goal = {}
+
+        if entry.backgroundTransparency ~= nil and instance:IsA("GuiObject") then
+                goal.BackgroundTransparency = 1
+        end
+
+        if entry.textTransparency ~= nil and TEXT_CLASSES[instance.ClassName] then
+                goal.TextTransparency = 1
+        end
+
+        if entry.textStrokeTransparency ~= nil and TEXT_CLASSES[instance.ClassName] then
+                goal.TextStrokeTransparency = 1
+        end
+
+        if entry.imageTransparency ~= nil and IMAGE_CLASSES[instance.ClassName] then
+                goal.ImageTransparency = 1
+        end
+
+        if entry.strokeTransparency ~= nil and instance:IsA("UIStroke") then
+                goal.Transparency = 1
+        end
+
+        if next(goal) == nil then
+                return nil
+        end
+
+        local tween = TweenService:Create(instance, tweenInfo, goal)
+        tween:Play()
+        return tween
 end
 
 local function ensureParent()
@@ -319,6 +436,92 @@ function WorldHUD:closeAllInterfaces()
         end
 end
 
+function WorldHUD:playLoadoutDissolve(duration)
+        if not (self.loadout and self.loadout.Parent) then
+                return false
+        end
+
+        duration = duration or 0.35
+
+        local targets = captureTransparencyTargets(self.loadout)
+        if #targets == 0 then
+                if self.loadout then
+                        self.loadout.Visible = false
+                end
+                if self.loadTitle then
+                        self.loadTitle.Visible = false
+                end
+                if self.backButton then
+                        self.backButton.Visible = false
+                        self.backButton.Active = false
+                end
+                self:setMenuExpanded(false)
+                if self.setShopButtonVisible then
+                        self:setShopButtonVisible(false)
+                end
+                return false
+        end
+
+        self._loadoutDissolveToken = (self._loadoutDissolveToken or 0) + 1
+        local token = self._loadoutDissolveToken
+
+        if self._loadoutDissolveTweens then
+                for _, tween in ipairs(self._loadoutDissolveTweens) do
+                        tween:Cancel()
+                end
+        end
+        self._loadoutDissolveTweens = {}
+
+        self:setMenuExpanded(false)
+        if self.setShopButtonVisible then
+                self:setShopButtonVisible(false)
+        end
+        if self.backButton then
+                self.backButton.Active = false
+        end
+
+        local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        for _, entry in ipairs(targets) do
+                local tween = tweenTransparencyEntry(entry, tweenInfo)
+                if tween then
+                        table.insert(self._loadoutDissolveTweens, tween)
+                end
+        end
+
+        task.delay(duration, function()
+                if self._destroyed or self._loadoutDissolveToken ~= token then
+                        return
+                end
+
+                if self._loadoutDissolveTweens then
+                        for _, tween in ipairs(self._loadoutDissolveTweens) do
+                                tween:Cancel()
+                        end
+                end
+                self._loadoutDissolveTweens = nil
+
+                if self.loadout then
+                        self.loadout.Visible = false
+                end
+                if self.loadTitle then
+                        self.loadTitle.Visible = false
+                end
+                if self.backButton then
+                        self.backButton.Visible = false
+                        self.backButton.Active = false
+                end
+
+                for _, entry in ipairs(targets) do
+                        local instance = entry.instance
+                        if instance and instance.Parent then
+                                applyTransparencyEntry(entry)
+                        end
+                end
+        end)
+
+        return true
+end
+
 function WorldHUD:setMenuExpanded(expanded)
         self.menuExpanded = expanded and true or false
         if self.togglePanel then
@@ -351,17 +554,23 @@ end
 
 function WorldHUD:handlePostTeleport()
         self:closeAllInterfaces()
-        if self.loadout then
-                self.loadout.Visible = false
+        local didAnimate = self:playLoadoutDissolve()
+        if not didAnimate then
+                if self.loadout then
+                        self.loadout.Visible = false
+                end
+                if self.loadTitle then
+                        self.loadTitle.Visible = false
+                end
+                if self.backButton then
+                        self.backButton.Visible = false
+                        self.backButton.Active = false
+                end
+                self:setMenuExpanded(false)
+                if self.setShopButtonVisible then
+                        self:setShopButtonVisible(false)
+                end
         end
-        if self.loadTitle then
-                self.loadTitle.Visible = false
-        end
-        if self.backButton then
-                self.backButton.Visible = false
-                self.backButton.Active = false
-        end
-        self:setMenuExpanded(false)
 end
 
 function WorldHUD.get()
