@@ -295,6 +295,7 @@ function BootUI.applyFetchedData(data)
         end
 
         Cosmetics.showDojoPicker()
+    end
 end
 
 function BootUI.getSelectedRealm()
