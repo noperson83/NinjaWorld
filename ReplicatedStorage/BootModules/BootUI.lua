@@ -168,6 +168,7 @@ end
 local Cosmetics       = require(ReplicatedStorage.BootModules.Cosmetics)
 local CurrencyService = require(ReplicatedStorage.BootModules.CurrencyService)
 local Shop            = require(ReplicatedStorage.BootModules.Shop)
+local AbilityUI       = require(ReplicatedStorage.BootModules.AbilityUI)
 local WorldHUD        = require(ReplicatedStorage.ClientModules.UI.WorldHUD)
 local TeleportClient  = require(ReplicatedStorage.ClientModules.TeleportClient)
 local DojoClient      = require(ReplicatedStorage.BootModules.DojoClient)
@@ -208,19 +209,109 @@ function BootUI.setShopButtonVisible(visible)
 end
 
 function BootUI.toggleShop(defaultTab)
-	local hud = BootUI.hud
-	if hud and hud.toggleShop then
-		local visible = hud:toggleShop(defaultTab)
-		BootUI.shopFrame = hud.shopFrame
-		return visible
-	end
+        local hud = BootUI.hud
+        if hud and hud.toggleShop then
+                local visible = hud:toggleShop(defaultTab)
+                BootUI.shopFrame = hud.shopFrame
+                return visible
+        end
+end
+
+function BootUI.isAbilityUIVisible()
+        local abilityUI = BootUI.abilityUI
+        if not abilityUI then
+                return false
+        end
+
+        if typeof(abilityUI.isVisible) == "function" then
+                local ok, result = pcall(function()
+                        return abilityUI:isVisible()
+                end)
+                if ok then
+                        return result and true or false
+                end
+        end
+
+        local frame = abilityUI.frame
+        return (frame and frame.Visible) or false
+end
+
+function BootUI.hideAbilityUI()
+        local abilityUI = BootUI.abilityUI
+        if not abilityUI then
+                return
+        end
+
+        if typeof(abilityUI.hide) == "function" then
+                abilityUI:hide()
+        elseif abilityUI.frame then
+                abilityUI.frame.Visible = false
+        end
+end
+
+function BootUI.showAbilityUI()
+        local abilityUI = BootUI.abilityUI
+        if not abilityUI then
+                return
+        end
+
+        if typeof(abilityUI.show) == "function" then
+                abilityUI:show()
+        elseif abilityUI.frame then
+                abilityUI.frame.Visible = true
+        end
+end
+
+function BootUI.toggleAbilityUI()
+        local abilityUI = BootUI.abilityUI
+        if not abilityUI then
+                return false
+        end
+
+        if typeof(abilityUI.toggle) == "function" then
+                local ok, result = pcall(function()
+                        return abilityUI:toggle()
+                end)
+                if ok then
+                        return result and true or false
+                end
+        elseif abilityUI.frame then
+                abilityUI.frame.Visible = not abilityUI.frame.Visible
+                return abilityUI.frame.Visible
+        end
+
+        return false
+end
+
+local function ensureAbilityInterface()
+        if BootUI.abilityInterface then
+                return BootUI.abilityInterface
+        end
+
+        local interface = {
+                show = function()
+                        BootUI.showAbilityUI()
+                end,
+                hide = function()
+                        BootUI.hideAbilityUI()
+                end,
+                toggle = function()
+                        return BootUI.toggleAbilityUI()
+                end,
+                isVisible = function()
+                        return BootUI.isAbilityUIVisible()
+                end,
+        }
+
+        BootUI.abilityInterface = interface
+        return interface
 end
 
 function BootUI.populateBackpackUI(data)
-	local hud = BootUI.hud
-	if hud and hud.setBackpackData then
-		hud:setBackpackData(data)
-	end
+        local hud = BootUI.hud
+        if hud and hud.setBackpackData then
+                hud:setBackpackData(data)
+        end
 end
 
 function BootUI.applyFetchedData(data)
@@ -268,13 +359,22 @@ function BootUI.destroyHUD()
 end
 
 function BootUI.hideOverlay()
-	if BootUI.introGui then
-		BootUI.introGui.Enabled = false
-	end
+        if BootUI.introGui then
+                BootUI.introGui.Enabled = false
+        end
+        BootUI.hideAbilityUI()
 end
 
 function BootUI.destroy()
-	BootUI.hideOverlay()
+        BootUI.hideOverlay()
+        local abilityUI = BootUI.abilityUI
+        if abilityUI and typeof(abilityUI.destroy) == "function" then
+                abilityUI:destroy()
+        end
+        BootUI.abilityUI = nil
+        if BootUI.abilityInterface then
+                BootUI.abilityInterface.frame = nil
+        end
 end
 
 local currencyService
@@ -291,16 +391,21 @@ function BootUI.start(config)
 	--  • Minor: consistent 0.6 transparency panels, plus small cleanups
 
 	-- =====================
-	currencyService = CurrencyService.new(config)
-	local shop            = Shop.new(config, currencyService)
-	BootUI.currencyService = currencyService
-	BootUI.shop = shop
+        currencyService = CurrencyService.new(config)
+        local shop            = Shop.new(config, currencyService)
+        local abilityInterface = ensureAbilityInterface()
+        BootUI.currencyService = currencyService
+        BootUI.shop = shop
 
-	local hud = WorldHUD.new(config, {currencyService = currencyService, shop = shop})
-	BootUI.hud = hud
-	BootUI.loadout = hud and hud:getLoadoutFrame() or nil
-	BootUI.shopBtn = hud and hud:getShopButton() or nil
-	BootUI.shopFrame = hud and hud.shopFrame or nil
+        local hud = WorldHUD.new(config, {
+                currencyService = currencyService,
+                shop = shop,
+                abilityInterface = abilityInterface,
+        })
+        BootUI.hud = hud
+        BootUI.loadout = hud and hud:getLoadoutFrame() or nil
+        BootUI.shopBtn = hud and hud:getShopButton() or nil
+        BootUI.shopFrame = hud and hud.shopFrame or nil
 
 	local questInterface = hud and hud:getQuestInterface() or nil
 	BootUI.questInterface = questInterface
@@ -506,8 +611,14 @@ function BootUI.start(config)
 	root.BackgroundTransparency = 1
 	root.Parent = ui
 
-	BootUI.root = root
-	Cosmetics.init(config, root, cosmeticsInterface)
+        BootUI.root = root
+        Cosmetics.init(config, root, cosmeticsInterface)
+
+        local abilityUI = AbilityUI.init(config, BootUI)
+        BootUI.abilityUI = abilityUI
+        if BootUI.abilityInterface then
+                BootUI.abilityInterface.frame = abilityUI and abilityUI.frame or nil
+        end
 
 	getEnterRemote()
 
