@@ -40,7 +40,13 @@ local UI_CONFIG = {
         MOBILE_BUTTON_SIZE = UDim2.new(0, 90, 0, 70),
         JUMP_BUTTON_SIZE = UDim2.new(0, 130, 0, 110),
         MOBILE_JUMP_SIZE = UDim2.new(0, 110, 0, 90),
+        DESKTOP_BUTTON_SIZE = UDim2.new(0, 84, 0, 68),
+        DESKTOP_JUMP_SIZE = UDim2.new(0, 96, 0, 76),
         PADDING = UDim.new(0, 12),
+        DESKTOP_PADDING = UDim.new(0, 8),
+        DESKTOP_BUTTON_SPACING = 16,
+        DESKTOP_BOTTOM_MARGIN = 36,
+        DESKTOP_FRAME_PADDING = 12,
         CORNER_RADIUS = UDim.new(0, 16),  -- Softer corners
 
         -- Responsive scaling
@@ -369,6 +375,10 @@ end
 
 local function shouldUseMobileLayout()
         return isMobile() or forceActionsVisible
+end
+
+local function shouldUseDesktopLayout()
+        return not shouldUseMobileLayout() and isDesktop()
 end
 
 local function shouldOverrideDefaultJump()
@@ -722,13 +732,22 @@ local function createStylizedButton(buttonDef)
 	button.ZIndex = 2
 	button.ClipsDescendants = true  -- Changed to true for cooldown overlay clipping
 
-	local mobileLayout = shouldUseMobileLayout()
+        local mobileLayout = shouldUseMobileLayout()
+        local desktopLayout = not mobileLayout and isDesktop()
 
         local baseSize
         if buttonDef.category == "jump" then
-                baseSize = mobileLayout and UI_CONFIG.MOBILE_JUMP_SIZE or UI_CONFIG.JUMP_BUTTON_SIZE
+                if desktopLayout and UI_CONFIG.DESKTOP_JUMP_SIZE then
+                        baseSize = UI_CONFIG.DESKTOP_JUMP_SIZE
+                else
+                        baseSize = mobileLayout and UI_CONFIG.MOBILE_JUMP_SIZE or UI_CONFIG.JUMP_BUTTON_SIZE
+                end
         else
-                baseSize = mobileLayout and UI_CONFIG.MOBILE_BUTTON_SIZE or UI_CONFIG.BUTTON_SIZE
+                if desktopLayout and UI_CONFIG.DESKTOP_BUTTON_SIZE then
+                        baseSize = UI_CONFIG.DESKTOP_BUTTON_SIZE
+                else
+                        baseSize = mobileLayout and UI_CONFIG.MOBILE_BUTTON_SIZE or UI_CONFIG.BUTTON_SIZE
+                end
         end
         button.Size = scaleUDim2(baseSize)
 
@@ -755,7 +774,11 @@ local function createStylizedButton(buttonDef)
         stroke.Parent = button
 
         local padding = Instance.new("UIPadding")
-        local paddingValue = scaleUDim(UI_CONFIG.PADDING)
+        local paddingConfig = UI_CONFIG.PADDING
+        if desktopLayout and UI_CONFIG.DESKTOP_PADDING then
+                paddingConfig = UI_CONFIG.DESKTOP_PADDING
+        end
+        local paddingValue = scaleUDim(paddingConfig)
         padding.PaddingTop = paddingValue
         padding.PaddingBottom = paddingValue
         padding.PaddingLeft = paddingValue
@@ -945,14 +968,19 @@ local function triggerHapticFeedback()
 end
 
 local function updateToggleVisual()
-	if not toggleButtonRef then
-		return
-	end
+        if not toggleButtonRef then
+                return
+        end
 
-	if #fanButtons == 0 then
-		toggleButtonRef.Visible = false
-		return
-	end
+        if shouldUseDesktopLayout() then
+                toggleButtonRef.Visible = false
+                return
+        end
+
+        if #fanButtons == 0 then
+                toggleButtonRef.Visible = false
+                return
+        end
 
 	toggleButtonRef.Visible = true
 	toggleButtonRef.Text = fanOpen and "−" or "☰"
@@ -1041,8 +1069,112 @@ local function ensureCharacterTracking()
         end
 end
 
+local function updateDesktopLayout(animated)
+        if not currentActionsFrame then
+                return
+        end
+
+        local layoutEntries = {}
+
+        local function addButton(button)
+                if not button or button.Parent ~= currentActionsFrame then
+                        return
+                end
+
+                table.insert(layoutEntries, {
+                        button = button,
+                        order = button.LayoutOrder or button:GetAttribute("ActionPriority") or 999,
+                })
+        end
+
+        addButton(jumpButtonRef)
+
+        for _, button in ipairs(fanButtons) do
+                addButton(button)
+        end
+
+        if #layoutEntries == 0 then
+                return
+        end
+
+        table.sort(layoutEntries, function(a, b)
+                if a.order == b.order then
+                        return a.button.Name < b.button.Name
+                end
+                return a.order < b.order
+        end)
+
+        local spacing = scaleNumber(UI_CONFIG.DESKTOP_BUTTON_SPACING or 16)
+        local horizontalPadding = scaleNumber(UI_CONFIG.DESKTOP_FRAME_PADDING or 12)
+        local verticalPadding = horizontalPadding
+        local bottomMargin = scaleNumber(UI_CONFIG.DESKTOP_BOTTOM_MARGIN or 36)
+
+        local totalWidth = horizontalPadding * 2
+        local maxHeight = 0
+
+        for _, entry in ipairs(layoutEntries) do
+                local size = entry.button.Size
+                totalWidth += size.X.Offset
+                if size.Y.Offset > maxHeight then
+                        maxHeight = size.Y.Offset
+                end
+        end
+
+        if #layoutEntries > 1 then
+                totalWidth += spacing * (#layoutEntries - 1)
+        end
+
+        local frameHeight = maxHeight + verticalPadding * 2
+
+        currentActionsFrame.AnchorPoint = Vector2.new(0.5, 1)
+        currentActionsFrame.Position = UDim2.new(0.5, 0, 1, -bottomMargin)
+        currentActionsFrame.Size = UDim2.new(0, totalWidth, 0, frameHeight)
+        currentActionsFrame.ClipsDescendants = false
+
+        local startOffset = -totalWidth / 2 + horizontalPadding
+        local cursor = startOffset
+
+        for _, entry in ipairs(layoutEntries) do
+                local button = entry.button
+                local width = button.Size.X.Offset
+                local targetPosition = UDim2.new(0.5, cursor + width / 2, 1, -verticalPadding)
+
+                button.AnchorPoint = Vector2.new(0.5, 1)
+
+                if animated then
+                        button.Visible = true
+                        local tween = TweenService:Create(button, TweenInfo.new(FAN_CONFIG.ANIMATION_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                Position = targetPosition,
+                                Rotation = 0,
+                        })
+                        tween:Play()
+                else
+                        button.Position = targetPosition
+                        button.Rotation = 0
+                        button.Visible = true
+                end
+
+                cursor += width + spacing
+        end
+
+        if toggleButtonRef then
+                toggleButtonRef.Visible = false
+        end
+
+        fanOpen = true
+end
+
 local function updateFanLayout(animated)
-        if not currentActionsFrame or not jumpButtonRef then
+        if not currentActionsFrame then
+                return
+        end
+
+        if shouldUseDesktopLayout() then
+                updateDesktopLayout(animated)
+                return
+        end
+
+        if not jumpButtonRef then
                 return
         end
 
@@ -1203,8 +1335,13 @@ local function updateFanLayout(animated)
 end
 
 local function setFanOpen(state, animated)
-        local targetState = state ~= false
         local shouldAnimate = animated ~= false
+        local targetState = state ~= false
+
+        if shouldUseDesktopLayout() then
+                targetState = true
+        end
+
         local stateChanged = fanOpen ~= targetState
 
         if stateChanged then
@@ -1362,13 +1499,24 @@ local function ensureActions()
 
         updateUIScale()
 
+        local mobileLayout = shouldUseMobileLayout()
+        local desktopLayout = not mobileLayout and isDesktop()
+
         local actions = Instance.new("Frame")
         actions.Name = "Actions"
         actions.BackgroundTransparency = 1
-        actions.AnchorPoint = Vector2.new(1, 1)
-        local actionInset = scaleNumber(20)
-        actions.Position = UDim2.new(1, -actionInset, 1, -actionInset)
         actions.ClipsDescendants = false
+
+        if desktopLayout then
+                actions.AnchorPoint = Vector2.new(0.5, 1)
+                local bottomMargin = scaleNumber(UI_CONFIG.DESKTOP_BOTTOM_MARGIN or 36)
+                actions.Position = UDim2.new(0.5, 0, 1, -bottomMargin)
+        else
+                actions.AnchorPoint = Vector2.new(1, 1)
+                local actionInset = scaleNumber(20)
+                actions.Position = UDim2.new(1, -actionInset, 1, -actionInset)
+        end
+
         actions.Parent = screenGui
 
 	currentActionsFrame = actions
@@ -1385,12 +1533,11 @@ local function ensureActions()
 		return (a.priority or 999) < (b.priority or 999)
 	end)
 
-	local mobileLayout = shouldUseMobileLayout()
-	local allowJumpButton = mobileLayout
+        local allowJumpButton = mobileLayout
 
-	if not allowJumpButton and UI_CONFIG.SHOW_ON_DESKTOP and UI_CONFIG.SHOW_DESKTOP_JUMP and isDesktop() then
-		allowJumpButton = true
-	end
+        if not allowJumpButton and UI_CONFIG.SHOW_ON_DESKTOP and UI_CONFIG.SHOW_DESKTOP_JUMP and desktopLayout then
+                allowJumpButton = true
+        end
 
         for _, buttonDef in ipairs(sortedButtons) do
                 local isJumpButton = buttonDef.category == "jump"
@@ -1412,7 +1559,7 @@ local function ensureActions()
 		end
 	end
 
-        if jumpButtonRef then
+        if jumpButtonRef and not desktopLayout then
                 local margin = getJumpMargin(mobileLayout)
                 local jumpSize = jumpButtonRef.Size
                 jumpButtonRef.Position = UDim2.new(
@@ -1423,15 +1570,17 @@ local function ensureActions()
 		)
 	end
 
-	for _, button in ipairs(fanButtons) do
-		if jumpButtonRef then
-			button.Position = jumpButtonRef.Position
-		else
-			button.Position = UDim2.new(1, -button.Size.X.Offset / 2, 1, -button.Size.Y.Offset / 2)
-		end
-	end
+        for _, button in ipairs(fanButtons) do
+                if desktopLayout then
+                        button.Position = UDim2.new(0.5, 0, 1, 0)
+                elseif jumpButtonRef then
+                        button.Position = jumpButtonRef.Position
+                else
+                        button.Position = UDim2.new(1, -button.Size.X.Offset / 2, 1, -button.Size.Y.Offset / 2)
+                end
+        end
 
-        if #fanButtons > 0 then
+        if #fanButtons > 0 and not desktopLayout then
                 toggleButtonRef = createFanToggleButton()
                 toggleButtonRef.Parent = actions
                 connectButtonActivation(toggleButtonRef, function()
@@ -1515,23 +1664,36 @@ function ActionUI.init()
         end
 
 	-- Keybinds (updated to check cooldowns)
-	local abilityKeybinds = {
-		[Enum.KeyCode.F] = {func = Abilities.Toss, button = "TossButton"},
-		[Enum.KeyCode.G] = {func = Abilities.Star, button = "StarButton"},
-		[Enum.KeyCode.Z] = {func = Abilities.Rain, button = "RainButton"},
-		[Enum.KeyCode.B] = {func = Abilities.Beast, button = "BeastButton"},
-		[Enum.KeyCode.X] = {func = Abilities.Dragon, button = "DragonButton"},
-	}
+        local function createKeybindEntry(buttonName, mapping)
+                if not mapping then
+                        return nil
+                end
 
-	local combatKeybinds = {
-		[Enum.KeyCode.E] = {func = CombatController.perform, param = "Punch", button = "PunchButton"},
-		[Enum.KeyCode.T] = {func = CombatController.perform, param = "Punch", button = "PunchButton"},
-		[Enum.KeyCode.Q] = {func = CombatController.perform, param = "Kick", button = "KickButton"},
-		[Enum.KeyCode.R] = {func = CombatController.perform, param = "Roll", button = "RollButton"},
-		[Enum.KeyCode.C] = {func = CombatController.perform, param = "Crouch", button = "CrouchButton"},
-		[Enum.KeyCode.LeftControl] = {func = CombatController.perform, param = "Slide", button = "SlideButton"},
-		[Enum.KeyCode.Space] = {func = performCustomJump, button = "JumpButton"},
-	}
+                return {
+                        func = mapping.func,
+                        param = mapping.param,
+                        button = buttonName,
+                        cooldown = mapping.cooldown or 0,
+                }
+        end
+
+        local abilityKeybinds = {
+                [Enum.KeyCode.F] = createKeybindEntry("TossButton", abilityMap.TossButton),
+                [Enum.KeyCode.G] = createKeybindEntry("StarButton", abilityMap.StarButton),
+                [Enum.KeyCode.Z] = createKeybindEntry("RainButton", abilityMap.RainButton),
+                [Enum.KeyCode.B] = createKeybindEntry("BeastButton", abilityMap.BeastButton),
+                [Enum.KeyCode.X] = createKeybindEntry("DragonButton", abilityMap.DragonButton),
+        }
+
+        local combatKeybinds = {
+                [Enum.KeyCode.E] = createKeybindEntry("PunchButton", actionMap.PunchButton),
+                [Enum.KeyCode.T] = createKeybindEntry("PunchButton", actionMap.PunchButton),
+                [Enum.KeyCode.Q] = createKeybindEntry("KickButton", actionMap.KickButton),
+                [Enum.KeyCode.R] = createKeybindEntry("RollButton", actionMap.RollButton),
+                [Enum.KeyCode.C] = createKeybindEntry("CrouchButton", actionMap.CrouchButton),
+                [Enum.KeyCode.LeftControl] = createKeybindEntry("SlideButton", actionMap.SlideButton),
+                [Enum.KeyCode.Space] = {func = performCustomJump, button = "JumpButton", cooldown = 0},
+        }
 
 	local ignoredInputKeys = {
 		[Enum.KeyCode.W] = true,
@@ -1570,13 +1732,26 @@ function ActionUI.init()
 		end
 
                 if data then
-                        if cooldowns[data.button] then return end
+                        if data.button and cooldowns[data.button] then return end
+
                         if data.param then
                                 data.func(data.param)
                         else
                                 data.func()
                         end
-                        -- No cooldown start here, assume handled in func or button
+
+                        if data.button and data.button ~= "JumpButton" then
+                                playButtonSound()
+                                triggerHapticFeedback()
+                        end
+
+                        if data.button and data.cooldown and data.cooldown > 0 then
+                                local buttonInstance = currentActionsFrame and currentActionsFrame:FindFirstChild(data.button)
+                                if buttonInstance then
+                                        startCooldown(data.button, data.cooldown)
+                                end
+                        end
+
                         return
                 end
 
