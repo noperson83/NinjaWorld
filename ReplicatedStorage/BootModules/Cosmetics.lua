@@ -819,33 +819,62 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
 	background.Parent = dojoInterface
 
 	-- Header with ninja branding
-	local headerFrame = createStyledFrame(dojoInterface, 
-		UDim2.fromScale(0.8, 0.15), 
-		UDim2.fromScale(0.5, 0.08), 
-		Vector2.new(0.5, 0)
-	)
-	headerFrame.BackgroundTransparency = .2
+        local headerFrame = createStyledFrame(dojoInterface,
+                UDim2.new(0, 0, 0, 0),
+                UDim2.fromScale(0.5, 0.08),
+                Vector2.new(0.5, 0)
+        )
+        headerFrame.AutomaticSize = Enum.AutomaticSize.XY
+        headerFrame.BackgroundTransparency = .2
 
-	local dojoTitle = Instance.new("ImageLabel")
-	dojoTitle.Size = UDim2.fromScale(0.7, 0.8)
-	dojoTitle.Position = UDim2.fromScale(0.5, 0.5)
-	dojoTitle.AnchorPoint = Vector2.new(0.5, 0.5)
-	dojoTitle.Image = "rbxassetid://138217463115431" -- BootUI logo
-	dojoTitle.BackgroundTransparency = 1
-	dojoTitle.ScaleType = Enum.ScaleType.Fit
-	dojoTitle.ZIndex = 12
-	dojoTitle.Parent = headerFrame
+        local headerPadding = Instance.new("UIPadding")
+        headerPadding.PaddingTop = UDim.new(0, 12)
+        headerPadding.PaddingBottom = UDim.new(0, 12)
+        headerPadding.PaddingLeft = UDim.new(0, 16)
+        headerPadding.PaddingRight = UDim.new(0, 16)
+        headerPadding.Parent = headerFrame
 
-	local shadowText = Instance.new("TextLabel")
-	shadowText.Size = UDim2.new(0.3, 0, 0.4, 0)
-	shadowText.Position = UDim2.new(0.1, 0, 0.3, 0)
-	shadowText.BackgroundTransparency = 1
-	shadowText.Text = "🌙 Shadow Dojo"
-	shadowText.Font = Enum.Font.GothamSemibold
-	shadowText.TextScaled = true
-	shadowText.TextColor3 = NINJA_COLORS.ACCENT
-	shadowText.ZIndex = 12
-	shadowText.Parent = headerFrame
+        local headerLayout = Instance.new("UIListLayout")
+        headerLayout.FillDirection = Enum.FillDirection.Horizontal
+        headerLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+        headerLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+        headerLayout.Padding = UDim.new(0, 12)
+        headerLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        headerLayout.Parent = headerFrame
+
+        local dojoTitle = Instance.new("ImageLabel")
+        dojoTitle.Size = UDim2.fromOffset(260, 80)
+        dojoTitle.Image = "rbxassetid://138217463115431" -- BootUI logo
+        dojoTitle.BackgroundTransparency = 1
+        dojoTitle.ScaleType = Enum.ScaleType.Fit
+        dojoTitle.ZIndex = 12
+        dojoTitle.LayoutOrder = 1
+        dojoTitle.Parent = headerFrame
+
+        local shadowText = Instance.new("TextLabel")
+        shadowText.AutomaticSize = Enum.AutomaticSize.XY
+        shadowText.Size = UDim2.new(0, 0, 0, 0)
+        shadowText.BackgroundTransparency = 1
+        shadowText.Text = "🌙 Shadow Dojo"
+        shadowText.Font = Enum.Font.GothamSemibold
+        shadowText.TextScaled = true
+        shadowText.TextWrapped = true
+        shadowText.LayoutOrder = 2
+        shadowText.TextXAlignment = Enum.TextXAlignment.Center
+        shadowText.TextColor3 = NINJA_COLORS.ACCENT
+        shadowText.ZIndex = 12
+        shadowText.Parent = headerFrame
+
+        local function updateHeaderLayout()
+                if headerFrame.AbsoluteSize.X < 400 then
+                        headerLayout.FillDirection = Enum.FillDirection.Vertical
+                else
+                        headerLayout.FillDirection = Enum.FillDirection.Horizontal
+                end
+        end
+
+        headerFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateHeaderLayout)
+        updateHeaderLayout()
 
 	-- Selected persona display
 	selectedPersonaLabel = Instance.new("TextLabel")
