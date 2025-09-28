@@ -425,6 +425,14 @@ end
 
 function WorldHUD:setTeleportVisible(visible)
         setInterfaceVisible(self.teleportUI, visible)
+
+        if visible then
+                setInterfaceVisible(self.quest, false)
+                setInterfaceVisible(self.backpack, false)
+                if self.shopFrame then
+                        self.shopFrame.Visible = false
+                end
+        end
 end
 
 function WorldHUD:closeAllInterfaces()
