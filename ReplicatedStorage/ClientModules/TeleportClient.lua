@@ -118,7 +118,12 @@ function TeleportClient.bindZoneButtons(gui, callbacks)
                 if button then
                         button.Activated:Connect(function()
                                 if onTeleport then
-                                        onTeleport()
+                                        onTeleport({
+                                                source = "Zone",
+                                                name = name,
+                                                island = zoneInfo[1],
+                                                location = zoneInfo[2],
+                                        })
                                 end
                                 teleportToIsland(unpack(zoneInfo))
                         end)
@@ -361,7 +366,11 @@ function TeleportClient.bindWorldButtons(gui, callbacks)
                local placeId = TeleportClient.worldSpawnIds[selectedRealm]
                if placeId and placeId > 0 then
                        if onTeleport then
-                               onTeleport()
+                               onTeleport({
+                                       source = "Realm",
+                                       realm = selectedRealm,
+                                       placeId = placeId,
+                               })
                        end
                        teleportToPlace(placeId)
                else
