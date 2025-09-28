@@ -1,11 +1,19 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterGui = game:GetService("StarterGui")
 
 local ActionUI = require(ReplicatedStorage.ClientModules.UI.ActionUI)
 
 local player = Players.LocalPlayer
 
 local function initializeActionUI()
+    local coreGuiSuccess, coreGuiErr = pcall(function()
+        StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
+    end)
+    if not coreGuiSuccess then
+        warn("Failed to disable player list:", coreGuiErr)
+    end
+
     task.defer(function()
         local success, err = pcall(ActionUI.init)
         if not success then
