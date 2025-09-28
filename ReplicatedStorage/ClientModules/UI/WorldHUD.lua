@@ -565,23 +565,32 @@ end
 
 function WorldHUD:handlePostTeleport()
         self:closeAllInterfaces()
-        self.menuAutoExpand = false
-        local didAnimate = self:playLoadoutDissolve()
-        if not didAnimate then
-                if self.loadout then
-                        self.loadout.Visible = false
-                end
-                if self.loadTitle then
-                        self.loadTitle.Visible = false
-                end
-                if self.backButton then
-                        self.backButton.Visible = false
-                        self.backButton.Active = false
-                end
-                self:setMenuExpanded(false)
-                if self.setShopButtonVisible then
-                        self:setShopButtonVisible(false)
-                end
+
+        -- Keep the main loadout menu available after teleporting so the player
+        -- can immediately access quests, pouch, teleports, and shop again.
+        self.menuAutoExpand = true
+        self:setMenuExpanded(true)
+
+        if self.loadout then
+                self.loadout.Visible = true
+        end
+
+        if self.togglePanel then
+                self.togglePanel.Visible = true
+        end
+
+        if self.loadTitle then
+                self.loadTitle.Visible = true
+        end
+
+        if self.backButton then
+                local showBack = self.backButtonEnabled ~= false
+                self.backButton.Visible = showBack
+                self.backButton.Active = showBack
+        end
+
+        if self.setShopButtonVisible then
+                self:setShopButtonVisible(true)
         end
 end
 
