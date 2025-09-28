@@ -203,12 +203,17 @@ function NinjaQuestUI.init(parent, baseY, options)
         abilityHeader.ZIndex = 7
         abilityHeader.Parent = abilityContainer
 
-        local abilityRow = Instance.new("Frame")
+        local abilityRow = Instance.new("ScrollingFrame")
         abilityRow.Name = "AbilityRow"
         abilityRow.Size = UDim2.new(1, 0, 0, 32)
         abilityRow.Position = UDim2.new(0, 0, 0, 24)
         abilityRow.BackgroundTransparency = 1
         abilityRow.ZIndex = 7
+        abilityRow.ScrollBarThickness = 4
+        abilityRow.ScrollingDirection = Enum.ScrollingDirection.X
+        abilityRow.AutomaticCanvasSize = Enum.AutomaticSize.X
+        abilityRow.CanvasSize = UDim2.new(0, 0, 0, 32)
+        abilityRow.ClipsDescendants = true
         abilityRow.Parent = abilityContainer
 
         local abilityLayout = Instance.new("UIListLayout")
