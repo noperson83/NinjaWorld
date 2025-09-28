@@ -436,12 +436,39 @@ function WorldHUD:closeAllInterfaces()
         end
 end
 
+function WorldHUD:cancelLoadoutDissolve()
+        self._loadoutDissolveToken = (self._loadoutDissolveToken or 0) + 1
+
+        if self._loadoutDissolveTweens then
+                for _, tween in ipairs(self._loadoutDissolveTweens) do
+                        tween:Cancel()
+                end
+        end
+        self._loadoutDissolveTweens = nil
+
+        if self._loadoutDissolveTargets then
+                for _, entry in ipairs(self._loadoutDissolveTargets) do
+                        local instance = entry.instance
+                        if instance and instance.Parent then
+                                applyTransparencyEntry(entry)
+                        end
+                end
+        end
+        self._loadoutDissolveTargets = nil
+
+        if self.loadout then
+                self.loadout.Visible = true
+        end
+end
+
 function WorldHUD:playLoadoutDissolve(duration)
         if not (self.loadout and self.loadout.Parent) then
                 return false
         end
 
         duration = duration or 0.35
+
+        self._loadoutDissolveTargets = nil
 
         local targets = captureTransparencyTargets(self.loadout)
         if #targets == 0 then
@@ -458,6 +485,8 @@ function WorldHUD:playLoadoutDissolve(duration)
 
         self._loadoutDissolveToken = (self._loadoutDissolveToken or 0) + 1
         local token = self._loadoutDissolveToken
+
+        self._loadoutDissolveTargets = targets
 
         if self._loadoutDissolveTweens then
                 for _, tween in ipairs(self._loadoutDissolveTweens) do
@@ -504,6 +533,10 @@ function WorldHUD:playLoadoutDissolve(duration)
                         if instance and instance.Parent then
                                 applyTransparencyEntry(entry)
                         end
+                end
+
+                if self._loadoutDissolveTargets == targets then
+                        self._loadoutDissolveTargets = nil
                 end
         end)
 
@@ -660,6 +693,7 @@ function WorldHUD:handlePostTeleport(teleportContext)
 
         -- Keep the main loadout menu available when returning to the dojo so the player
         -- can immediately access quests, pouch, teleports, and shop again.
+        self:cancelLoadoutDissolve()
         self:setWorldMode(false)
         self.menuAutoExpand = true
         self:setMenuExpanded(true)
