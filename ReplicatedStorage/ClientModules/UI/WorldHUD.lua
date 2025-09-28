@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local NinjaMarketplaceUI = require(ReplicatedStorage.ClientModules.UI.NinjaMarketplaceUI)
 local NinjaQuestUI = require(ReplicatedStorage.ClientModules.UI.NinjaQuestUI)
@@ -26,6 +27,30 @@ local REALM_INFO = {
 	{key = "Metal",         name = "Metal"},
 	{key = "Strength",      name = "Strength"},
 	{key = "Atoms",         name = "Atoms"},
+}
+
+-- Button styling configurations
+local BUTTON_STYLE = {
+	-- Main colors with ninja theme
+	primaryColor = Color3.fromRGB(20, 25, 35),
+	secondaryColor = Color3.fromRGB(35, 45, 65),
+	accentColor = Color3.fromRGB(255, 140, 60), -- Orange accent
+	textColor = Color3.fromRGB(255, 255, 255),
+	shadowColor = Color3.fromRGB(0, 0, 0),
+	
+	-- Hover effects
+	hoverColor = Color3.fromRGB(45, 55, 75),
+	activeColor = Color3.fromRGB(255, 160, 80),
+	
+	-- Sizing
+	buttonSize = UDim2.new(0, 160, 0, 50),
+	cornerRadius = UDim.new(0, 12),
+	spacing = 15,
+	
+	-- Animation
+	hoverScale = 1.05,
+	pressScale = 0.95,
+	animSpeed = 0.2,
 }
 
 local function track(self, conn)
@@ -54,6 +79,132 @@ local function getRealmFolder()
 		end
 	end
 	return realmsFolder
+end
+
+-- Enhanced button creation with ninja styling
+local function createStyledButton(parent, text, position, zIndex)
+	-- Main button container
+	local buttonContainer = Instance.new("Frame")
+	buttonContainer.Name = text .. "Container"
+	buttonContainer.Size = BUTTON_STYLE.buttonSize
+	buttonContainer.Position = position
+	buttonContainer.BackgroundTransparency = 1
+	buttonContainer.ZIndex = zIndex
+	buttonContainer.Parent = parent
+	
+	-- Shadow frame (for depth effect)
+	local shadow = Instance.new("Frame")
+	shadow.Name = "Shadow"
+	shadow.Size = UDim2.new(1, 4, 1, 4)
+	shadow.Position = UDim2.new(0, 2, 0, 2)
+	shadow.BackgroundColor3 = BUTTON_STYLE.shadowColor
+	shadow.BackgroundTransparency = 0.7
+	shadow.ZIndex = zIndex
+	shadow.Parent = buttonContainer
+	
+	local shadowCorner = Instance.new("UICorner")
+	shadowCorner.CornerRadius = BUTTON_STYLE.cornerRadius
+	shadowCorner.Parent = shadow
+	
+	-- Main button
+	local button = Instance.new("TextButton")
+	button.Name = text .. "Button"
+	button.Size = UDim2.new(1, 0, 1, 0)
+	button.Position = UDim2.new(0, 0, 0, 0)
+	button.BackgroundColor3 = BUTTON_STYLE.primaryColor
+	button.BorderSizePixel = 0
+	button.Font = Enum.Font.GothamBold
+	button.Text = text
+	button.TextColor3 = BUTTON_STYLE.textColor
+	button.TextScaled = true
+	button.AutoButtonColor = false
+	button.ZIndex = zIndex + 1
+	button.Parent = buttonContainer
+	
+	-- Corner rounding
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = BUTTON_STYLE.cornerRadius
+	corner.Parent = button
+	
+	-- Gradient overlay for depth
+	local gradient = Instance.new("UIGradient")
+	gradient.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0.0, Color3.fromRGB(255, 255, 255)),
+		ColorSequenceKeypoint.new(1.0, Color3.fromRGB(200, 200, 200))
+	})
+	gradient.Rotation = 90
+	gradient.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0.0, 0.9),
+		NumberSequenceKeypoint.new(1.0, 0.7)
+	})
+	gradient.Parent = button
+	
+	-- Accent border
+	local border = Instance.new("UIStroke")
+	border.Color = BUTTON_STYLE.accentColor
+	border.Thickness = 2
+	border.Transparency = 0.3
+	border.Parent = button
+	
+	-- Text padding
+	local textPadding = Instance.new("UIPadding")
+	textPadding.PaddingLeft = UDim.new(0, 12)
+	textPadding.PaddingRight = UDim.new(0, 12)
+	textPadding.PaddingTop = UDim.new(0, 8)
+	textPadding.PaddingBottom = UDim.new(0, 8)
+	textPadding.Parent = button
+	
+	-- Animation tweens
+	local hoverTweenInfo = TweenInfo.new(BUTTON_STYLE.animSpeed, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	local pressTweenInfo = TweenInfo.new(BUTTON_STYLE.animSpeed * 0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	
+	-- Hover effects
+	button.MouseEnter:Connect(function()
+		local hoverTween = TweenService:Create(button, hoverTweenInfo, {
+			BackgroundColor3 = BUTTON_STYLE.hoverColor,
+			Size = UDim2.new(BUTTON_STYLE.hoverScale, 0, BUTTON_STYLE.hoverScale, 0),
+			Position = UDim2.new((1 - BUTTON_STYLE.hoverScale) / 2, 0, (1 - BUTTON_STYLE.hoverScale) / 2, 0)
+		})
+		local borderTween = TweenService:Create(border, hoverTweenInfo, {
+			Transparency = 0.1
+		})
+		hoverTween:Play()
+		borderTween:Play()
+	end)
+	
+	button.MouseLeave:Connect(function()
+		local leaveTween = TweenService:Create(button, hoverTweenInfo, {
+			BackgroundColor3 = BUTTON_STYLE.primaryColor,
+			Size = UDim2.new(1, 0, 1, 0),
+			Position = UDim2.new(0, 0, 0, 0)
+		})
+		local borderTween = TweenService:Create(border, hoverTweenInfo, {
+			Transparency = 0.3
+		})
+		leaveTween:Play()
+		borderTween:Play()
+	end)
+	
+	-- Press effects
+	button.MouseButton1Down:Connect(function()
+		local pressTween = TweenService:Create(button, pressTweenInfo, {
+			Size = UDim2.new(BUTTON_STYLE.pressScale, 0, BUTTON_STYLE.pressScale, 0),
+			Position = UDim2.new((1 - BUTTON_STYLE.pressScale) / 2, 0, (1 - BUTTON_STYLE.pressScale) / 2, 0),
+			BackgroundColor3 = BUTTON_STYLE.activeColor
+		})
+		pressTween:Play()
+	end)
+	
+	button.MouseButton1Up:Connect(function()
+		local releaseTween = TweenService:Create(button, pressTweenInfo, {
+			Size = UDim2.new(BUTTON_STYLE.hoverScale, 0, BUTTON_STYLE.hoverScale, 0),
+			Position = UDim2.new((1 - BUTTON_STYLE.hoverScale) / 2, 0, (1 - BUTTON_STYLE.hoverScale) / 2, 0),
+			BackgroundColor3 = BUTTON_STYLE.hoverColor
+		})
+		releaseTween:Play()
+	end)
+	
+	return button, buttonContainer
 end
 
 function WorldHUD.get()
@@ -114,28 +265,42 @@ function WorldHUD.new(config, dependencies)
 	local baseY = GuiService:GetGuiInset().Y + 20
 	self.baseY = baseY
 
+	-- Enhanced title with ninja styling
 	local loadTitle = Instance.new("TextLabel")
-	loadTitle.Size = UDim2.new(1,-40,0,60)
+	loadTitle.Size = UDim2.new(1,-40,0,70)
 	loadTitle.Position = UDim2.new(0.5,0,0,baseY)
 	loadTitle.AnchorPoint = Vector2.new(0.5,0)
-	loadTitle.BackgroundTransparency = 0.6
+	loadTitle.BackgroundColor3 = BUTTON_STYLE.primaryColor
+	loadTitle.BackgroundTransparency = 0.1
 	loadTitle.TextXAlignment = Enum.TextXAlignment.Center
-	loadTitle.Text = "Loadout"
+	loadTitle.Text = "⚔ NINJA LOADOUT ⚔"
 	loadTitle.Font = Enum.Font.GothamBold
 	loadTitle.TextScaled = true
-	loadTitle.TextColor3 = Color3.fromRGB(255,200,120)
+	loadTitle.TextColor3 = BUTTON_STYLE.accentColor
+	loadTitle.ZIndex = 25
 	loadTitle.Parent = loadout
 
-	-- Teleport UI
-        local setTeleportsVisible
+	-- Title styling
+	local titleCorner = Instance.new("UICorner")
+	titleCorner.CornerRadius = UDim.new(0, 15)
+	titleCorner.Parent = loadTitle
 
-        local teleportUI = TeleportUI.init(loadout, baseY, {
-                REALM_INFO = REALM_INFO,
-                getRealmFolder = getRealmFolder,
-                onTeleport = function()
-                        setTeleportsVisible(false)
-                end,
-        })
+	local titleStroke = Instance.new("UIStroke")
+	titleStroke.Color = BUTTON_STYLE.accentColor
+	titleStroke.Thickness = 2
+	titleStroke.Transparency = 0.5
+	titleStroke.Parent = loadTitle
+
+	-- Teleport UI
+	local setTeleportsVisible
+
+	local teleportUI = TeleportUI.init(loadout, baseY, {
+		REALM_INFO = REALM_INFO,
+		getRealmFolder = getRealmFolder,
+		onTeleport = function()
+			setTeleportsVisible(false)
+		end,
+	})
 	self.teleportUI = teleportUI
 	local teleportCloseButton = teleportUI and teleportUI.closeButton or nil
 	self.teleportCloseButton = teleportCloseButton
@@ -147,74 +312,59 @@ function WorldHUD.new(config, dependencies)
 	local backpack = NinjaPouchUI.init(loadout, baseY)
 	self.backpack = backpack
 
+	-- Enhanced floating button panel positioned on left center
 	local togglePanel = Instance.new("Frame")
 	togglePanel.Name = "PanelToggleButtons"
-	togglePanel.Size = UDim2.new(0,180,0,160)
-	togglePanel.AnchorPoint = Vector2.new(0,1)
-	togglePanel.Position = UDim2.new(0,20,1,-220)
+	togglePanel.Size = UDim2.new(0, 180, 0, 280)
+	togglePanel.AnchorPoint = Vector2.new(0, 0.5)
+	togglePanel.Position = UDim2.new(0, 30, 0.5, 0)
 	togglePanel.BackgroundTransparency = 1
 	togglePanel.ZIndex = 40
 	togglePanel.Parent = loadout
 	self.togglePanel = togglePanel
 
-	local toggleLayout = Instance.new("UIListLayout")
-	toggleLayout.FillDirection = Enum.FillDirection.Vertical
-	toggleLayout.Padding = UDim.new(0,6)
-	toggleLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-	toggleLayout.VerticalAlignment = Enum.VerticalAlignment.Top
-	toggleLayout.Parent = togglePanel
+	-- Create styled buttons with proper spacing
+	local questButton, questContainer = createStyledButton(togglePanel, "Quests", UDim2.new(0, 0, 0, 0), 41)
+	local pouchButton, pouchContainer = createStyledButton(togglePanel, "Pouch", UDim2.new(0, 0, 0, 65), 41)
+	local teleButton, teleContainer = createStyledButton(togglePanel, "Teleports", UDim2.new(0, 0, 0, 130), 41)
+	local shopButton, shopContainer = createStyledButton(togglePanel, "Shop", UDim2.new(0, 0, 0, 195), 41)
 
-	local function createOpenButton(label)
-		local btn = Instance.new("TextButton")
-		btn.Name = label .. "OpenButton"
-		btn.Size = UDim2.new(1,0,0,36)
-		btn.BackgroundColor3 = Color3.fromRGB(50,120,255)
-		btn.TextColor3 = Color3.new(1,1,1)
-		btn.Font = Enum.Font.GothamSemibold
-		btn.TextScaled = true
-		btn.AutoButtonColor = true
-		btn.Text = label
-		btn.Visible = false
-		btn.ZIndex = 41
-		btn.Parent = togglePanel
-		return btn
-	end
-
-	local questOpenButton = createOpenButton("Quests")
-	local backpackOpenButton = createOpenButton("Backpack")
-	local teleOpenButton = createOpenButton("Teleports")
-	local shopButton = createOpenButton("Shop")
+	-- Set initial visibility
+	questButton.Visible = false
+	pouchButton.Visible = false  -- Changed from backpack to pouch
+	teleButton.Visible = false
 	shopButton.Visible = true
-	self.questOpenButton = questOpenButton
-	self.backpackOpenButton = backpackOpenButton
-	self.teleportOpenButton = teleOpenButton
+
+	self.questOpenButton = questButton
+	self.backpackOpenButton = pouchButton  -- Keep internal reference name for compatibility
+	self.teleportOpenButton = teleButton
 	self.shopButton = shopButton
 
-        setTeleportsVisible = function(visible)
-                if teleportUI then
-                        teleportUI:setVisible(visible)
-                end
-                teleOpenButton.Visible = not visible
-        end
+	setTeleportsVisible = function(visible)
+		if teleportUI then
+			teleportUI:setVisible(visible)
+		end
+		teleButton.Visible = not visible
+	end
 
 	if quest and quest.closeButton then
 		track(self, quest.closeButton.MouseButton1Click:Connect(function()
 			if quest.setVisible then
 				quest:setVisible(false)
 			end
-			questOpenButton.Visible = true
+			questButton.Visible = true
 		end))
 	end
 
-	track(self, questOpenButton.MouseButton1Click:Connect(function()
+	track(self, questButton.MouseButton1Click:Connect(function()
 		if quest and quest.setVisible then
 			quest:setVisible(true)
 		end
-		questOpenButton.Visible = false
+		questButton.Visible = false
 	end))
 
 	if quest and quest.isVisible and not quest:isVisible() then
-		questOpenButton.Visible = true
+		questButton.Visible = true
 	end
 
 	if backpack and backpack.closeButton then
@@ -222,19 +372,19 @@ function WorldHUD.new(config, dependencies)
 			if backpack.setVisible then
 				backpack:setVisible(false)
 			end
-			backpackOpenButton.Visible = true
+			pouchButton.Visible = true
 		end))
 	end
 
-	track(self, backpackOpenButton.MouseButton1Click:Connect(function()
+	track(self, pouchButton.MouseButton1Click:Connect(function()
 		if backpack and backpack.setVisible then
 			backpack:setVisible(true)
 		end
-		backpackOpenButton.Visible = false
+		pouchButton.Visible = false
 	end))
 
 	if backpack and backpack.isVisible and not backpack:isVisible() then
-		backpackOpenButton.Visible = true
+		pouchButton.Visible = true
 	end
 
 	track(self, shopButton.MouseButton1Click:Connect(function()
@@ -247,25 +397,17 @@ function WorldHUD.new(config, dependencies)
 		end))
 	end
 
-	track(self, teleOpenButton.MouseButton1Click:Connect(function()
+	track(self, teleButton.MouseButton1Click:Connect(function()
 		setTeleportsVisible(true)
 	end))
 
 	setTeleportsVisible(false)
 
-	local backButton = Instance.new("TextButton")
-	backButton.Name = "BackButton"
-	backButton.Size = UDim2.new(0, 220, 0, 48)
-	backButton.AnchorPoint = Vector2.new(0, 1)
-	backButton.Position = UDim2.new(0, 20, 1, -20)
-	backButton.BackgroundColor3 = Color3.fromRGB(50, 120, 255)
-	backButton.TextColor3 = Color3.new(1, 1, 1)
-	backButton.Font = Enum.Font.GothamSemibold
-	backButton.TextScaled = true
-	backButton.AutoButtonColor = true
-	backButton.Text = "Back"
-	backButton.ZIndex = 40
-	backButton.Parent = loadout
+	-- Enhanced back button
+	local backButton, backContainer = createStyledButton(loadout, "◀ Back", UDim2.new(0, 20, 1, -80), 40)
+	backButton.Size = UDim2.new(0, 200, 0, 50)
+	backContainer.Size = UDim2.new(0, 200, 0, 50)
+	
 	self.backButton = backButton
 
 	local realmDisplayLookup = {}
