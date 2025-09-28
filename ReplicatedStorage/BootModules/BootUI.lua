@@ -704,6 +704,14 @@ if backButton then
     end)
 end
 
+local personaButton = hud and hud.getPersonaButton and hud:getPersonaButton()
+if personaButton then
+    personaButton.MouseButton1Click:Connect(function()
+        applyStartCam()
+        Cosmetics.showDojoPicker()
+    end)
+end
+
 local enterRealmButton = hud and hud.enterRealmButton
 if enterRealmButton then
     enterRealmButton.MouseButton1Click:Connect(function()

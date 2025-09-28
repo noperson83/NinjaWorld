@@ -488,6 +488,7 @@ function WorldHUD:playLoadoutDissolve(duration)
                 if self.setShopButtonVisible then
                         self:setShopButtonVisible(false)
                 end
+                self:updatePersonaButtonVisibility()
                 return false
         end
 
@@ -535,6 +536,7 @@ function WorldHUD:playLoadoutDissolve(duration)
                         self.loadout.Visible = false
                 end
                 self:updateLoadoutHeaderVisibility()
+                self:updatePersonaButtonVisibility()
 
                 for _, entry in ipairs(targets) do
                         local instance = entry.instance
@@ -662,6 +664,16 @@ function WorldHUD:detachLoadoutHeader()
         end
 end
 
+function WorldHUD:updatePersonaButtonVisibility()
+        if not self.personaButton then
+                return
+        end
+
+        local shouldShow = self.worldModeActive and not (self.loadout and self.loadout.Visible)
+        self.personaButton.Visible = shouldShow
+        self.personaButton.Active = shouldShow
+end
+
 function WorldHUD:handlePostTeleport(teleportContext)
         self:closeAllInterfaces()
 
@@ -696,6 +708,7 @@ function WorldHUD:handlePostTeleport(teleportContext)
                         self.togglePanel.Visible = false
                 end
 
+                self:updatePersonaButtonVisibility()
                 return
         end
 
@@ -724,6 +737,8 @@ function WorldHUD:handlePostTeleport(teleportContext)
         if self.setShopButtonVisible then
                 self:setShopButtonVisible(true)
         end
+
+        self:updatePersonaButtonVisibility()
 end
 
 function WorldHUD.get()
@@ -774,18 +789,46 @@ function WorldHUD.new(config, dependencies)
 	self.root = root
 
 	-- Loadout UI
-	local loadout = Instance.new("Frame")
-	loadout.Name = "Loadout"
-	loadout.Size = UDim2.fromScale(1,1)
-	loadout.BackgroundTransparency = 1
-	loadout.Visible = false
-	loadout.ZIndex = 20
-	loadout.Parent = root
-	self.loadout = loadout
+        local loadout = Instance.new("Frame")
+        loadout.Name = "Loadout"
+        loadout.Size = UDim2.fromScale(1,1)
+        loadout.BackgroundTransparency = 1
+        loadout.Visible = false
+        loadout.ZIndex = 20
+        loadout.Parent = root
+        self.loadout = loadout
 
         local baseY = GuiService:GetGuiInset().Y + 20
         self.baseY = baseY
         self:ensureLoadoutHeader()
+
+        local personaButton = Instance.new("TextButton")
+        personaButton.Name = "PersonaButton"
+        personaButton.Size = UDim2.new(0, 220, 0, 54)
+        personaButton.Position = UDim2.new(0.5, 0, 0, baseY)
+        personaButton.AnchorPoint = Vector2.new(0.5, 0)
+        personaButton.BackgroundColor3 = BUTTON_STYLE.primaryColor
+        personaButton.BackgroundTransparency = 0.1
+        personaButton.Text = "Persona"
+        personaButton.Font = Enum.Font.GothamBold
+        personaButton.TextScaled = true
+        personaButton.TextColor3 = BUTTON_STYLE.accentColor
+        personaButton.AutoButtonColor = true
+        personaButton.Active = false
+        personaButton.Visible = false
+        personaButton.ZIndex = 30
+        personaButton.Parent = root
+        self.personaButton = personaButton
+
+        local personaCorner = Instance.new("UICorner")
+        personaCorner.CornerRadius = UDim.new(0, 15)
+        personaCorner.Parent = personaButton
+
+        local personaStroke = Instance.new("UIStroke")
+        personaStroke.Color = BUTTON_STYLE.accentColor
+        personaStroke.Thickness = 2
+        personaStroke.Transparency = 0.5
+        personaStroke.Parent = personaButton
 
 	-- Teleport UI
 	local setTeleportsVisible
@@ -937,11 +980,15 @@ function WorldHUD.new(config, dependencies)
 end
 
 function WorldHUD:getLoadoutFrame()
-	return self.loadout
+        return self.loadout
+end
+
+function WorldHUD:getPersonaButton()
+        return self.personaButton
 end
 
 function WorldHUD:getShopButton()
-	return self.shopButton
+        return self.shopButton
 end
 
 function WorldHUD:getQuestInterface()
@@ -956,10 +1003,15 @@ function WorldHUD:createCosmeticsInterface()
 	local hud = self
         return {
                 showDojoPicker = function()
-                        if hud and hud.hideLoadout then
-                                hud:hideLoadout()
-                                if hud.closeAllInterfaces then
-                                        hud:closeAllInterfaces()
+                        if hud then
+                                if hud.setWorldMode then
+                                        hud:setWorldMode(false)
+                                end
+                                if hud.hideLoadout then
+                                        hud:hideLoadout()
+                                        if hud.closeAllInterfaces then
+                                                hud:closeAllInterfaces()
+                                        end
                                 end
                         end
                 end,
@@ -1019,23 +1071,26 @@ function WorldHUD:setWorldMode(inWorld)
                 self:ensureLoadoutHeader()
         end
         self:updateLoadoutHeaderVisibility()
+        self:updatePersonaButtonVisibility()
 end
 
 function WorldHUD:showLoadout()
-	if self.loadout then
-		self.loadout.Visible = true
-	end
-	self:setWorldMode(false)
-	self:applyMenuAutoState()
-	self:setShopButtonVisible(true)
+        if self.loadout then
+                self.loadout.Visible = true
+        end
+        self:setWorldMode(false)
+        self:applyMenuAutoState()
+        self:setShopButtonVisible(true)
+        self:updatePersonaButtonVisibility()
 end
 
 function WorldHUD:hideLoadout()
-	if self.loadout then
-		self.loadout.Visible = false
-	end
-	self:updateLoadoutHeaderVisibility()
-	self:setShopButtonVisible(false)
+        if self.loadout then
+                self.loadout.Visible = false
+        end
+        self:updateLoadoutHeaderVisibility()
+        self:setShopButtonVisible(false)
+        self:updatePersonaButtonVisibility()
 end
 
 function WorldHUD:setBackButtonEnabled(enabled)
@@ -1113,6 +1168,9 @@ function WorldHUD:destroy()
         if self.backButtonContainer then
                 self.backButtonContainer:Destroy()
         end
+        if self.personaButton then
+                self.personaButton:Destroy()
+        end
         self.gui = nil
         self.root = nil
         self.loadout = nil
@@ -1134,7 +1192,8 @@ function WorldHUD:destroy()
         self.teleportCloseButton = nil
         self.teleportUI = nil
         self.backButtonEnabled = nil
-	self.worldModeActive = nil
+        self.worldModeActive = nil
+        self.personaButton = nil
         if currentHud == self then
                 currentHud = nil
         end
