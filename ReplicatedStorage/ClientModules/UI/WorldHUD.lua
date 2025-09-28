@@ -207,6 +207,44 @@ local function createStyledButton(parent, text, position, zIndex)
 	return button, buttonContainer
 end
 
+local function setInterfaceVisible(interface, visible)
+        if typeof(interface) ~= "table" then
+                return
+        end
+
+        if typeof(interface.setVisible) == "function" then
+                interface:setVisible(visible)
+                return
+        end
+
+        local root = rawget(interface, "root")
+        if typeof(root) == "Instance" and root:IsA("GuiObject") then
+                root.Visible = visible and true or false
+        end
+end
+
+local function isInterfaceVisible(interface)
+        if typeof(interface) ~= "table" then
+                return false
+        end
+
+        if typeof(interface.isVisible) == "function" then
+                local ok, result = pcall(function()
+                        return interface:isVisible()
+                end)
+                if ok then
+                        return result and true or false
+                end
+        end
+
+        local root = rawget(interface, "root")
+        if typeof(root) == "Instance" and root:IsA("GuiObject") then
+                return root.Visible
+        end
+
+        return false
+end
+
 function WorldHUD.get()
 	if currentHud and currentHud._destroyed then
 		currentHud = nil
@@ -329,63 +367,42 @@ function WorldHUD.new(config, dependencies)
 	local teleButton, teleContainer = createStyledButton(togglePanel, "Teleports", UDim2.new(0, 0, 0, 130), 41)
 	local shopButton, shopContainer = createStyledButton(togglePanel, "Shop", UDim2.new(0, 0, 0, 195), 41)
 
-	-- Set initial visibility
-	questButton.Visible = false
-	pouchButton.Visible = false  -- Changed from backpack to pouch
-	teleButton.Visible = false
-	shopButton.Visible = true
+        -- Set initial visibility
+        questButton.Visible = true
+        pouchButton.Visible = true  -- Changed from backpack to pouch
+        teleButton.Visible = true
+        shopButton.Visible = true
 
 	self.questOpenButton = questButton
 	self.backpackOpenButton = pouchButton  -- Keep internal reference name for compatibility
 	self.teleportOpenButton = teleButton
 	self.shopButton = shopButton
 
-	setTeleportsVisible = function(visible)
-		if teleportUI then
-			teleportUI:setVisible(visible)
-		end
-		teleButton.Visible = not visible
-	end
+        setTeleportsVisible = function(visible)
+                setInterfaceVisible(teleportUI, visible)
+        end
 
-	if quest and quest.closeButton then
-		track(self, quest.closeButton.MouseButton1Click:Connect(function()
-			if quest.setVisible then
-				quest:setVisible(false)
-			end
-			questButton.Visible = true
-		end))
-	end
+        if quest and quest.closeButton then
+                track(self, quest.closeButton.MouseButton1Click:Connect(function()
+                        setInterfaceVisible(quest, false)
+                end))
+        end
 
-	track(self, questButton.MouseButton1Click:Connect(function()
-		if quest and quest.setVisible then
-			quest:setVisible(true)
-		end
-		questButton.Visible = false
-	end))
+        track(self, questButton.MouseButton1Click:Connect(function()
+                local shouldShow = not isInterfaceVisible(quest)
+                setInterfaceVisible(quest, shouldShow)
+        end))
 
-	if quest and quest.isVisible and not quest:isVisible() then
-		questButton.Visible = true
-	end
+        if backpack and backpack.closeButton then
+                track(self, backpack.closeButton.MouseButton1Click:Connect(function()
+                        setInterfaceVisible(backpack, false)
+                end))
+        end
 
-	if backpack and backpack.closeButton then
-		track(self, backpack.closeButton.MouseButton1Click:Connect(function()
-			if backpack.setVisible then
-				backpack:setVisible(false)
-			end
-			pouchButton.Visible = true
-		end))
-	end
-
-	track(self, pouchButton.MouseButton1Click:Connect(function()
-		if backpack and backpack.setVisible then
-			backpack:setVisible(true)
-		end
-		pouchButton.Visible = false
-	end))
-
-	if backpack and backpack.isVisible and not backpack:isVisible() then
-		pouchButton.Visible = true
-	end
+        track(self, pouchButton.MouseButton1Click:Connect(function()
+                local shouldShow = not isInterfaceVisible(backpack)
+                setInterfaceVisible(backpack, shouldShow)
+        end))
 
 	track(self, shopButton.MouseButton1Click:Connect(function()
 		self:toggleShop()
@@ -397,11 +414,14 @@ function WorldHUD.new(config, dependencies)
 		end))
 	end
 
-	track(self, teleButton.MouseButton1Click:Connect(function()
-		setTeleportsVisible(true)
-	end))
+        track(self, teleButton.MouseButton1Click:Connect(function()
+                local shouldShow = not isInterfaceVisible(teleportUI)
+                setTeleportsVisible(shouldShow)
+        end))
 
-	setTeleportsVisible(false)
+        setInterfaceVisible(quest, false)
+        setInterfaceVisible(backpack, false)
+        setTeleportsVisible(false)
 
 	-- Enhanced back button
 	local backButton, backContainer = createStyledButton(loadout, "◀ Back", UDim2.new(0, 20, 1, -80), 40)
