@@ -207,6 +207,59 @@ local function createStyledButton(parent, text, position, zIndex)
 	return button, buttonContainer
 end
 
+local function createMenuToggleButton(parent, position, zIndex)
+        local container = Instance.new("Frame")
+        container.Name = "MenuToggleContainer"
+        container.Size = UDim2.new(0, 64, 0, 64)
+        container.AnchorPoint = Vector2.new(0, 0.5)
+        container.Position = position
+        container.BackgroundTransparency = 1
+        container.ZIndex = zIndex
+        container.Parent = parent
+
+        local circle = Instance.new("Frame")
+        circle.Name = "Circle"
+        circle.AnchorPoint = Vector2.new(0.5, 0.5)
+        circle.Position = UDim2.new(0.5, 0, 0.5, 0)
+        circle.Size = UDim2.new(1, 0, 1, 0)
+        circle.BackgroundColor3 = BUTTON_STYLE.primaryColor
+        circle.BackgroundTransparency = 1
+        circle.BorderSizePixel = 0
+        circle.ZIndex = zIndex
+        circle.Parent = container
+
+        local circleCorner = Instance.new("UICorner")
+        circleCorner.CornerRadius = UDim.new(1, 0)
+        circleCorner.Parent = circle
+
+        local circleAspect = Instance.new("UIAspectRatioConstraint")
+        circleAspect.AspectRatio = 1
+        circleAspect.Parent = circle
+
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = BUTTON_STYLE.accentColor
+        stroke.Thickness = 3
+        stroke.Transparency = 0
+        stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        stroke.Parent = circle
+
+        local button = Instance.new("TextButton")
+        button.Name = "MenuToggle"
+        button.Size = UDim2.new(1, 0, 1, 0)
+        button.Position = UDim2.new(0, 0, 0, 0)
+        button.BackgroundTransparency = 1
+        button.BorderSizePixel = 0
+        button.Text = "☰"
+        button.TextScaled = true
+        button.Font = Enum.Font.GothamBold
+        button.TextColor3 = BUTTON_STYLE.textColor
+        button.AutoButtonColor = false
+        button.ZIndex = zIndex + 1
+        button.Parent = container
+
+        return button, container, circle, stroke
+end
+
 local function setInterfaceVisible(interface, visible)
         if typeof(interface) ~= "table" then
                 return
@@ -266,17 +319,19 @@ function WorldHUD:closeAllInterfaces()
         end
 end
 
-local function getMenuText(expanded)
-        return expanded and "Menu ▼" or "Menu ▲"
-end
-
 function WorldHUD:setMenuExpanded(expanded)
         self.menuExpanded = expanded and true or false
         if self.togglePanel then
                 self.togglePanel.Visible = self.menuExpanded
         end
         if self.menuButton then
-                self.menuButton.Text = getMenuText(self.menuExpanded)
+                local targetColor = self.menuExpanded and BUTTON_STYLE.accentColor or BUTTON_STYLE.textColor
+                self.menuButton.TextColor3 = targetColor
+        end
+        if self.menuButtonStroke then
+                local targetThickness = self.menuExpanded and 4 or 3
+                self.menuButtonStroke.Thickness = targetThickness
+                self.menuButtonStroke.Color = self.menuExpanded and BUTTON_STYLE.accentColor or BUTTON_STYLE.secondaryColor
         end
 end
 
@@ -296,6 +351,9 @@ end
 
 function WorldHUD:handlePostTeleport()
         self:closeAllInterfaces()
+        if self.loadout then
+                self.loadout.Visible = false
+        end
         if self.loadTitle then
                 self.loadTitle.Visible = false
         end
@@ -303,7 +361,7 @@ function WorldHUD:handlePostTeleport()
                 self.backButton.Visible = false
                 self.backButton.Active = false
         end
-        self:setMenuExpanded(true)
+        self:setMenuExpanded(false)
 end
 
 function WorldHUD.get()
@@ -427,14 +485,26 @@ function WorldHUD.new(config, dependencies)
         togglePanel.Parent = loadout
         self.togglePanel = togglePanel
 
-        local menuButton, menuContainer = createStyledButton(loadout, "Menu", UDim2.new(0, 30, 0.5, -180), 45)
-        menuContainer.Size = UDim2.new(0, 160, 0, 50)
+        local menuButton, menuContainer, _, menuStroke = createMenuToggleButton(loadout, UDim2.new(0, 30, 0.5, -180), 45)
         self.menuButton = menuButton
         self.menuContainer = menuContainer
+        self.menuButtonStroke = menuStroke
         self.menuExpanded = true
         self:setMenuExpanded(true)
         track(self, menuButton.MouseButton1Click:Connect(function()
                 self:toggleMenu()
+        end))
+
+        track(self, menuButton.MouseEnter:Connect(function()
+                if menuStroke then
+                        menuStroke.Thickness = self.menuExpanded and 5 or 4
+                end
+        end))
+
+        track(self, menuButton.MouseLeave:Connect(function()
+                if menuStroke then
+                        menuStroke.Thickness = self.menuExpanded and 4 or 3
+                end
         end))
 
         -- Create styled buttons with proper spacing
@@ -500,7 +570,7 @@ function WorldHUD.new(config, dependencies)
         setTeleportsVisible(false)
 
 	-- Enhanced back button
-	local backButton, backContainer = createStyledButton(loadout, "◀ Back", UDim2.new(0, 20, 1, -80), 40)
+        local backButton, backContainer = createStyledButton(loadout, "◀ Back", UDim2.new(0, 20, 1, -80), 40)
 	backButton.Size = UDim2.new(0, 200, 0, 50)
 	backContainer.Size = UDim2.new(0, 200, 0, 50)
 	
