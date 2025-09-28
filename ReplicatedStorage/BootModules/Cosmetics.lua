@@ -843,7 +843,7 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
         headerLayout.Parent = headerFrame
 
         local dojoTitle = Instance.new("ImageLabel")
-        dojoTitle.Size = UDim2.fromOffset(260, 80)
+        dojoTitle.Size = UDim2.fromOffset(360, 120)
         dojoTitle.Image = "rbxassetid://138217463115431" -- BootUI logo
         dojoTitle.BackgroundTransparency = 1
         dojoTitle.ScaleType = Enum.ScaleType.Fit
@@ -851,13 +851,18 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
         dojoTitle.LayoutOrder = 1
         dojoTitle.Parent = headerFrame
 
+        local dojoTitleConstraint = Instance.new("UISizeConstraint")
+        dojoTitleConstraint.MaxSize = Vector2.new(360, 120)
+        dojoTitleConstraint.Parent = dojoTitle
+
         local shadowText = Instance.new("TextLabel")
         shadowText.AutomaticSize = Enum.AutomaticSize.XY
         shadowText.Size = UDim2.new(0, 0, 0, 0)
         shadowText.BackgroundTransparency = 1
         shadowText.Text = "🌙 Shadow Dojo"
         shadowText.Font = Enum.Font.GothamSemibold
-        shadowText.TextScaled = true
+        shadowText.TextScaled = false
+        shadowText.TextSize = 36
         shadowText.TextWrapped = true
         shadowText.LayoutOrder = 2
         shadowText.TextXAlignment = Enum.TextXAlignment.Center
@@ -865,40 +870,56 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
         shadowText.ZIndex = 12
         shadowText.Parent = headerFrame
 
+        local shadowTextConstraint = Instance.new("UITextSizeConstraint")
+        shadowTextConstraint.MaxTextSize = 36
+        shadowTextConstraint.MinTextSize = 24
+        shadowTextConstraint.Parent = shadowText
+
         local function updateHeaderLayout()
-                if headerFrame.AbsoluteSize.X < 400 then
+                local headerWidth = headerFrame.AbsoluteSize.X
+
+                if headerWidth < 600 then
                         headerLayout.FillDirection = Enum.FillDirection.Vertical
                 else
                         headerLayout.FillDirection = Enum.FillDirection.Horizontal
+                end
+
+                local newTextSize = 36
+                if headerWidth < 420 then
+                        newTextSize = 24
+                elseif headerWidth < 600 then
+                        newTextSize = 28
+                elseif headerWidth < 900 then
+                        newTextSize = 32
+                end
+
+                if shadowText.TextSize ~= newTextSize then
+                        shadowText.TextSize = newTextSize
                 end
         end
 
         headerFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateHeaderLayout)
         updateHeaderLayout()
 
-	-- Selected persona display
-	selectedPersonaLabel = Instance.new("TextLabel")
-	selectedPersonaLabel.Name = "SelectedPersonaLabel"
-	selectedPersonaLabel.Size = UDim2.new(0.8, 0, 0.04, 0)
-	selectedPersonaLabel.Position = UDim2.fromScale(0.5, 0.25)
-	selectedPersonaLabel.AnchorPoint = Vector2.new(0.5, 0)
-	selectedPersonaLabel.BackgroundTransparency = 1
-	selectedPersonaLabel.TextScaled = true
-	selectedPersonaLabel.Font = Enum.Font.GothamSemibold
-	selectedPersonaLabel.TextColor3 = NINJA_COLORS.ACCENT
-	selectedPersonaLabel.Text = ""
-	selectedPersonaLabel.ZIndex = 12
-	selectedPersonaLabel.Parent = dojoInterface
+        -- Main content panel
+        local contentPanel = createStyledFrame(dojoInterface,
+                UDim2.fromScale(0.9, 0.6),
+                UDim2.fromScale(0.5, 0.55),
+                Vector2.new(0.5, 0.5)
+        )
+        contentPanel.BackgroundTransparency = .2
 
-	-- Main content panel
-	local contentPanel = createStyledFrame(dojoInterface, 
-		UDim2.fromScale(0.9, 0.6), 
-		UDim2.fromScale(0.5, 0.55), 
-		Vector2.new(0.5, 0.5)
-	)
-	contentPanel.BackgroundTransparency = .2
+        contentPanel.AnchorPoint = Vector2.new(0.5, 0)
 
-	-- Slots container
+        local function updateContentPanelPosition()
+                local headerHeight = headerFrame.AbsoluteSize.Y
+                contentPanel.Position = UDim2.new(0.5, 0, 0, headerHeight + 20)
+        end
+
+        updateContentPanelPosition()
+        headerFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateContentPanelPosition)
+
+        -- Slots container
 	slotsContainer = Instance.new("Frame")
 	slotsContainer.Size = UDim2.new(1, -20, 0.8, 0)
 	slotsContainer.Position = UDim2.new(0, 10, 0, 10)
