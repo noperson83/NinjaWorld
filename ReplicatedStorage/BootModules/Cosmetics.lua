@@ -315,14 +315,16 @@ end
 -- ═══════════════════════════════════════════════════════════════
 
 local function showNinjaConfirmation(message, onConfirm)
-	local overlay = Instance.new("Frame")
-	overlay.Size = UDim2.fromScale(1, 1)
-	overlay.BackgroundColor3 = Color3.new(0, 0, 0)
-	overlay.BackgroundTransparency = 0.3
-	overlay.ZIndex = 300
-	overlay.Active = true
-	overlay.Modal = true
-	overlay.Parent = rootUI
+        local overlay = Instance.new("TextButton")
+        overlay.Size = UDim2.fromScale(1, 1)
+        overlay.BackgroundColor3 = Color3.new(0, 0, 0)
+        overlay.BackgroundTransparency = 0.3
+        overlay.ZIndex = 300
+        overlay.Active = true
+        overlay.Modal = true
+        overlay.AutoButtonColor = false
+        overlay.Text = ""
+        overlay.Parent = rootUI
 
 	local dialog = createStyledFrame(overlay, 
 		UDim2.fromScale(0.35, 0.3), 
