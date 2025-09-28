@@ -17,56 +17,11 @@ local rf      = nil
 local cam     = Workspace.CurrentCamera
 local enterRE -- RemoteEvent created by Init.server.lua
 
-local debugLines = {}
-local debugOrder = {}
-local debugLabel
-
-local function rebuildDebugText()
-    if not debugLabel then
-        return
-    end
-
-    local lines = {}
-    for _, key in ipairs(debugOrder) do
-        local value = debugLines[key]
-        if value and value ~= "" then
-            table.insert(lines, value)
-        end
-    end
-
-    if #lines == 0 then
-        debugLabel.Text = "Debug Checks\n(no entries)"
-    else
-        debugLabel.Text = "Debug Checks\n" .. table.concat(lines, "\n")
-    end
+BootUI.setDebugLine = function()
 end
-
-local function setDebugLine(key, text)
-    if text and text ~= "" then
-        if not debugLines[key] then
-            table.insert(debugOrder, key)
-        end
-        debugLines[key] = text
-    else
-        if debugLines[key] then
-            debugLines[key] = nil
-            for index, existing in ipairs(debugOrder) do
-                if existing == key then
-                    table.remove(debugOrder, index)
-                    break
-                end
-            end
-        end
-    end
-
-    rebuildDebugText()
-end
-
-BootUI.setDebugLine = setDebugLine
 
 local function getEnterRemote()
     if enterRE and enterRE.Parent then
-        setDebugLine("enterRemote", "EnterDojoRE ready")
         return enterRE
     end
 
@@ -82,7 +37,6 @@ local function getEnterRemote()
 
     if remote and remote:IsA("RemoteEvent") then
         enterRE = remote
-        setDebugLine("enterRemote", "EnterDojoRE ready")
         return enterRE
     end
 
@@ -90,7 +44,6 @@ local function getEnterRemote()
         warn("BootUI: EnterDojoRE exists but is a " .. remote.ClassName)
     end
 
-    setDebugLine("enterRemote", "EnterDojoRE missing")
     return nil
 end
 
@@ -178,14 +131,8 @@ end
 
 local function profileRF(action, data)
     local remote = getPersonaRemote()
-    if remote then
-        setDebugLine("personaRemote", "Persona remote ready")
-    else
-        setDebugLine("personaRemote", "Persona remote missing")
-    end
     if not remote then
         warn("PersonaServiceRF unavailable for action", action)
-        setDebugLine("status", "Persona remote missing")
         return nil
     end
     local start = os.clock()
@@ -199,26 +146,15 @@ local function profileRF(action, data)
 end
 
 function BootUI.fetchData()
-    setDebugLine("status", "Fetching persona data…")
     local persona = profileRF("get", {})
     persona = sanitizePersonaData(persona)
-    if persona and typeof(persona.slotCount) == "number" then
-        setDebugLine("personaSlots", string.format("Persona slots loaded: %d", persona.slotCount))
-    else
-        setDebugLine("personaSlots", "Persona slots unavailable")
-    end
     local inventory
     local invStr = player:GetAttribute("Inventory")
     if typeof(invStr) == "string" then
         local ok, decoded = pcall(HttpService.JSONDecode, HttpService, invStr)
         if ok then
             inventory = decoded
-            setDebugLine("inventory", "Inventory cache decoded")
-        else
-            setDebugLine("inventory", "Inventory decode failed")
         end
-    else
-        setDebugLine("inventory", "Inventory not cached")
     end
     return {
         inventory = inventory,
@@ -358,13 +294,7 @@ function BootUI.applyFetchedData(data)
             return table.concat(details, " | ")
         end
 
-        setDebugLine("mainPersona", describeMainPersona())
-        setDebugLine("status", "Persona selection ready")
         Cosmetics.showDojoPicker()
-    else
-        setDebugLine("mainPersona", "Main persona: missing data")
-        setDebugLine("status", "Persona data unavailable")
-    end
 end
 
 function BootUI.getSelectedRealm()
@@ -631,61 +561,6 @@ root.Parent = ui
 BootUI.root = root
 Cosmetics.init(config, root, cosmeticsInterface)
 
-local debugPanel = Instance.new("Frame")
-debugPanel.Name = "DebugPanel"
-debugPanel.Size = UDim2.new(0, 320, 0, 0)
-debugPanel.Position = UDim2.fromOffset(16, 16)
-debugPanel.BackgroundColor3 = Color3.fromRGB(10, 12, 18)
-debugPanel.BackgroundTransparency = 0.35
-debugPanel.BorderSizePixel = 0
-debugPanel.AutomaticSize = Enum.AutomaticSize.Y
-debugPanel.ZIndex = 500
-debugPanel.Parent = root
-
-local debugCorner = Instance.new("UICorner")
-debugCorner.CornerRadius = UDim.new(0, 8)
-debugCorner.Parent = debugPanel
-
-local debugPadding = Instance.new("UIPadding")
-debugPadding.PaddingTop = UDim.new(0, 8)
-debugPadding.PaddingBottom = UDim.new(0, 8)
-debugPadding.PaddingLeft = UDim.new(0, 10)
-debugPadding.PaddingRight = UDim.new(0, 10)
-debugPadding.Parent = debugPanel
-
-local debugTextLabel = Instance.new("TextLabel")
-debugTextLabel.Name = "DebugText"
-debugTextLabel.Size = UDim2.new(1, 0, 0, 0)
-debugTextLabel.AutomaticSize = Enum.AutomaticSize.Y
-debugTextLabel.BackgroundTransparency = 1
-debugTextLabel.Font = Enum.Font.Gotham
-debugTextLabel.TextSize = 16
-debugTextLabel.TextWrapped = true
-debugTextLabel.TextXAlignment = Enum.TextXAlignment.Left
-debugTextLabel.TextYAlignment = Enum.TextYAlignment.Top
-debugTextLabel.TextColor3 = Color3.fromRGB(230, 230, 230)
-debugTextLabel.ZIndex = 501
-debugTextLabel.Text = ""
-debugTextLabel.Parent = debugPanel
-
-debugLabel = debugTextLabel
-BootUI.debugPanel = debugPanel
-rebuildDebugText()
-
-local playerName = "Unknown player"
-if player then
-    local displayName = player.DisplayName
-    if typeof(displayName) == "string" and displayName ~= "" then
-        playerName = string.format("Player: %s (@%s)", displayName, player.Name)
-    else
-        playerName = string.format("Player: %s", player.Name)
-    end
-end
-
-setDebugLine("player", playerName)
-setDebugLine("personaSlots", "Waiting for persona data…")
-setDebugLine("mainPersona", "Main persona: awaiting data")
-setDebugLine("status", "Boot interface ready")
 getEnterRemote()
 
 -- Intro visuals
@@ -740,7 +615,6 @@ if enterRealmButton then
                 enterRemote:FireServer({ type = personaType, slot = chosenSlot })
             else
                 warn("EnterDojoRE missing on server")
-                setDebugLine("status", "EnterDojoRE missing")
             end
 
             task.wait(0.2)
