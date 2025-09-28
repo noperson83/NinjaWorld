@@ -567,6 +567,20 @@ function WorldHUD:handlePostTeleport(teleportContext)
                 self:setWorldMode(true)
                 self.menuAutoExpand = false
 
+                -- Ensure the loadout header and back button disappear immediately when
+                -- transitioning into a realm.  Relying solely on updateLoadoutHeaderVisibility
+                -- isn't enough because other scripts can momentarily re-enable the loadout
+                -- frame during the dissolve animation, letting the header/back flash on
+                -- screen.  Explicitly hiding the controls guarantees the player never sees
+                -- them while a world teleport is in progress.
+                if self.loadTitle then
+                        self.loadTitle.Visible = false
+                end
+                if self.backButton then
+                        self.backButton.Visible = false
+                        self.backButton.Active = false
+                end
+
                 if not self:playLoadoutDissolve() then
                         if self.loadout then
                                 self.loadout.Visible = false
