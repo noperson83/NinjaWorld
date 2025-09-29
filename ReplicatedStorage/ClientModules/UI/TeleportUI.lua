@@ -8,6 +8,19 @@ local player = Players.LocalPlayer
 
 local BASE_Z_INDEX = 25
 
+TeleportUI.ZONE_INFO = {
+        {name = "Starter", label = "Starter Zone"},
+        {name = "Dojo", label = "Dojo Entrance"},
+        {name = "Water", label = "Water Island"},
+        {name = "Fire", label = "Fire Island"},
+        {name = "Wind", label = "Wind Island"},
+        {name = "Grow", label = "Growth Island"},
+        {name = "Ice", label = "Ice Island"},
+        {name = "Light", label = "Light Island"},
+        {name = "Metal", label = "Metal Island"},
+        {name = "Atom", label = "Atoms Island"},
+}
+
 local DEFAULT_REALM_INFO = {
         {key = "StarterDojo",   name = "Starter Dojo"},
         {key = "SecretVillage", name = "Secret Village of Elementara"},
@@ -273,20 +286,7 @@ function TeleportUI.init(parent, baseY, dependencies)
         teleGrid.VerticalAlignment = Enum.VerticalAlignment.Top
         teleGrid.Parent = teleFrame
 
-        local zoneButtonsInfo = {
-                {name = "Starter", label = "Starter Zone"},
-                {name = "Dojo", label = "Dojo Entrance"},
-                {name = "Water", label = "Water Island"},
-                {name = "Fire", label = "Fire Island"},
-                {name = "Wind", label = "Wind Island"},
-                {name = "Grow", label = "Growth Island"},
-                {name = "Ice", label = "Ice Island"},
-                {name = "Light", label = "Light Island"},
-                {name = "Metal", label = "Metal Island"},
-                {name = "Atom", label = "Atoms Island"},
-        }
-
-        for index, info in ipairs(zoneButtonsInfo) do
+        for index, info in ipairs(TeleportUI.ZONE_INFO) do
                 local button = Instance.new("TextButton")
                 button.Name = info.name .. "Button"
                 button.Size = UDim2.new(0, 0, 0, 0)
