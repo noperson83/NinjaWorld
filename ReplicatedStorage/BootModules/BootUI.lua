@@ -16,6 +16,7 @@ local player  = Players.LocalPlayer
 local rf      = nil
 local cam     = Workspace.CurrentCamera
 local enterRE -- RemoteEvent created by Init.server.lua
+local lastFreezeRestore
 
 BootUI.setDebugLine = function()
 end
@@ -48,12 +49,12 @@ local function getEnterRemote()
 end
 
 local function getPlayerGui()
-	if not player then
-		player = Players.LocalPlayer
-	end
-	if not player then
-		return nil
-	end
+        if not player then
+                player = Players.LocalPlayer
+        end
+        if not player then
+                return nil
+        end
 
 	local gui = player:FindFirstChildOfClass("PlayerGui")
 	if gui then
@@ -72,6 +73,109 @@ end
 
 local GameSettings = require(ReplicatedStorage.GameSettings)
 local DEFAULT_SLOT_COUNT = tonumber(GameSettings.maxSlots) or 3
+
+local function freezeCharacter()
+        if lastFreezeRestore then
+                lastFreezeRestore()
+                lastFreezeRestore = nil
+        end
+
+        if not player then
+                player = Players.LocalPlayer
+        end
+
+        local currentPlayer = player
+        if not currentPlayer then
+                return function() end
+        end
+
+        local character = currentPlayer.Character
+        if not character then
+                local ok, newChar = pcall(function()
+                        return currentPlayer.CharacterAdded:Wait()
+                end)
+                if ok then
+                        character = newChar
+                end
+        end
+
+        if not character then
+                return function() end
+        end
+
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        local rootPart = character:FindFirstChild("HumanoidRootPart")
+        if not humanoid then
+                return function() end
+        end
+
+        local original = {
+                walkSpeed = humanoid.WalkSpeed,
+                autoRotate = humanoid.AutoRotate,
+                jumpPower = humanoid.JumpPower,
+                jumpHeight = humanoid.JumpHeight,
+                hrpAnchored = rootPart and rootPart.Anchored or false,
+        }
+
+        humanoid.WalkSpeed = 0
+        if humanoid.UseJumpPower ~= false then
+                humanoid.JumpPower = 0
+        else
+                humanoid.JumpHeight = 0
+        end
+        humanoid.AutoRotate = false
+
+        if rootPart then
+                rootPart.Anchored = true
+                rootPart.AssemblyLinearVelocity = Vector3.zero
+                rootPart.AssemblyAngularVelocity = Vector3.zero
+        end
+
+        local restored = false
+        local restoreConn
+
+        local function restore()
+                if restored then
+                        return
+                end
+                restored = true
+
+                if humanoid.Parent then
+                        humanoid.WalkSpeed = original.walkSpeed or humanoid.WalkSpeed
+                        if humanoid.UseJumpPower ~= false then
+                                humanoid.JumpPower = original.jumpPower or humanoid.JumpPower
+                        else
+                                humanoid.JumpHeight = original.jumpHeight or humanoid.JumpHeight
+                        end
+                        humanoid.AutoRotate = original.autoRotate ~= nil and original.autoRotate or humanoid.AutoRotate
+                end
+
+                if rootPart and rootPart.Parent then
+                        rootPart.Anchored = original.hrpAnchored
+                end
+
+                if restoreConn then
+                        restoreConn:Disconnect()
+                        restoreConn = nil
+                end
+
+                if lastFreezeRestore == restore then
+                        lastFreezeRestore = nil
+                end
+        end
+
+        restoreConn = currentPlayer.CharacterAdded:Connect(function()
+                restore()
+        end)
+
+        lastFreezeRestore = restore
+
+        task.delay(12, restore)
+
+        return restore
+end
+
+BootUI.freezeCharacter = freezeCharacter
 
 local function getPersonaRemote()
 	if rf and rf.Parent then
@@ -515,13 +619,14 @@ function BootUI.start(config)
 		cam.FieldOfView = partFOV(startPos)
 	end
 
-	local function holdStartCam(seconds)
-		applyStartCam()
-		local untilT = os.clock() + (seconds or 1.0)
-		local key = "NW_HoldStart"
-		RunService:BindToRenderStep(key, Enum.RenderPriority.Camera.Value + 1, function()
-			cam = Workspace.CurrentCamera
-			applyStartCam()
+        local function holdStartCam(seconds)
+                cam = Workspace.CurrentCamera or cam
+                applyStartCam()
+                local untilT = os.clock() + (seconds or 1.0)
+                local key = "NW_HoldStart"
+                RunService:BindToRenderStep(key, Enum.RenderPriority.Camera.Value + 1, function()
+                        cam = Workspace.CurrentCamera
+                        applyStartCam()
 			if os.clock() > untilT then RunService:UnbindFromRenderStep(key) end
 		end)
 		Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
@@ -530,17 +635,41 @@ function BootUI.start(config)
 		end)
 	end
 
-	local function tweenToEnd()
-		if not endPos then return end
-		local cf  = faceCF(endPos)
-		local fov = partFOV(endPos)
-		TweenService:Create(cam, TweenInfo.new(CAM_TWEEN_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = cf, FieldOfView = fov}):Play()
-	end
-	BootUI.tweenToEnd = tweenToEnd
+        local function tweenToEnd()
+                if not endPos then return end
+                local cf  = faceCF(endPos)
+                local fov = partFOV(endPos)
+                TweenService:Create(cam, TweenInfo.new(CAM_TWEEN_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = cf, FieldOfView = fov}):Play()
+        end
+        BootUI.tweenToEnd = tweenToEnd
 
-	if not cosmeticsInterface.tweenToEnd then
-		cosmeticsInterface.tweenToEnd = tweenToEnd
-	end
+        if not cosmeticsInterface.tweenToEnd then
+                cosmeticsInterface.tweenToEnd = tweenToEnd
+        end
+
+        local function replayIntroSequence(options)
+                options = options or {}
+                cam = Workspace.CurrentCamera or cam
+                applyStartCam()
+                holdStartCam(options.holdTime or 0.3)
+                if options.disableBlur ~= false then
+                        disableUIBlur()
+                end
+
+                if Cosmetics and Cosmetics.showDojoPicker then
+                        Cosmetics.showDojoPicker()
+                end
+
+                if Cosmetics and Cosmetics.refreshSlots then
+                        local personaData = options.personaData
+                        if personaData == nil then
+                                personaData = BootUI.personaData
+                        end
+                        Cosmetics.refreshSlots(personaData)
+                end
+        end
+
+        BootUI.replayIntroSequence = replayIntroSequence
 
 	-- Lighting helpers (disable DOF while UI is visible)
 	-- =====================
@@ -585,10 +714,23 @@ function BootUI.start(config)
 		end
 	end
 
-	-- =====================
-	-- UI root
-	-- =====================
-	local gui = Instance.new("ScreenGui"); local ui = gui
+        local introController = {
+                freezeCharacter = freezeCharacter,
+                replayIntroSequence = replayIntroSequence,
+                disableUIBlur = disableUIBlur,
+                restoreUIBlur = restoreUIBlur,
+        }
+
+        BootUI.introController = introController
+
+        if hud and hud.setIntroController then
+                hud:setIntroController(introController)
+        end
+
+        -- =====================
+        -- UI root
+        -- =====================
+        local gui = Instance.new("ScreenGui"); local ui = gui
 	ui.ResetOnSpawn   = false
 	ui.Name           = "IntroGui"
 	ui.IgnoreGuiInset = true
@@ -739,13 +881,11 @@ function BootUI.start(config)
 	-- =====================
 	-- FLOW
 	-- =====================
-	cam.CameraType = Enum.CameraType.Scriptable
-	holdStartCam(0.3)
-	disableUIBlur()
-
-	Cosmetics.showDojoPicker()
-	-- We do NOT tween to end here anymore; only after "Use".
-	Cosmetics.refreshSlots(config.personaData)
+        BootUI.replayIntroSequence({
+                holdTime = 0.3,
+                personaData = config.personaData,
+        })
+        -- We do NOT tween to end here anymore; only after "Use".
 
 
 end

@@ -66,7 +66,99 @@ local BUTTON_STYLE = {
 	animSpeed = 0.2,
 }
 
-local BACK_BUTTON_OFFSET = 60
+local BACK_BUTTON_OFFSET = 12
+
+local function fallbackFreezeCharacter(playerRef)
+        local targetPlayer = playerRef or player
+        if not targetPlayer then
+                return function() end
+        end
+
+        local character = targetPlayer.Character
+        if not character then
+                return function() end
+        end
+
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        local rootPart = character:FindFirstChild("HumanoidRootPart")
+        if not humanoid then
+                return function() end
+        end
+
+        local original = {
+                walkSpeed = humanoid.WalkSpeed,
+                autoRotate = humanoid.AutoRotate,
+                jumpPower = humanoid.JumpPower,
+                jumpHeight = humanoid.JumpHeight,
+                hrpAnchored = rootPart and rootPart.Anchored or false,
+        }
+
+        humanoid.WalkSpeed = 0
+        if humanoid.UseJumpPower ~= false then
+                humanoid.JumpPower = 0
+        else
+                humanoid.JumpHeight = 0
+        end
+        humanoid.AutoRotate = false
+
+        if rootPart then
+                rootPart.Anchored = true
+                rootPart.AssemblyLinearVelocity = Vector3.zero
+                rootPart.AssemblyAngularVelocity = Vector3.zero
+        end
+
+        local restored = false
+        local restoreConn
+
+        local function restore()
+                if restored then
+                        return
+                end
+                restored = true
+
+                if humanoid.Parent then
+                        humanoid.WalkSpeed = original.walkSpeed or humanoid.WalkSpeed
+                        if humanoid.UseJumpPower ~= false then
+                                humanoid.JumpPower = original.jumpPower or humanoid.JumpPower
+                        else
+                                humanoid.JumpHeight = original.jumpHeight or humanoid.JumpHeight
+                        end
+                        humanoid.AutoRotate = original.autoRotate ~= nil and original.autoRotate or humanoid.AutoRotate
+                end
+
+                if rootPart and rootPart.Parent then
+                        rootPart.Anchored = original.hrpAnchored
+                end
+
+                if restoreConn then
+                        restoreConn:Disconnect()
+                        restoreConn = nil
+                end
+        end
+
+        restoreConn = targetPlayer.CharacterAdded:Connect(function()
+                restore()
+        end)
+
+        task.delay(12, restore)
+
+        return restore
+end
+
+local function fallbackIntroSequence(cosmeticsModule, personaData)
+        local Cosmetics = cosmeticsModule
+        if not Cosmetics then
+                return
+        end
+
+        if Cosmetics.showDojoPicker then
+                Cosmetics.showDojoPicker()
+        end
+
+        if Cosmetics.refreshSlots then
+                Cosmetics.refreshSlots(personaData)
+        end
+end
 
 local function track(self, conn)
 	if conn == nil then
@@ -671,7 +763,7 @@ function WorldHUD:ensureLoadoutHeader()
         local backPosition = UDim2.new(0.5, 0, 0, baseY + BACK_BUTTON_OFFSET)
 
         if not self.backButtonContainer then
-                local backButton, backContainer = createStyledButton(loadout, "◀ Back", backPosition, 40)
+                local backButton, backContainer = createStyledButton(loadout, "Persona", backPosition, 40)
                 backButton.Size = UDim2.new(0, 200, 0, 50)
                 backContainer.Size = UDim2.new(0, 200, 0, 50)
                 backContainer.AnchorPoint = Vector2.new(0.5, 0)
@@ -688,6 +780,7 @@ function WorldHUD:ensureLoadoutHeader()
         end
 
         if self.backButton then
+                self.backButton.Text = "Persona"
                 self.backButton.Visible = false
                 self.backButton.Active = false
                 if not self._backButtonClickConn then
@@ -862,14 +955,37 @@ function WorldHUD:promptReturnToDojo()
                                 self._enterDojoRemote = enterRemote
                         end
 
+                        local introController = self.introController
+                        local restoreCharacter
+
+                        if introController and introController.freezeCharacter then
+                                local ok, result = pcall(introController.freezeCharacter)
+                                if ok and typeof(result) == "function" then
+                                        restoreCharacter = result
+                                elseif not ok then
+                                        warn("WorldHUD: freezeCharacter failed", result)
+                                        restoreCharacter = fallbackFreezeCharacter(player)
+                                end
+                        end
+
+                        if not restoreCharacter then
+                                restoreCharacter = fallbackFreezeCharacter(player)
+                        end
+
                         DojoClient.start("Dojo")
 
                         local personaType, chosenSlot = Cosmetics.getSelectedPersona()
-                        if enterRemote then
+                        if enterRemote and enterRemote.FireServer then
                                 enterRemote:FireServer({
                                         type = personaType,
                                         slot = chosenSlot,
                                 })
+                        else
+                                warn("WorldHUD: EnterDojoRE missing, restoring character state")
+                                if restoreCharacter then
+                                        restoreCharacter()
+                                        restoreCharacter = nil
+                                end
                         end
 
                         if self.handlePostTeleport then
@@ -879,7 +995,21 @@ function WorldHUD:promptReturnToDojo()
                                 })
                         end
 
-                        Cosmetics.showDojoPicker()
+                        local introPlayed = false
+                        if introController and introController.replayIntroSequence then
+                                local ok, err = pcall(introController.replayIntroSequence, {
+                                        personaData = nil,
+                                })
+                                if not ok then
+                                        warn("WorldHUD: replayIntroSequence failed", err)
+                                else
+                                        introPlayed = true
+                                end
+                        end
+
+                        if not introPlayed then
+                                fallbackIntroSequence(Cosmetics)
+                        end
                 end))
         end
 
@@ -963,11 +1093,15 @@ function WorldHUD:handlePostTeleport(teleportContext)
 		self.togglePanel.Visible = true
 	end
 
-	if self.setShopButtonVisible then
-		self:setShopButtonVisible(true)
-	end
+        if self.setShopButtonVisible then
+                self:setShopButtonVisible(true)
+        end
 
-	self:updatePersonaButtonVisibility()
+        self:updatePersonaButtonVisibility()
+end
+
+function WorldHUD:setIntroController(controller)
+        self.introController = controller
 end
 
 function WorldHUD:showTeleportBanner(teleportContext)
@@ -1031,13 +1165,14 @@ function WorldHUD.get()
 end
 
 function WorldHUD.new(config, dependencies)
-	if currentHud and currentHud.gui and currentHud.gui.Parent then
-		if config then currentHud.config = config end
-		if dependencies then
-			if dependencies.shop then currentHud.shop = dependencies.shop end
-			if dependencies.currencyService then currentHud.currencyService = dependencies.currencyService end
-		end
-		return currentHud
+        if currentHud and currentHud.gui and currentHud.gui.Parent then
+                if config then currentHud.config = config end
+                if dependencies then
+                        if dependencies.shop then currentHud.shop = dependencies.shop end
+                        if dependencies.currencyService then currentHud.currencyService = dependencies.currencyService end
+                        if dependencies.introController then currentHud.introController = dependencies.introController end
+                end
+                return currentHud
 	elseif currentHud and (not currentHud.gui or not currentHud.gui.Parent) then
 		currentHud = nil
 	end
@@ -1048,7 +1183,8 @@ function WorldHUD.new(config, dependencies)
 	self.currencyService = dependencies and dependencies.currencyService or nil
 	self.abilityInterface = dependencies and dependencies.abilityInterface or nil
 	self._connections = {}
-	self._destroyed = false
+        self._destroyed = false
+        self.introController = dependencies and dependencies.introController or nil
 	self.backButtonEnabled = true
 	self.menuAutoExpand = true
 	self.worldModeActive = false
