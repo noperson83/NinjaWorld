@@ -435,8 +435,12 @@ function BootUI.applyFetchedData(data)
 		local sanitized = sanitizePersonaData(personaData)
 		BootUI.config.personaData = sanitized
 		BootUI.personaData = sanitized
-		Cosmetics.refreshSlots(sanitized)
-		Cosmetics.showDojoPicker()
+                if typeof(Cosmetics.refreshSlots) == "function" then
+                        Cosmetics.refreshSlots(sanitized)
+                end
+                if typeof(Cosmetics.showDojoPicker) == "function" then
+                        Cosmetics.showDojoPicker()
+                end
 	end
 end
 
@@ -699,11 +703,11 @@ function BootUI.start(config)
                         disableUIBlur()
                 end
 
-                if Cosmetics and Cosmetics.showDojoPicker then
+                if Cosmetics and typeof(Cosmetics.showDojoPicker) == "function" then
                         Cosmetics.showDojoPicker()
                 end
 
-                if Cosmetics and Cosmetics.refreshSlots then
+                if Cosmetics and typeof(Cosmetics.refreshSlots) == "function" then
                         local personaData = options.personaData
                         if personaData == nil then
                                 personaData = BootUI.personaData
@@ -782,13 +786,15 @@ function BootUI.start(config)
                 end)
         end
 
-	local personaButton = hud and hud.getPersonaButton and hud:getPersonaButton()
-	if personaButton then
-		personaButton.MouseButton1Click:Connect(function()
-			applyStartCam()
-			Cosmetics.showDojoPicker()
-		end)
-	end
+        local personaButton = hud and hud.getPersonaButton and hud:getPersonaButton()
+        if personaButton then
+                personaButton.MouseButton1Click:Connect(function()
+                        applyStartCam()
+                        if typeof(Cosmetics.showDojoPicker) == "function" then
+                                Cosmetics.showDojoPicker()
+                        end
+                end)
+        end
 
 	local enterRealmButton = hud and hud.enterRealmButton
 	if enterRealmButton then
