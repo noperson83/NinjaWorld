@@ -647,6 +647,49 @@ function BootUI.start(config)
                 cosmeticsInterface.tweenToEnd = tweenToEnd
         end
 
+        -- Lighting helpers (disable DOF while UI is visible)
+        -- =====================
+        local savedDOF
+        local savedBlurEnabled
+        local function getOrCreateBlur()
+                local blur = Lighting:FindFirstChild("Blur") or Lighting:FindFirstChildOfClass("BlurEffect")
+                if not blur then
+                        blur = Instance.new("BlurEffect")
+                        blur.Name = "Blur"
+                        blur.Enabled = false
+                        blur.Parent = Lighting
+                end
+                return blur
+        end
+        local function disableUIBlur()
+                if savedDOF or savedBlurEnabled ~= nil then return end
+                savedDOF = {}
+                for _,e in ipairs(Lighting:GetChildren()) do
+                        if e:IsA("DepthOfFieldEffect") then
+                                savedDOF[e] = e.Enabled
+                                e.Enabled = false
+                        end
+                end
+                local blur = getOrCreateBlur()
+                if blur then
+                        savedBlurEnabled = blur.Enabled
+                        blur.Enabled = false
+                end
+        end
+        local function restoreUIBlur()
+                if savedDOF then
+                        for e,was in pairs(savedDOF) do
+                                if e and e.Parent then e.Enabled = was end
+                        end
+                        savedDOF = nil
+                end
+                if savedBlurEnabled ~= nil then
+                        local blur = getOrCreateBlur()
+                        if blur then blur.Enabled = savedBlurEnabled end
+                        savedBlurEnabled = nil
+                end
+        end
+
         local function replayIntroSequence(options)
                 options = options or {}
                 cam = Workspace.CurrentCamera or cam
@@ -670,49 +713,6 @@ function BootUI.start(config)
         end
 
         BootUI.replayIntroSequence = replayIntroSequence
-
-	-- Lighting helpers (disable DOF while UI is visible)
-	-- =====================
-	local savedDOF
-	local savedBlurEnabled
-	local function getOrCreateBlur()
-		local blur = Lighting:FindFirstChild("Blur") or Lighting:FindFirstChildOfClass("BlurEffect")
-		if not blur then
-			blur = Instance.new("BlurEffect")
-			blur.Name = "Blur"
-			blur.Enabled = false
-			blur.Parent = Lighting
-		end
-		return blur
-	end
-	local function disableUIBlur()
-		if savedDOF or savedBlurEnabled ~= nil then return end
-		savedDOF = {}
-		for _,e in ipairs(Lighting:GetChildren()) do
-			if e:IsA("DepthOfFieldEffect") then
-				savedDOF[e] = e.Enabled
-				e.Enabled = false
-			end
-		end
-		local blur = getOrCreateBlur()
-		if blur then
-			savedBlurEnabled = blur.Enabled
-			blur.Enabled = false
-		end
-	end
-	local function restoreUIBlur()
-		if savedDOF then
-			for e,was in pairs(savedDOF) do
-				if e and e.Parent then e.Enabled = was end
-			end
-			savedDOF = nil
-		end
-		if savedBlurEnabled ~= nil then
-			local blur = getOrCreateBlur()
-			if blur then blur.Enabled = savedBlurEnabled end
-			savedBlurEnabled = nil
-		end
-	end
 
         local introController = {
                 freezeCharacter = freezeCharacter,
