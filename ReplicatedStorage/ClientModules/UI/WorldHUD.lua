@@ -26,6 +26,8 @@ local IMAGE_CLASSES = {
 
 local player = Players.LocalPlayer
 
+local ZONE_INFO = TeleportUI.ZONE_INFO or {}
+
 local REALM_INFO = {
 	{key = "StarterDojo",   name = "Starter Dojo"},
 	{key = "SecretVillage", name = "Secret Village"},
@@ -603,14 +605,14 @@ function WorldHUD:prepareLoadoutPanels()
 end
 
 function WorldHUD:ensureLoadoutHeader()
-	local loadout = self.loadout
-	if not loadout then
-		return
-	end
+        local loadout = self.loadout
+        if not loadout then
+                return
+        end
 
-	if not self.loadTitle then
-		local baseY = self.baseY or 0
-		local loadTitle = Instance.new("TextLabel")
+        if not self.loadTitle then
+                local baseY = self.baseY or 0
+                local loadTitle = Instance.new("TextLabel")
 		loadTitle.Size = UDim2.new(.7, -40, 0, 70)
 		loadTitle.Position = UDim2.new(0.5, 0, 0, baseY-64)
 		loadTitle.AnchorPoint = Vector2.new(0.5, 0)
@@ -632,16 +634,41 @@ function WorldHUD:ensureLoadoutHeader()
 		local titleStroke = Instance.new("UIStroke")
 		titleStroke.Color = BUTTON_STYLE.accentColor
 		titleStroke.Thickness = 2
-		titleStroke.Transparency = 0.5
-		titleStroke.Parent = loadTitle
-	elseif not self.loadTitle.Parent then
-		self.loadTitle.Parent = loadout
-	end
+                titleStroke.Transparency = 0.5
+                titleStroke.Parent = loadTitle
+        elseif not self.loadTitle.Parent then
+                self.loadTitle.Parent = loadout
+        end
 
-	if not self.backButtonContainer then
-		local backButton, backContainer = createStyledButton(loadout, "◀ Back", UDim2.new(0, 20, 1, -80), 40)
-		backButton.Size = UDim2.new(0, 200, 0, 50)
-		backContainer.Size = UDim2.new(0, 200, 0, 50)
+        if not self.teleportBanner then
+                local baseY = self.baseY or 0
+                local bannerParent = self.root or loadout
+                local banner = Instance.new("TextLabel")
+                banner.Name = "TeleportBanner"
+                banner.Size = UDim2.new(0.6, 0, 0, 56)
+                banner.Position = UDim2.new(0.5, 0, 0, math.max(8, baseY - 110))
+                banner.AnchorPoint = Vector2.new(0.5, 0)
+                banner.BackgroundTransparency = 1
+                banner.Text = ""
+                banner.Font = Enum.Font.GothamBold
+                banner.TextScaled = true
+                banner.TextColor3 = BUTTON_STYLE.textColor
+                banner.TextTransparency = 1
+                banner.TextStrokeTransparency = 1
+                banner.TextStrokeColor3 = BUTTON_STYLE.shadowColor
+                banner.ZIndex = 60
+                banner.Visible = false
+                banner.Parent = bannerParent
+                self.teleportBanner = banner
+        elseif not self.teleportBanner.Parent then
+                local bannerParent = self.root or loadout
+                self.teleportBanner.Parent = bannerParent
+        end
+
+        if not self.backButtonContainer then
+                local backButton, backContainer = createStyledButton(loadout, "◀ Back", UDim2.new(0, 20, 1, -80), 40)
+                backButton.Size = UDim2.new(0, 200, 0, 50)
+                backContainer.Size = UDim2.new(0, 200, 0, 50)
 		self.backButton = backButton
 		self.backButtonContainer = backContainer
 	elseif not self.backButtonContainer.Parent then
@@ -683,7 +710,10 @@ function WorldHUD:updatePersonaButtonVisibility()
 end
 
 function WorldHUD:handlePostTeleport(teleportContext)
-	self:closeAllInterfaces()
+        if not teleportContext then
+                self:showTeleportBanner(nil)
+        end
+        self:closeAllInterfaces()
 
 	local inWorld = false
 	if teleportContext then
@@ -747,6 +777,59 @@ function WorldHUD:handlePostTeleport(teleportContext)
 	end
 
 	self:updatePersonaButtonVisibility()
+end
+
+function WorldHUD:showTeleportBanner(teleportContext)
+        self:ensureLoadoutHeader()
+
+        local banner = self.teleportBanner
+        if not banner then
+                return
+        end
+
+        if self._teleportBannerTween then
+                self._teleportBannerTween:Cancel()
+                self._teleportBannerTween = nil
+        end
+
+        if not teleportContext then
+                banner.Visible = false
+                banner.Text = ""
+                banner.TextTransparency = 1
+                banner.TextStrokeTransparency = 1
+                return
+        end
+
+        local displayName
+        if teleportContext.source == "Zone" then
+                local zoneLookup = self.zoneDisplayLookup
+                displayName = zoneLookup and zoneLookup[teleportContext.name]
+        elseif teleportContext.source == "Realm" then
+                local realmKey = teleportContext.realm or teleportContext.name
+                local realmLookup = self.realmDisplayLookup
+                displayName = realmLookup and realmLookup[realmKey]
+        end
+
+        displayName = displayName or teleportContext.name or teleportContext.realm or "Unknown Destination"
+
+        banner.Visible = true
+        banner.Text = string.format("Destination: %s", displayName)
+        banner.TextTransparency = 1
+        banner.TextStrokeTransparency = 1
+
+        local tween = TweenService:Create(banner, TweenInfo.new(5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                TextTransparency = 0,
+                TextStrokeTransparency = 0,
+        })
+
+        tween.Completed:Connect(function()
+                if self._teleportBannerTween == tween then
+                        self._teleportBannerTween = nil
+                end
+        end)
+
+        tween:Play()
+        self._teleportBannerTween = tween
 end
 
 function WorldHUD.get()
@@ -842,17 +925,23 @@ function WorldHUD.new(config, dependencies)
 	-- Teleport UI
 	local setTeleportsVisible
 
-	local teleportUI = TeleportUI.init(loadout, baseY, {
-		REALM_INFO = REALM_INFO,
-		getRealmFolder = getRealmFolder,
-		onTeleport = function(teleportContext)
-			if self and self.handlePostTeleport then
-				self:handlePostTeleport(teleportContext)
-			elseif self then
-				self:setTeleportVisible(false)
-			end
-		end,
-	})
+        local teleportUI = TeleportUI.init(loadout, baseY, {
+                REALM_INFO = REALM_INFO,
+                getRealmFolder = getRealmFolder,
+                onTeleport = function(teleportContext)
+                        if self and self.showTeleportBanner then
+                                self:showTeleportBanner(teleportContext)
+                        end
+                        if self and self.handlePostTeleport then
+                                self:handlePostTeleport(teleportContext)
+                        elseif self then
+                                self:setTeleportVisible(false)
+                                if self.showTeleportBanner then
+                                        self:showTeleportBanner(nil)
+                                end
+                        end
+                end,
+        })
 	self.teleportUI = teleportUI
 	local teleportCloseButton = teleportUI and teleportUI.closeButton or nil
 	self.teleportCloseButton = teleportCloseButton
@@ -999,19 +1088,28 @@ function WorldHUD.new(config, dependencies)
 		setTeleportsVisible(shouldShow)
 	end))
 
-	setInterfaceVisible(quest, false)
-	setInterfaceVisible(backpack, false)
-	setTeleportsVisible(false)
+        setInterfaceVisible(quest, false)
+        setInterfaceVisible(backpack, false)
+        setTeleportsVisible(false)
 
-	local realmDisplayLookup = {}
-	self.realmDisplayLookup = realmDisplayLookup
-	for _, info in ipairs(REALM_INFO) do
-		realmDisplayLookup[info.key] = info.name
-	end
+        local realmDisplayLookup = {}
+        self.realmDisplayLookup = realmDisplayLookup
+        for _, info in ipairs(REALM_INFO) do
+                realmDisplayLookup[info.key] = info.name
+        end
 
-	if self.config and self.config.showShop then
-		self:toggleShop()
-	end
+        local zoneDisplayLookup = {}
+        self.zoneDisplayLookup = zoneDisplayLookup
+        for _, info in ipairs(ZONE_INFO) do
+                local key = info.name or info.key
+                if key then
+                        zoneDisplayLookup[key] = info.label or info.name or key
+                end
+        end
+
+        if self.config and self.config.showShop then
+                self:toggleShop()
+        end
 
 	currentHud = self
 	return self
@@ -1286,38 +1384,46 @@ function WorldHUD:setSelectedRealm(key)
 end
 
 function WorldHUD:destroy()
-	if self._destroyed then return end
-	self._destroyed = true
-	for _, conn in ipairs(self._connections) do
-		if conn.Disconnect then conn:Disconnect() end
-	end
-	self._connections = {}
-	if self.teleportUI and self.teleportUI.destroy then
-		self.teleportUI:destroy()
-	end
-	if self.gui then
-		self.gui:Destroy()
-	end
-	if self.loadTitle then
-		self.loadTitle:Destroy()
-	end
-	if self.backButtonContainer then
-		self.backButtonContainer:Destroy()
-	end
-	if self.personaButton then
-		self.personaButton:Destroy()
-	end
-	self.gui = nil
-	self.root = nil
-	self.loadout = nil
-	self.loadTitle = nil
-	self.shopButton = nil
-	self.shopFrame = nil
-	self.backButton = nil
-	self.backButtonContainer = nil
-	self.enterRealmButton = nil
-	self.quest = nil
-	self.backpack = nil
+        if self._destroyed then return end
+        self._destroyed = true
+        for _, conn in ipairs(self._connections) do
+                if conn.Disconnect then conn:Disconnect() end
+        end
+        self._connections = {}
+        if self.teleportUI and self.teleportUI.destroy then
+                self.teleportUI:destroy()
+        end
+        if self._teleportBannerTween then
+                self._teleportBannerTween:Cancel()
+                self._teleportBannerTween = nil
+        end
+        if self.gui then
+                self.gui:Destroy()
+        end
+        if self.loadTitle then
+                self.loadTitle:Destroy()
+        end
+        if self.backButtonContainer then
+                self.backButtonContainer:Destroy()
+        end
+        if self.personaButton then
+                self.personaButton:Destroy()
+        end
+        if self.teleportBanner then
+                self.teleportBanner:Destroy()
+        end
+        self.gui = nil
+        self.root = nil
+        self.loadout = nil
+        self.loadTitle = nil
+        self.shopButton = nil
+        self.shopFrame = nil
+        self.backButton = nil
+        self.backButtonContainer = nil
+        self.enterRealmButton = nil
+        self.quest = nil
+        self.backpack = nil
+        self.teleportBanner = nil
 	self.togglePanel = nil
 	self.menuButton = nil
 	self.menuContainer = nil
