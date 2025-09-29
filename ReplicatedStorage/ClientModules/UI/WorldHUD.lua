@@ -658,10 +658,10 @@ function WorldHUD:playLoadoutDissolve(duration)
 end
 
 function WorldHUD:setMenuExpanded(expanded)
-	self.menuExpanded = expanded and true or false
-	if self.togglePanel then
-		self.togglePanel.Visible = self.menuExpanded
-	end
+        self.menuExpanded = expanded and true or false
+        if self.togglePanel then
+                self.togglePanel.Visible = self.menuExpanded
+        end
 	if self.menuButton then
 		local targetColor = self.menuExpanded and BUTTON_STYLE.accentColor or BUTTON_STYLE.textColor
 		self.menuButton.TextColor3 = targetColor
@@ -671,9 +671,11 @@ function WorldHUD:setMenuExpanded(expanded)
 		self.menuButtonStroke.Thickness = targetThickness
 		self.menuButtonStroke.Color = self.menuExpanded and BUTTON_STYLE.accentColor or BUTTON_STYLE.secondaryColor
 	end
-	if self.menuExpanded then
-		self.menuAutoExpand = true
-	end
+        if self.menuExpanded then
+                self.menuAutoExpand = true
+        end
+
+        self:updatePersonaButtonVisibility()
 end
 
 function WorldHUD:toggleMenu()
@@ -1010,6 +1012,8 @@ function WorldHUD:promptReturnToDojo()
                         if not introPlayed then
                                 fallbackIntroSequence(Cosmetics)
                         end
+
+                        DojoClient.hide()
                 end))
         end
 
@@ -1025,25 +1029,14 @@ function WorldHUD:updatePersonaButtonVisibility()
                 return
         end
 
-        local loadoutVisible = self.loadout and self.loadout.Visible
-        local shouldShowInWorld = self.worldModeActive and not loadoutVisible
-        local shouldShowInMenu = loadoutVisible and not self.worldModeActive
-
-        if shouldShowInWorld then
-                if self.personaButtonContainer.Parent ~= self.root then
-                        self.personaButtonContainer.Parent = self.root
-                end
-                self.personaButtonContainer.AnchorPoint = Vector2.new(0.5, 0)
-                self.personaButtonContainer.Position = self.personaWorldPosition or UDim2.new(0.5, 0, 0, self.baseY or 0)
-        elseif shouldShowInMenu then
-                if self.togglePanel and self.personaButtonContainer.Parent ~= self.togglePanel then
-                        self.personaButtonContainer.Parent = self.togglePanel
-                end
-                self.personaButtonContainer.AnchorPoint = Vector2.new(0, 0)
-                self.personaButtonContainer.Position = self.personaMenuPosition or UDim2.new(0, 0, 0, 0)
+        if self.togglePanel and self.personaButtonContainer.Parent ~= self.togglePanel then
+                self.personaButtonContainer.Parent = self.togglePanel
         end
 
-        local shouldShow = shouldShowInWorld or shouldShowInMenu
+        self.personaButtonContainer.AnchorPoint = Vector2.new(0, 0)
+        self.personaButtonContainer.Position = self.personaMenuPosition or UDim2.new(0, 0, 0, 0)
+
+        local shouldShow = self.togglePanel and self.togglePanel.Visible and self.menuExpanded
         self.personaButtonContainer.Visible = shouldShow
         self.personaButton.Visible = shouldShow
         self.personaButton.Active = shouldShow
@@ -1321,7 +1314,6 @@ function WorldHUD.new(config, dependencies)
         self.personaButton = personaButton
         self.personaButtonContainer = personaContainer
         self.personaMenuPosition = personaContainer.Position
-        self.personaWorldPosition = UDim2.new(0.5, 0, 0, baseY)
 
         local questButton, questContainer = createStyledButton(togglePanel, "Quests", UDim2.new(0, 0, 0, 65), 41)
         local pouchButton, pouchContainer = createStyledButton(togglePanel, "Pouch", UDim2.new(0, 0, 0, 130), 41)
@@ -1778,7 +1770,6 @@ function WorldHUD:destroy()
         self.personaButton = nil
         self.personaButtonContainer = nil
         self.personaMenuPosition = nil
-        self.personaWorldPosition = nil
         if currentHud == self then
                 currentHud = nil
         end
