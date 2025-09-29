@@ -66,6 +66,8 @@ local BUTTON_STYLE = {
 	animSpeed = 0.2,
 }
 
+local BACK_BUTTON_OFFSET = 60
+
 local function track(self, conn)
 	if conn == nil then
 		return nil
@@ -665,38 +667,227 @@ function WorldHUD:ensureLoadoutHeader()
                 self.teleportBanner.Parent = bannerParent
         end
 
+        local baseY = self.baseY or 0
+        local backPosition = UDim2.new(0.5, 0, 0, baseY + BACK_BUTTON_OFFSET)
+
         if not self.backButtonContainer then
-                local backButton, backContainer = createStyledButton(loadout, "◀ Back", UDim2.new(0, 20, 1, -80), 40)
+                local backButton, backContainer = createStyledButton(loadout, "◀ Back", backPosition, 40)
                 backButton.Size = UDim2.new(0, 200, 0, 50)
                 backContainer.Size = UDim2.new(0, 200, 0, 50)
-		self.backButton = backButton
-		self.backButtonContainer = backContainer
-	elseif not self.backButtonContainer.Parent then
-		self.backButtonContainer.Parent = loadout
-	end
+                backContainer.AnchorPoint = Vector2.new(0.5, 0)
+                backContainer.Position = backPosition
+                self.backButton = backButton
+                self.backButtonContainer = backContainer
+        elseif not self.backButtonContainer.Parent then
+                self.backButtonContainer.Parent = loadout
+        end
 
-	if self.backButton then
-		self.backButton.Visible = false
-		self.backButton.Active = false
-	end
-	if self.backButtonContainer then
-		self.backButtonContainer.Visible = false
-	end
+        if self.backButtonContainer then
+                self.backButtonContainer.AnchorPoint = Vector2.new(0.5, 0)
+                self.backButtonContainer.Position = backPosition
+        end
+
+        if self.backButton then
+                self.backButton.Visible = false
+                self.backButton.Active = false
+                if not self._backButtonClickConn then
+                        self._backButtonClickConn = track(self, self.backButton.MouseButton1Click:Connect(function()
+                                self:promptReturnToDojo()
+                        end))
+                end
+        end
+        if self.backButtonContainer then
+                self.backButtonContainer.Visible = false
+        end
 end
 
 function WorldHUD:detachLoadoutHeader()
-	if self.loadTitle then
-		self.loadTitle.Visible = false
-		self.loadTitle.Parent = nil
-	end
-	if self.backButton then
-		self.backButton.Visible = false
-		self.backButton.Active = false
-	end
-	if self.backButtonContainer then
-		self.backButtonContainer.Visible = false
-		self.backButtonContainer.Parent = nil
-	end
+        if self.loadTitle then
+                self.loadTitle.Visible = false
+                self.loadTitle.Parent = nil
+        end
+        if self.backButton then
+                self.backButton.Visible = false
+                self.backButton.Active = false
+        end
+        if self.backButtonContainer then
+                self.backButtonContainer.Visible = false
+                self.backButtonContainer.Parent = nil
+        end
+end
+
+function WorldHUD:promptReturnToDojo()
+        if self._destroyed then
+                return
+        end
+
+        local root = self.root
+        if not (root and root.Parent) then
+                return
+        end
+
+        if self._returnPromptActive then
+                return
+        end
+
+        local overlay = self._returnPromptOverlay
+        if not overlay or overlay.Parent ~= root then
+                overlay = Instance.new("Frame")
+                overlay.Name = "ReturnToDojoPrompt"
+                overlay.Size = UDim2.fromScale(1, 1)
+                overlay.BackgroundColor3 = Color3.new(0, 0, 0)
+                overlay.BackgroundTransparency = 0.45
+                overlay.Visible = false
+                overlay.ZIndex = 180
+                overlay.BorderSizePixel = 0
+                overlay.Active = true
+                overlay.Parent = root
+                self._returnPromptOverlay = overlay
+
+                local modal = Instance.new("Frame")
+                modal.Name = "PromptFrame"
+                modal.Size = UDim2.new(0, 420, 0, 220)
+                modal.Position = UDim2.new(0.5, 0, 0.38, 0)
+                modal.AnchorPoint = Vector2.new(0.5, 0.5)
+                modal.BackgroundColor3 = BUTTON_STYLE.primaryColor
+                modal.BackgroundTransparency = 0.05
+                modal.BorderSizePixel = 0
+                modal.ZIndex = overlay.ZIndex + 5
+                modal.Parent = overlay
+
+                local modalCorner = Instance.new("UICorner")
+                modalCorner.CornerRadius = UDim.new(0, 18)
+                modalCorner.Parent = modal
+
+                local modalStroke = Instance.new("UIStroke")
+                modalStroke.Color = BUTTON_STYLE.accentColor
+                modalStroke.Thickness = 2
+                modalStroke.Transparency = 0.35
+                modalStroke.Parent = modal
+
+                local title = Instance.new("TextLabel")
+                title.Name = "Title"
+                title.Size = UDim2.new(1, -40, 0, 48)
+                title.Position = UDim2.new(0.5, 0, 0, 24)
+                title.AnchorPoint = Vector2.new(0.5, 0)
+                title.BackgroundTransparency = 1
+                title.Text = "Return to Dojo?"
+                title.Font = Enum.Font.GothamBold
+                title.TextScaled = true
+                title.TextColor3 = BUTTON_STYLE.accentColor
+                title.ZIndex = modal.ZIndex + 1
+                title.Parent = modal
+
+                local message = Instance.new("TextLabel")
+                message.Name = "Message"
+                message.Size = UDim2.new(1, -60, 0, 60)
+                message.Position = UDim2.new(0.5, 0, 0, 96)
+                message.AnchorPoint = Vector2.new(0.5, 0)
+                message.BackgroundTransparency = 1
+                message.Text = "Are you sure you want to leave the current zone and return to the dojo?"
+                message.Font = Enum.Font.Gotham
+                message.TextWrapped = true
+                message.TextScaled = true
+                message.TextColor3 = BUTTON_STYLE.textColor
+                message.ZIndex = modal.ZIndex + 1
+                message.Parent = modal
+
+                local buttonRow = Instance.new("Frame")
+                buttonRow.Name = "ButtonRow"
+                buttonRow.Size = UDim2.new(1, -80, 0, 56)
+                buttonRow.Position = UDim2.new(0.5, 0, 1, -36)
+                buttonRow.AnchorPoint = Vector2.new(0.5, 1)
+                buttonRow.BackgroundTransparency = 1
+                buttonRow.ZIndex = modal.ZIndex + 1
+                buttonRow.Parent = modal
+
+                local layout = Instance.new("UIListLayout")
+                layout.FillDirection = Enum.FillDirection.Horizontal
+                layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+                layout.VerticalAlignment = Enum.VerticalAlignment.Center
+                layout.Padding = UDim.new(0, 20)
+                layout.Parent = buttonRow
+
+                local function createPromptButton(text, isPrimary)
+                        local button = Instance.new("TextButton")
+                        button.Name = text .. "Button"
+                        button.Size = UDim2.new(0, 160, 0, 48)
+                        button.AutoButtonColor = false
+                        button.BackgroundColor3 = isPrimary and BUTTON_STYLE.accentColor or BUTTON_STYLE.secondaryColor
+                        button.TextColor3 = isPrimary and BUTTON_STYLE.primaryColor or BUTTON_STYLE.textColor
+                        button.Text = text
+                        button.Font = Enum.Font.GothamBold
+                        button.TextScaled = true
+                        button.ZIndex = modal.ZIndex + 2
+                        button.Parent = buttonRow
+
+                        local corner = Instance.new("UICorner")
+                        corner.CornerRadius = BUTTON_STYLE.cornerRadius
+                        corner.Parent = button
+
+                        local stroke = Instance.new("UIStroke")
+                        stroke.Color = BUTTON_STYLE.accentColor
+                        stroke.Thickness = 2
+                        stroke.Transparency = isPrimary and 0.1 or 0.35
+                        stroke.Parent = button
+
+                        return button
+                end
+
+                local yesButton = createPromptButton("Yes", true)
+                local noButton = createPromptButton("No", false)
+
+                self._returnPromptModal = modal
+                self._returnPromptYes = yesButton
+                self._returnPromptNo = noButton
+
+                track(self, noButton.MouseButton1Click:Connect(function()
+                        if self._returnPromptOverlay then
+                                self._returnPromptOverlay.Visible = false
+                        end
+                        self._returnPromptActive = false
+                end))
+
+                track(self, yesButton.MouseButton1Click:Connect(function()
+                        if self._returnPromptOverlay then
+                                self._returnPromptOverlay.Visible = false
+                        end
+                        self._returnPromptActive = false
+
+                        local Cosmetics = require(ReplicatedStorage.BootModules.Cosmetics)
+                        local DojoClient = require(ReplicatedStorage.BootModules.DojoClient)
+                        local enterRemote = self._enterDojoRemote
+                        if not enterRemote then
+                                enterRemote = ReplicatedStorage:WaitForChild("EnterDojoRE")
+                                self._enterDojoRemote = enterRemote
+                        end
+
+                        DojoClient.start("Dojo")
+
+                        local personaType, chosenSlot = Cosmetics.getSelectedPersona()
+                        if enterRemote then
+                                enterRemote:FireServer({
+                                        type = personaType,
+                                        slot = chosenSlot,
+                                })
+                        end
+
+                        if self.handlePostTeleport then
+                                self:handlePostTeleport({
+                                        source = "Zone",
+                                        name = "Dojo",
+                                })
+                        end
+
+                        Cosmetics.showDojoPicker()
+                end))
+        end
+
+        self._returnPromptActive = true
+
+        overlay = self._returnPromptOverlay
+        overlay.Visible = true
+        overlay.Active = true
 end
 
 function WorldHUD:updatePersonaButtonVisibility()
@@ -1412,6 +1603,9 @@ function WorldHUD:destroy()
         if self.teleportBanner then
                 self.teleportBanner:Destroy()
         end
+        if self._returnPromptOverlay then
+                self._returnPromptOverlay:Destroy()
+        end
         self.gui = nil
         self.root = nil
         self.loadout = nil
@@ -1424,10 +1618,17 @@ function WorldHUD:destroy()
         self.quest = nil
         self.backpack = nil
         self.teleportBanner = nil
-	self.togglePanel = nil
-	self.menuButton = nil
-	self.menuContainer = nil
-	self.menuExpanded = nil
+        self._returnPromptOverlay = nil
+        self._returnPromptModal = nil
+        self._returnPromptYes = nil
+        self._returnPromptNo = nil
+        self._enterDojoRemote = nil
+        self._backButtonClickConn = nil
+        self._returnPromptActive = nil
+        self.togglePanel = nil
+        self.menuButton = nil
+        self.menuContainer = nil
+        self.menuExpanded = nil
 	self.questOpenButton = nil
 	self.backpackOpenButton = nil
 	self.teleportOpenButton = nil

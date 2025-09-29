@@ -630,13 +630,15 @@ function BootUI.start(config)
 	fade.ZIndex = 50
 	fade.Parent = root
 
-	local backButton = hud and hud.backButton
-	if backButton then
-		backButton.MouseButton1Click:Connect(function()
-			applyStartCam()
-			Cosmetics.showDojoPicker()
-		end)
-	end
+        local backButton = hud and hud.backButton
+        if backButton then
+                backButton.MouseButton1Click:Connect(function()
+                        local currentHud = BootUI.hud
+                        if currentHud and currentHud.promptReturnToDojo then
+                                currentHud:promptReturnToDojo()
+                        end
+                end)
+        end
 
 	local personaButton = hud and hud.getPersonaButton and hud:getPersonaButton()
 	if personaButton then
