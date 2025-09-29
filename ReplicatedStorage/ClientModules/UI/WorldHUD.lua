@@ -1021,13 +1021,32 @@ function WorldHUD:promptReturnToDojo()
 end
 
 function WorldHUD:updatePersonaButtonVisibility()
-	if not self.personaButton then
-		return
-	end
+        if not self.personaButton or not self.personaButtonContainer then
+                return
+        end
 
-	local shouldShow = self.worldModeActive and not (self.loadout and self.loadout.Visible)
-	self.personaButton.Visible = shouldShow
-	self.personaButton.Active = shouldShow
+        local loadoutVisible = self.loadout and self.loadout.Visible
+        local shouldShowInWorld = self.worldModeActive and not loadoutVisible
+        local shouldShowInMenu = loadoutVisible and not self.worldModeActive
+
+        if shouldShowInWorld then
+                if self.personaButtonContainer.Parent ~= self.root then
+                        self.personaButtonContainer.Parent = self.root
+                end
+                self.personaButtonContainer.AnchorPoint = Vector2.new(0.5, 0)
+                self.personaButtonContainer.Position = self.personaWorldPosition or UDim2.new(0.5, 0, 0, self.baseY or 0)
+        elseif shouldShowInMenu then
+                if self.togglePanel and self.personaButtonContainer.Parent ~= self.togglePanel then
+                        self.personaButtonContainer.Parent = self.togglePanel
+                end
+                self.personaButtonContainer.AnchorPoint = Vector2.new(0, 0)
+                self.personaButtonContainer.Position = self.personaMenuPosition or UDim2.new(0, 0, 0, 0)
+        end
+
+        local shouldShow = shouldShowInWorld or shouldShowInMenu
+        self.personaButtonContainer.Visible = shouldShow
+        self.personaButton.Visible = shouldShow
+        self.personaButton.Active = shouldShow
 end
 
 function WorldHUD:handlePostTeleport(teleportContext)
@@ -1221,36 +1240,8 @@ function WorldHUD.new(config, dependencies)
 	self.baseY = baseY
 	self:ensureLoadoutHeader()
 
-	local personaButton = Instance.new("TextButton")
-	personaButton.Name = "PersonaButton"
-	personaButton.Size = UDim2.new(0, 220, 0, 54)
-	personaButton.Position = UDim2.new(0.5, 0, 0, baseY)
-	personaButton.AnchorPoint = Vector2.new(0.5, 0)
-	personaButton.BackgroundColor3 = BUTTON_STYLE.primaryColor
-	personaButton.BackgroundTransparency = 0.1
-	personaButton.Text = "Persona"
-	personaButton.Font = Enum.Font.GothamBold
-	personaButton.TextScaled = true
-	personaButton.TextColor3 = BUTTON_STYLE.accentColor
-	personaButton.AutoButtonColor = true
-	personaButton.Active = false
-	personaButton.Visible = false
-	personaButton.ZIndex = 30
-	personaButton.Parent = root
-	self.personaButton = personaButton
-
-	local personaCorner = Instance.new("UICorner")
-	personaCorner.CornerRadius = UDim.new(0, 15)
-	personaCorner.Parent = personaButton
-
-	local personaStroke = Instance.new("UIStroke")
-	personaStroke.Color = BUTTON_STYLE.accentColor
-	personaStroke.Thickness = 2
-	personaStroke.Transparency = 0.5
-	personaStroke.Parent = personaButton
-
-	-- Teleport UI
-	local setTeleportsVisible
+        -- Teleport UI
+        local setTeleportsVisible
 
         local teleportUI = TeleportUI.init(loadout, baseY, {
                 REALM_INFO = REALM_INFO,
@@ -1291,17 +1282,17 @@ function WorldHUD.new(config, dependencies)
 	self.backpack = backpack
 
 	-- Enhanced floating button panel positioned on left center
-	local togglePanel = Instance.new("Frame")
-	togglePanel.Name = "PanelToggleButtons"
-	togglePanel.Size = UDim2.new(0, 180, 0, self.abilityInterface and 345 or 280)
-	togglePanel.AnchorPoint = Vector2.new(1, 0)
-	togglePanel.Position = UDim2.new(1, -30, 0, baseY + 10)
-	togglePanel.BackgroundTransparency = 1
-	togglePanel.ZIndex = 40
-	togglePanel.Parent = loadout
-	self.togglePanel = togglePanel
+        local togglePanel = Instance.new("Frame")
+        togglePanel.Name = "PanelToggleButtons"
+        togglePanel.Size = UDim2.new(0, 180, 0, self.abilityInterface and 410 or 345)
+        togglePanel.AnchorPoint = Vector2.new(1, 0)
+        togglePanel.Position = UDim2.new(1, -30, 0, baseY + 10)
+        togglePanel.BackgroundTransparency = 1
+        togglePanel.ZIndex = 40
+        togglePanel.Parent = loadout
+        self.togglePanel = togglePanel
 
-	local menuButton, menuContainer, _, menuStroke = createMenuToggleButton(loadout, UDim2.new(1, -30, 0, baseY), 45)
+        local menuButton, menuContainer, _, menuStroke = createMenuToggleButton(loadout, UDim2.new(1, -30, 0, baseY), 45)
 	self.menuButton = menuButton
 	self.menuContainer = menuContainer
 	self.menuButtonStroke = menuStroke
@@ -1317,38 +1308,48 @@ function WorldHUD.new(config, dependencies)
 		end
 	end))
 
-	track(self, menuButton.MouseLeave:Connect(function()
-		if menuStroke then
-			menuStroke.Thickness = self.menuExpanded and 4 or 3
-		end
-	end))
+        track(self, menuButton.MouseLeave:Connect(function()
+                if menuStroke then
+                        menuStroke.Thickness = self.menuExpanded and 4 or 3
+                end
+        end))
 
-	-- Create styled buttons with proper spacing
-	local questButton, questContainer = createStyledButton(togglePanel, "Quests", UDim2.new(0, 0, 0, 0), 41)
-	local pouchButton, pouchContainer = createStyledButton(togglePanel, "Pouch", UDim2.new(0, 0, 0, 65), 41)
-	local teleButton, teleContainer = createStyledButton(togglePanel, "Teleports", UDim2.new(0, 0, 0, 130), 41)
-	local shopButton, shopContainer = createStyledButton(togglePanel, "Shop", UDim2.new(0, 0, 0, 195), 41)
-	local abilityButton, abilityContainer
-	if self.abilityInterface then
-		abilityButton, abilityContainer = createStyledButton(togglePanel, "Abilities", UDim2.new(0, 0, 0, 260), 41)
+        -- Create styled buttons with proper spacing
+        local personaButton, personaContainer = createStyledButton(togglePanel, "Persona", UDim2.new(0, 0, 0, 0), 41)
+        personaButton.Visible = false
+        personaContainer.Visible = false
+        self.personaButton = personaButton
+        self.personaButtonContainer = personaContainer
+        self.personaMenuPosition = personaContainer.Position
+        self.personaWorldPosition = UDim2.new(0.5, 0, 0, baseY)
+
+        local questButton, questContainer = createStyledButton(togglePanel, "Quests", UDim2.new(0, 0, 0, 65), 41)
+        local pouchButton, pouchContainer = createStyledButton(togglePanel, "Pouch", UDim2.new(0, 0, 0, 130), 41)
+        local teleButton, teleContainer = createStyledButton(togglePanel, "Teleports", UDim2.new(0, 0, 0, 195), 41)
+        local shopButton, shopContainer = createStyledButton(togglePanel, "Shop", UDim2.new(0, 0, 0, 260), 41)
+        local abilityButton, abilityContainer
+        if self.abilityInterface then
+                abilityButton, abilityContainer = createStyledButton(togglePanel, "Abilities", UDim2.new(0, 0, 0, 325), 41)
+        end
+
+        -- Set initial visibility
+        questButton.Visible = true
+        pouchButton.Visible = true  -- Changed from backpack to pouch
+        teleButton.Visible = true
+        shopButton.Visible = true
+        if abilityButton then
+                abilityButton.Visible = true
 	end
 
-	-- Set initial visibility
-	questButton.Visible = true
-	pouchButton.Visible = true  -- Changed from backpack to pouch
-	teleButton.Visible = true
-	shopButton.Visible = true
-	if abilityButton then
-		abilityButton.Visible = true
-	end
+        self.questOpenButton = questButton
+        self.backpackOpenButton = pouchButton  -- Keep internal reference name for compatibility
+        self.teleportOpenButton = teleButton
+        self.shopButton = shopButton
+        if abilityButton then
+                self.abilityButton = abilityButton
+        end
 
-	self.questOpenButton = questButton
-	self.backpackOpenButton = pouchButton  -- Keep internal reference name for compatibility
-	self.teleportOpenButton = teleButton
-	self.shopButton = shopButton
-	if abilityButton then
-		self.abilityButton = abilityButton
-	end
+        self:updatePersonaButtonVisibility()
 
 	setTeleportsVisible = function(visible)
 		self:setTeleportVisible(visible)
@@ -1733,7 +1734,9 @@ function WorldHUD:destroy()
         if self.backButtonContainer then
                 self.backButtonContainer:Destroy()
         end
-        if self.personaButton then
+        if self.personaButtonContainer then
+                self.personaButtonContainer:Destroy()
+        elseif self.personaButton then
                 self.personaButton:Destroy()
         end
         if self.teleportBanner then
@@ -1770,12 +1773,15 @@ function WorldHUD:destroy()
 	self.teleportOpenButton = nil
 	self.teleportCloseButton = nil
 	self.teleportUI = nil
-	self.backButtonEnabled = nil
-	self.worldModeActive = nil
-	self.personaButton = nil
-	if currentHud == self then
-		currentHud = nil
-	end
+        self.backButtonEnabled = nil
+        self.worldModeActive = nil
+        self.personaButton = nil
+        self.personaButtonContainer = nil
+        self.personaMenuPosition = nil
+        self.personaWorldPosition = nil
+        if currentHud == self then
+                currentHud = nil
+        end
 end
 
 return WorldHUD
