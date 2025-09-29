@@ -744,7 +744,7 @@ local function createPersonaSlot(parent, slotIndex, size, position, anchorPoint)
 			buttonSize, UDim2.new(0, 0, 0, 0), NINJA_COLORS.SECONDARY)
 		robloxButton = createNinjaButton(buttonContainer, "👤 Avatar", 
 			buttonSize, UDim2.new(0.55, 0, 0, 0), Color3.fromRGB(80, 120, 200))
-		useButton = createNinjaButton(buttonContainer, "⚡ Activate", 
+		useButton = createNinjaButton(buttonContainer, "⚡ Play", 
 			UDim2.new(0.7, 0, 0.25, 0), UDim2.new(0.15, 0, 0.35, 0), NINJA_COLORS.SUCCESS)
 		clearButton = createNinjaButton(buttonContainer, "🗑️ Clear", 
 			UDim2.new(0.5, 0, 0.2, 0), UDim2.new(0.25, 0, 0.75, 0), NINJA_COLORS.DANGER)
