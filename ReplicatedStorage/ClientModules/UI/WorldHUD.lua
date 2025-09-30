@@ -612,11 +612,7 @@ function WorldHUD:playLoadoutDissolve(duration)
 	if self.setShopButtonVisible then
 		self:setShopButtonVisible(false)
 	end
-	if self.backButton then
-		self.backButton.Active = false
-	end
-
-	local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 	for _, entry in ipairs(targets) do
 		local tween = tweenTransparencyEntry(entry, tweenInfo)
 		if tween then
@@ -764,50 +760,12 @@ function WorldHUD:ensureLoadoutHeader()
         local baseY = self.baseY or 0
         local backPosition = UDim2.new(0.5, 0, 0, baseY + BACK_BUTTON_OFFSET)
 
-        if not self.backButtonContainer then
-                local backButton, backContainer = createStyledButton(loadout, "Persona", backPosition, 40)
-                backButton.Size = UDim2.new(0, 200, 0, 50)
-                backContainer.Size = UDim2.new(0, 200, 0, 50)
-                backContainer.AnchorPoint = Vector2.new(0.5, 0)
-                backContainer.Position = backPosition
-                self.backButton = backButton
-                self.backButtonContainer = backContainer
-        elseif not self.backButtonContainer.Parent then
-                self.backButtonContainer.Parent = loadout
-        end
-
-        if self.backButtonContainer then
-                self.backButtonContainer.AnchorPoint = Vector2.new(0.5, 0)
-                self.backButtonContainer.Position = backPosition
-        end
-
-        if self.backButton then
-                self.backButton.Text = "Persona"
-                self.backButton.Visible = false
-                self.backButton.Active = false
-                if not self._backButtonClickConn then
-                        self._backButtonClickConn = track(self, self.backButton.MouseButton1Click:Connect(function()
-                                self:promptReturnToDojo()
-                        end))
-                end
-        end
-        if self.backButtonContainer then
-                self.backButtonContainer.Visible = false
-        end
 end
 
 function WorldHUD:detachLoadoutHeader()
         if self.loadTitle then
                 self.loadTitle.Visible = false
                 self.loadTitle.Parent = nil
-        end
-        if self.backButton then
-                self.backButton.Visible = false
-                self.backButton.Active = false
-        end
-        if self.backButtonContainer then
-                self.backButtonContainer.Visible = false
-                self.backButtonContainer.Parent = nil
         end
 end
 
@@ -1069,10 +1027,7 @@ function WorldHUD:handlePostTeleport(teleportContext)
 			if self.setShopButtonVisible then
 				self:setShopButtonVisible(false)
 			end
-			if self.backButton then
-				self.backButton.Active = false
-			end
-			self:updateLoadoutHeaderVisibility()
+                        self:updateLoadoutHeaderVisibility()
 		end
 
 		if self.togglePanel then
@@ -1169,10 +1124,174 @@ function WorldHUD:showTeleportBanner(teleportContext)
         self._teleportBannerTween = tween
 end
 
+function WorldHUD:promptPersonaChange(confirmCallback)
+        if self._destroyed then
+                return
+        end
+
+        local root = self.root
+        if not (root and root.Parent) then
+                return
+        end
+
+        self._pendingPersonaConfirm = confirmCallback
+
+        if self._personaPromptActive then
+                if self._personaPromptOverlay then
+                        self._personaPromptOverlay.Visible = true
+                end
+                return
+        end
+
+        local overlay = self._personaPromptOverlay
+        if not overlay or overlay.Parent ~= root then
+                overlay = Instance.new("Frame")
+                overlay.Name = "PersonaChangePrompt"
+                overlay.Size = UDim2.fromScale(1, 1)
+                overlay.BackgroundColor3 = Color3.new(0, 0, 0)
+                overlay.BackgroundTransparency = 0.45
+                overlay.Visible = false
+                overlay.ZIndex = 180
+                overlay.BorderSizePixel = 0
+                overlay.Active = true
+                overlay.Parent = root
+                self._personaPromptOverlay = overlay
+
+                local modal = Instance.new("Frame")
+                modal.Name = "PromptFrame"
+                modal.Size = UDim2.new(0, 420, 0, 220)
+                modal.Position = UDim2.new(0.5, 0, 0.38, 0)
+                modal.AnchorPoint = Vector2.new(0.5, 0.5)
+                modal.BackgroundColor3 = BUTTON_STYLE.primaryColor
+                modal.BackgroundTransparency = 0.05
+                modal.BorderSizePixel = 0
+                modal.ZIndex = overlay.ZIndex + 5
+                modal.Parent = overlay
+
+                local modalCorner = Instance.new("UICorner")
+                modalCorner.CornerRadius = UDim.new(0, 18)
+                modalCorner.Parent = modal
+
+                local modalStroke = Instance.new("UIStroke")
+                modalStroke.Color = BUTTON_STYLE.accentColor
+                modalStroke.Thickness = 2
+                modalStroke.Transparency = 0.35
+                modalStroke.Parent = modal
+
+                local title = Instance.new("TextLabel")
+                title.Name = "Title"
+                title.Size = UDim2.new(1, -40, 0, 50)
+                title.Position = UDim2.new(0.5, 0, 0, 30)
+                title.AnchorPoint = Vector2.new(0.5, 0.5)
+                title.BackgroundTransparency = 1
+                title.Text = "Switch Persona?"
+                title.Font = Enum.Font.GothamBlack
+                title.TextScaled = true
+                title.TextColor3 = BUTTON_STYLE.textColor
+                title.ZIndex = modal.ZIndex + 1
+                title.Parent = modal
+
+                local description = Instance.new("TextLabel")
+                description.Name = "Description"
+                description.Size = UDim2.new(1, -60, 0, 80)
+                description.Position = UDim2.new(0.5, 0, 0, 110)
+                description.AnchorPoint = Vector2.new(0.5, 0.5)
+                description.BackgroundTransparency = 1
+                description.TextWrapped = true
+                description.Text = "You'll head back to the dojo to choose a different persona. Continue?"
+                description.Font = Enum.Font.Gotham
+                description.TextScaled = true
+                description.TextColor3 = BUTTON_STYLE.textColor
+                description.ZIndex = modal.ZIndex + 1
+                description.Parent = modal
+
+                local buttonRow = Instance.new("Frame")
+                buttonRow.Name = "ButtonRow"
+                buttonRow.Size = UDim2.new(1, -80, 0, 50)
+                buttonRow.Position = UDim2.new(0.5, 0, 1, -50)
+                buttonRow.AnchorPoint = Vector2.new(0.5, 1)
+                buttonRow.BackgroundTransparency = 1
+                buttonRow.ZIndex = modal.ZIndex + 1
+                buttonRow.Parent = modal
+
+                local layout = Instance.new("UIListLayout")
+                layout.FillDirection = Enum.FillDirection.Horizontal
+                layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+                layout.VerticalAlignment = Enum.VerticalAlignment.Center
+                layout.Padding = UDim.new(0, 20)
+                layout.Parent = buttonRow
+
+                local function createPromptButton(text, isPrimary)
+                        local button = Instance.new("TextButton")
+                        button.Name = text .. "Button"
+                        button.Size = UDim2.new(0, 160, 0, 48)
+                        button.AutoButtonColor = false
+                        button.BackgroundColor3 = isPrimary and BUTTON_STYLE.accentColor or BUTTON_STYLE.secondaryColor
+                        button.TextColor3 = isPrimary and BUTTON_STYLE.primaryColor or BUTTON_STYLE.textColor
+                        button.Text = text
+                        button.Font = Enum.Font.GothamBold
+                        button.TextScaled = true
+                        button.ZIndex = modal.ZIndex + 2
+                        button.Parent = buttonRow
+
+                        local corner = Instance.new("UICorner")
+                        corner.CornerRadius = BUTTON_STYLE.cornerRadius
+                        corner.Parent = button
+
+                        local stroke = Instance.new("UIStroke")
+                        stroke.Color = BUTTON_STYLE.accentColor
+                        stroke.Thickness = 2
+                        stroke.Transparency = isPrimary and 0.1 or 0.35
+                        stroke.Parent = button
+
+                        return button
+                end
+
+                local confirmButton = createPromptButton("Confirm", true)
+                local cancelButton = createPromptButton("Cancel", false)
+
+                self._personaPromptModal = modal
+                self._personaPromptConfirm = confirmButton
+                self._personaPromptCancel = cancelButton
+
+                track(self, cancelButton.MouseButton1Click:Connect(function()
+                        if self._personaPromptOverlay then
+                                self._personaPromptOverlay.Visible = false
+                        end
+                        self._personaPromptActive = false
+                        self._pendingPersonaConfirm = nil
+                end))
+
+                track(self, confirmButton.MouseButton1Click:Connect(function()
+                        if self._personaPromptOverlay then
+                                self._personaPromptOverlay.Visible = false
+                        end
+                        self._personaPromptActive = false
+
+                        local callback = self._pendingPersonaConfirm
+                        self._pendingPersonaConfirm = nil
+
+                        if typeof(callback) == "function" then
+                                local ok, err = pcall(callback)
+                                if not ok then
+                                        warn("WorldHUD: persona confirm failed", err)
+                                end
+                        end
+                end))
+        end
+
+        self._personaPromptActive = true
+
+        overlay = self._personaPromptOverlay
+        if overlay then
+                overlay.Visible = true
+        end
+end
+
 function WorldHUD.get()
-	if currentHud and currentHud._destroyed then
-		currentHud = nil
-	end
+        if currentHud and currentHud._destroyed then
+                currentHud = nil
+        end
 	return currentHud
 end
 
@@ -1197,8 +1316,7 @@ function WorldHUD.new(config, dependencies)
 	self._connections = {}
         self._destroyed = false
         self.introController = dependencies and dependencies.introController or nil
-	self.backButtonEnabled = true
-	self.menuAutoExpand = true
+        self.menuAutoExpand = true
 	self.worldModeActive = false
 
 	local playerGui = ensureParent()
@@ -1587,17 +1705,6 @@ function WorldHUD:updateLoadoutHeaderVisibility()
 		self.loadTitle.Visible = headerVisible
 	end
 
-	local backContainer = self.backButtonContainer
-	if self.backButton then
-		local showBack = headerVisible and (self.backButtonEnabled ~= false)
-		self.backButton.Visible = showBack
-		self.backButton.Active = showBack
-		if backContainer then
-			backContainer.Visible = showBack
-		end
-	elseif backContainer then
-		backContainer.Visible = false
-	end
 end
 
 function WorldHUD:setWorldMode(inWorld)
@@ -1630,11 +1737,6 @@ function WorldHUD:hideLoadout()
 	self:setShopButtonVisible(false)
 	self:updatePersonaButtonVisibility()
 	self:hideAbilityInterface()
-end
-
-function WorldHUD:setBackButtonEnabled(enabled)
-	self.backButtonEnabled = enabled and true or false
-	self:updateLoadoutHeaderVisibility()
 end
 
 function WorldHUD:showShop(defaultTab)
@@ -1723,9 +1825,6 @@ function WorldHUD:destroy()
         if self.loadTitle then
                 self.loadTitle:Destroy()
         end
-        if self.backButtonContainer then
-                self.backButtonContainer:Destroy()
-        end
         if self.personaButtonContainer then
                 self.personaButtonContainer:Destroy()
         elseif self.personaButton then
@@ -1737,14 +1836,15 @@ function WorldHUD:destroy()
         if self._returnPromptOverlay then
                 self._returnPromptOverlay:Destroy()
         end
+        if self._personaPromptOverlay then
+                self._personaPromptOverlay:Destroy()
+        end
         self.gui = nil
         self.root = nil
         self.loadout = nil
         self.loadTitle = nil
         self.shopButton = nil
         self.shopFrame = nil
-        self.backButton = nil
-        self.backButtonContainer = nil
         self.enterRealmButton = nil
         self.quest = nil
         self.backpack = nil
@@ -1753,8 +1853,13 @@ function WorldHUD:destroy()
         self._returnPromptModal = nil
         self._returnPromptYes = nil
         self._returnPromptNo = nil
+        self._personaPromptOverlay = nil
+        self._personaPromptModal = nil
+        self._personaPromptConfirm = nil
+        self._personaPromptCancel = nil
+        self._pendingPersonaConfirm = nil
+        self._personaPromptActive = nil
         self._enterDojoRemote = nil
-        self._backButtonClickConn = nil
         self._returnPromptActive = nil
         self.togglePanel = nil
         self.menuButton = nil
@@ -1765,7 +1870,6 @@ function WorldHUD:destroy()
 	self.teleportOpenButton = nil
 	self.teleportCloseButton = nil
 	self.teleportUI = nil
-        self.backButtonEnabled = nil
         self.worldModeActive = nil
         self.personaButton = nil
         self.personaButtonContainer = nil

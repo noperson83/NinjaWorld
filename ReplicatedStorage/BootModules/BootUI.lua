@@ -776,22 +776,21 @@ function BootUI.start(config)
 	fade.ZIndex = 50
 	fade.Parent = root
 
-        local backButton = hud and hud.backButton
-        if backButton then
-                backButton.MouseButton1Click:Connect(function()
-                        local currentHud = BootUI.hud
-                        if currentHud and currentHud.promptReturnToDojo then
-                                currentHud:promptReturnToDojo()
-                        end
-                end)
-        end
-
         local personaButton = hud and hud.getPersonaButton and hud:getPersonaButton()
         if personaButton then
                 personaButton.MouseButton1Click:Connect(function()
-                        applyStartCam()
-                        if typeof(Cosmetics.showDojoPicker) == "function" then
-                                Cosmetics.showDojoPicker()
+                        local function openDojoPicker()
+                                applyStartCam()
+                                if typeof(Cosmetics.showDojoPicker) == "function" then
+                                        Cosmetics.showDojoPicker()
+                                end
+                        end
+
+                        local currentHud = BootUI.hud
+                        if currentHud and currentHud.promptPersonaChange then
+                                currentHud:promptPersonaChange(openDojoPicker)
+                        else
+                                openDojoPicker()
                         end
                 end)
         end
@@ -815,9 +814,6 @@ function BootUI.start(config)
 				end
 				if not dissolvePlayed then
 					BootUI.hideLoadout()
-				end
-				if currentHud and currentHud.setBackButtonEnabled then
-					currentHud:setBackButtonEnabled(false)
 				end
 				local enterRemote = getEnterRemote()
 				if enterRemote then
@@ -848,9 +844,6 @@ function BootUI.start(config)
 				fadeTween.Completed:Connect(function(playbackState)
 					if playbackState == Enum.PlaybackState.Completed then
 						local hudAfter = BootUI.hud
-						if hudAfter and hudAfter.setBackButtonEnabled then
-							hudAfter:setBackButtonEnabled(true)
-						end
 					end
 				end)
 				fadeTween:Play()
