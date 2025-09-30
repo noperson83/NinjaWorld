@@ -26,6 +26,28 @@ local IMAGE_CLASSES = {
 
 local player = Players.LocalPlayer
 
+local function enableIntroGui()
+        local currentPlayer = player or Players.LocalPlayer
+        if not currentPlayer then
+                return
+        end
+
+        local playerGui = currentPlayer:FindFirstChildOfClass("PlayerGui")
+        if not playerGui then
+                local ok, result = pcall(function()
+                        return currentPlayer:WaitForChild("PlayerGui", 1)
+                end)
+                if ok then
+                        playerGui = result
+                end
+        end
+
+        local introGui = playerGui and playerGui:FindFirstChild("IntroGui")
+        if introGui and introGui.Enabled == false then
+                introGui.Enabled = true
+        end
+end
+
 local ZONE_INFO = TeleportUI.ZONE_INFO or {}
 
 local REALM_INFO = {
@@ -1576,19 +1598,21 @@ end
 function WorldHUD:createCosmeticsInterface()
 	local hud = self
 	return {
-		showDojoPicker = function()
-			if hud then
-				if hud.setWorldMode then
-					hud:setWorldMode(false)
-				end
-				if hud.hideLoadout then
-					hud:hideLoadout()
-					if hud.closeAllInterfaces then
-						hud:closeAllInterfaces()
-					end
-				end
-			end
-		end,
+                showDojoPicker = function()
+                        enableIntroGui()
+
+                        if hud then
+                                if hud.setWorldMode then
+                                        hud:setWorldMode(false)
+                                end
+                                if hud.hideLoadout then
+                                        hud:hideLoadout()
+                                        if hud.closeAllInterfaces then
+                                                hud:closeAllInterfaces()
+                                        end
+                                end
+                        end
+                end,
 		showLoadout = function(personaType)
 			if hud and hud.showLoadout then
 				hud:showLoadout()
