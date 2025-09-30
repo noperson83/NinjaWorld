@@ -1,4 +1,5 @@
 local AbilityMetadata = {
+    DoubleJump = {cost = 75, prerequisites = {}},
     Toss = {cost = 50, prerequisites = {}},
     Star = {cost = 100, prerequisites = {"Toss"}},
     Rain = {cost = 200, prerequisites = {"Star"}},

@@ -113,18 +113,21 @@ local BUTTON_DEFINITIONS = {
 	{name = "SlideButton", text = "SLIDE", icon = "rbxassetid://1234567890", action = "Slide", category = "movement", keybind = "Ctrl", priority = 6},
 
 	-- Abilities (Blue, grouped)
-	{name = "TossButton", text = "TOSS", icon = "rbxassetid://1234567890", action = "Toss", category = "ability", keybind = "F", priority = 7},
-	{name = "StarButton", text = "STAR", icon = "rbxassetid://1234567890", action = "Star", category = "ability", keybind = "G", priority = 8},
-	{name = "RainButton", text = "RAIN", icon = "rbxassetid://1234567890", action = "Rain", category = "ability", keybind = "Z", priority = 9},
-	{name = "BeastButton", text = "BEAST", icon = "rbxassetid://1234567890", action = "Beast", category = "ability", keybind = "B", priority = 10},
-        {name = "DragonButton", text = "DRAGON", icon = "rbxassetid://1234567890", action = "Dragon", category = "ability", keybind = "X", priority = 11},
+        {name = "DoubleJumpButton", text = "DOUBLE", icon = "rbxassetid://1234567890", action = "DoubleJump", category = "ability", keybind = "H", priority = 7},
+        {name = "TossButton", text = "TOSS", icon = "rbxassetid://1234567890", action = "Toss", category = "ability", keybind = "F", priority = 8},
+        {name = "StarButton", text = "STAR", icon = "rbxassetid://1234567890", action = "Star", category = "ability", keybind = "G", priority = 9},
+        {name = "RainButton", text = "RAIN", icon = "rbxassetid://1234567890", action = "Rain", category = "ability", keybind = "Z", priority = 10},
+        {name = "BeastButton", text = "BEAST", icon = "rbxassetid://1234567890", action = "Beast", category = "ability", keybind = "B", priority = 11},
+        {name = "DragonButton", text = "DRAGON", icon = "rbxassetid://1234567890", action = "Dragon", category = "ability", keybind = "X", priority = 12},
 }
 
 local ABILITY_FAN_ORDER = {
-        DragonButton = 1,
-        BeastButton = 2,
-        StarButton = 3,
-        TossButton = 4,
+        DoubleJumpButton = 1,
+        DragonButton = 2,
+        BeastButton = 3,
+        StarButton = 4,
+        TossButton = 5,
+        RainButton = 6,
 }
 
 -- Global variables (Added cooldown tracking)
@@ -156,12 +159,22 @@ local updateToggleVisual
 local applySpeedState
 local setFanOpen
 local ensureCharacterTracking
-local performCustomJump
+local performCustomJump = nil
 local playButtonSound
 local triggerHapticFeedback
 local updateCooldownVisuals
 
 local currentUIScale = 1
+
+local DOUBLE_JUMP_CHARGES_ATTRIBUTE = "ActionUI_DoubleJumpCharges"
+local DOUBLE_JUMP_EXPIRE_ATTRIBUTE = "ActionUI_DoubleJumpExpire"
+local DOUBLE_JUMP_USED_ATTRIBUTE = "ActionUI_DoubleJumpUsed"
+local DOUBLE_JUMP_BOOST_ATTRIBUTE = "ActionUI_DoubleJumpBoost"
+local DOUBLE_JUMP_ALLOWED_STATES = {
+        [Enum.HumanoidStateType.Freefall] = true,
+        [Enum.HumanoidStateType.FallingDown] = true,
+        [Enum.HumanoidStateType.Jumping] = true,
+}
 
 local MOVEMENT_REMOTE_NAME = "MovementModeEvent"
 local MOVEMENT_MODES = GameSettings.movementModes or {RunDance = "RunDance", Battle = "Battle"}
@@ -1358,26 +1371,76 @@ local function setFanOpen(state, animated)
         return fanOpen
 end
 
-local function performCustomJump()
-	local player = Players.LocalPlayer
-	local character = player.Character
-	if not character then return end
+performCustomJump = function()
+        local player = Players.LocalPlayer
+        local character = player and player.Character
+        if not character then
+                return
+        end
 
-	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	if not humanoid then return end
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if not humanoid then
+                return
+        end
 
-	if humanoid:GetState() ~= Enum.HumanoidStateType.Freefall then
-		humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-		lastJumpTime = os.clock()
+        local humanoidRoot = character:FindFirstChild("HumanoidRootPart")
+        local now = os.clock()
+        local state = humanoid:GetState()
 
-		-- Enhanced: Add particle effect or custom boost
-		-- Example: local particles = Instance.new("ParticleEmitter") ... 
+        local charges = humanoid:GetAttribute(DOUBLE_JUMP_CHARGES_ATTRIBUTE)
+        local expireTime = humanoid:GetAttribute(DOUBLE_JUMP_EXPIRE_ATTRIBUTE)
+        local alreadyUsed = humanoid:GetAttribute(DOUBLE_JUMP_USED_ATTRIBUTE)
+        local boostOverride = humanoid:GetAttribute(DOUBLE_JUMP_BOOST_ATTRIBUTE)
 
-		playButtonSound(UI_CONFIG.JUMP_SOUND_ID)
-		triggerHapticFeedback()
+        if expireTime and expireTime <= now then
+                humanoid:SetAttribute(DOUBLE_JUMP_CHARGES_ATTRIBUTE, nil)
+                humanoid:SetAttribute(DOUBLE_JUMP_EXPIRE_ATTRIBUTE, nil)
+                humanoid:SetAttribute(DOUBLE_JUMP_BOOST_ATTRIBUTE, nil)
+                humanoid:SetAttribute(DOUBLE_JUMP_USED_ATTRIBUTE, nil)
+                alreadyUsed = nil
+        end
 
-		print("Custom jump performed!")
-	end
+        local function applyJumpVelocity(useBoost)
+                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                if humanoidRoot then
+                        local velocity = humanoidRoot.Velocity
+                        local jumpPower = humanoid.JumpPower
+                        local targetY = math.max(velocity.Y, jumpPower)
+                        if useBoost and boostOverride then
+                                targetY = math.max(targetY, boostOverride)
+                        end
+                        humanoidRoot.Velocity = Vector3.new(velocity.X, targetY, velocity.Z)
+                end
+
+                lastJumpTime = now
+                playButtonSound(UI_CONFIG.JUMP_SOUND_ID)
+                triggerHapticFeedback()
+        end
+
+        if not DOUBLE_JUMP_ALLOWED_STATES[state] then
+                humanoid:SetAttribute(DOUBLE_JUMP_USED_ATTRIBUTE, false)
+                applyJumpVelocity(false)
+                return
+        end
+
+        local availableCharges = tonumber(charges) or 0
+        if availableCharges > 0 and not alreadyUsed then
+                humanoid:SetAttribute(DOUBLE_JUMP_USED_ATTRIBUTE, true)
+                local remaining = math.max(availableCharges - 1, 0)
+                if remaining > 0 then
+                        humanoid:SetAttribute(DOUBLE_JUMP_CHARGES_ATTRIBUTE, remaining)
+                else
+                        humanoid:SetAttribute(DOUBLE_JUMP_CHARGES_ATTRIBUTE, nil)
+                        humanoid:SetAttribute(DOUBLE_JUMP_EXPIRE_ATTRIBUTE, nil)
+                        humanoid:SetAttribute(DOUBLE_JUMP_BOOST_ATTRIBUTE, nil)
+                end
+                applyJumpVelocity(true)
+                return
+        end
+
+        -- Fallback: regular jump (first jump when no double jump is active)
+        humanoid:SetAttribute(DOUBLE_JUMP_USED_ATTRIBUTE, false)
+        applyJumpVelocity(false)
 end
 
 local function disableDefaultJump()
@@ -1643,6 +1706,7 @@ function ActionUI.init()
 
                 -- Abilities (with example cooldowns)
                 abilityMap = {
+                        DoubleJumpButton = {func = Abilities.DoubleJump, cooldown = 8},
                         TossButton = {func = Abilities.Toss, cooldown = 5},
                         StarButton = {func = Abilities.Star, cooldown = 10},
                         RainButton = {func = Abilities.Rain, cooldown = 15},
@@ -1683,6 +1747,7 @@ function ActionUI.init()
         local abilityKeybinds = {}
         if abilityMap then
                 abilityKeybinds = {
+                        [Enum.KeyCode.H] = createKeybindEntry("DoubleJumpButton", abilityMap.DoubleJumpButton),
                         [Enum.KeyCode.F] = createKeybindEntry("TossButton", abilityMap.TossButton),
                         [Enum.KeyCode.G] = createKeybindEntry("StarButton", abilityMap.StarButton),
                         [Enum.KeyCode.Z] = createKeybindEntry("RainButton", abilityMap.RainButton),
