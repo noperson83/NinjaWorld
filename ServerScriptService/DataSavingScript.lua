@@ -204,7 +204,18 @@ local function loadPlayerData(player)
         return DataStore:GetAsync(key)
     end)
     if success then
-        data = data or deepCopy(DEFAULT_DATA)
+        if data ~= nil and typeof(data) ~= "table" then
+            warn(string.format(
+                "Invalid data for %s from datastore (type %s): %s",
+                player.Name,
+                typeof(data),
+                tostring(data)
+            ))
+            data = deepCopy(DEFAULT_DATA)
+        else
+            data = typeof(data) == "table" and data or deepCopy(DEFAULT_DATA)
+        end
+
         fillMissing(data, DEFAULT_DATA)
         data.elements = sanitizeElements(data.elements)
         data.slots = typeof(data.slots) == "table" and data.slots or {}
