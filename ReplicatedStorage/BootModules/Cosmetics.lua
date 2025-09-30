@@ -265,7 +265,7 @@ local function createNinjaButton(parent, text, size, position, color, onClick)
 	button.Size = size
 	button.Position = position
 	button.Text = text
-	button.Font = Enum.Font.GothamSemibold
+        button.Font = Enum.Font.GothamMedium
 	button.TextScaled = true
 	button.TextColor3 = NINJA_COLORS.TEXT_PRIMARY
 	button.BackgroundColor3 = color or NINJA_COLORS.ACCENT
@@ -338,7 +338,7 @@ local function showNinjaConfirmation(message, onConfirm)
 	title.Position = UDim2.new(0, 10, 0, 10)
 	title.BackgroundTransparency = 1
 	title.Text = "⚠️ Shadow Council Confirmation"
-	title.Font = Enum.Font.GothamSemibold
+        title.Font = Enum.Font.GothamMedium
 	title.TextScaled = true
 	title.TextColor3 = NINJA_COLORS.ACCENT
 	title.ZIndex = 302
@@ -714,7 +714,7 @@ local function createPersonaSlot(parent, slotIndex, size, position, anchorPoint)
 	levelLabel.Position = UDim2.new(0, 5, 0, 5)
 	levelLabel.BackgroundTransparency = 1
 	levelLabel.Text = "⭐ Level 1"
-	levelLabel.Font = Enum.Font.GothamSemibold
+        levelLabel.Font = Enum.Font.GothamMedium
 	levelLabel.TextSize = 12
 	levelLabel.TextColor3 = NINJA_COLORS.ACCENT
 	levelLabel.TextXAlignment = Enum.TextXAlignment.Left

@@ -409,7 +409,7 @@ function AbilityUI:createAbilityEntry(abilityName, info)
     costLabel.Name = "CostLabel"
     costLabel.Size = UDim2.new(1, -150, 1, 0)
     costLabel.BackgroundTransparency = 1
-    costLabel.Font = Enum.Font.GothamSemibold
+    costLabel.Font = Enum.Font.GothamMedium
     costLabel.TextSize = 18
     costLabel.TextXAlignment = Enum.TextXAlignment.Left
     costLabel.TextColor3 = TEXT_COLORS.secondary
