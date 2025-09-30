@@ -453,9 +453,11 @@ local function preloadPersonaModel(model)
 	end)
 end
 
+local refreshSlotData
+
 local function updateSlotDisplays()
-	local highestUsed = math.min(getHighestUsedSlot(), #slotButtons)
-	local visibleSlots = math.min(highestUsed + 1, #slotButtons)
+        local highestUsed = math.min(getHighestUsedSlot(), #slotButtons)
+        local visibleSlots = math.min(highestUsed + 1, #slotButtons)
 
 	for slotIndex = 1, #slotButtons do
 		local slotData = personaCache.slots[slotIndex]
@@ -514,14 +516,16 @@ local function updateSlotDisplays()
 							string.format("🗑️ Remove the shadow warrior from slot %d?", slotIndex),
 							function()
 								local result = invokePersonaService("clear", {slot = slotIndex})
-								if result and result.ok then
-									if chosenSlot == slotIndex then 
-										chosenSlot = nil 
-									end
-									refreshSlotData(result)
-								else
-									warn("🥷 Failed to clear slot:", result and result.err)
-								end
+                                                                if result and result.ok then
+                                                                        if chosenSlot == slotIndex then
+                                                                                chosenSlot = nil
+                                                                        end
+                                                                        if refreshSlotData then
+                                                                                refreshSlotData(result)
+                                                                        end
+                                                                else
+                                                                        warn("🥷 Failed to clear slot:", result and result.err)
+                                                                end
 							end
 						)
 					end)
@@ -548,11 +552,11 @@ local function updateSlotDisplays()
 	updateLevelDisplays()
 end
 
-local function refreshSlotData(newData)
-	personaCache = sanitizePersonaData(newData)
-	ensureValidSelection()
-	updateSlotDisplays()
-	updateSelectedPersonaLabel()
+refreshSlotData = function(newData)
+        personaCache = sanitizePersonaData(newData)
+        ensureValidSelection()
+        updateSlotDisplays()
+        updateSelectedPersonaLabel()
 end
 
 -- ═══════════════════════════════════════════════════════════════
