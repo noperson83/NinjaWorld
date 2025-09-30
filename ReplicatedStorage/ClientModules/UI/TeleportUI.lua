@@ -53,7 +53,7 @@ local function createRealmButton(parent, info, order)
         btn.Size = UDim2.new(1, 0, 0, 44)
         btn.LayoutOrder = order or 0
         btn.Text = info.name
-        btn.Font = Enum.Font.GothamSemibold
+        btn.Font = Enum.Font.GothamMedium
         btn.TextScaled = true
         btn.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
         btn.TextColor3 = Color3.fromRGB(170, 170, 170)
@@ -251,7 +251,7 @@ function TeleportUI.init(parent, baseY, dependencies)
         localTitle.BackgroundTransparency = 1
         localTitle.Text = "Locations"
         localTitle.TextXAlignment = Enum.TextXAlignment.Left
-        localTitle.Font = Enum.Font.GothamSemibold
+        localTitle.Font = Enum.Font.GothamMedium
         localTitle.TextScaled = true
         localTitle.TextColor3 = Color3.fromRGB(200, 200, 220)
         localTitle.ZIndex = BASE_Z_INDEX + 3
@@ -294,7 +294,7 @@ function TeleportUI.init(parent, baseY, dependencies)
                 button.BackgroundColor3 = Color3.fromRGB(50, 120, 255)
                 button.BackgroundTransparency = 0.2
                 button.TextColor3 = Color3.new(1, 1, 1)
-                button.Font = Enum.Font.GothamSemibold
+                button.Font = Enum.Font.GothamMedium
                 button.TextScaled = true
                 button.AutoButtonColor = true
                 button.Text = info.label
@@ -311,7 +311,7 @@ function TeleportUI.init(parent, baseY, dependencies)
         worldTitle.BackgroundTransparency = 1
         worldTitle.Text = "Realms"
         worldTitle.TextXAlignment = Enum.TextXAlignment.Left
-        worldTitle.Font = Enum.Font.GothamSemibold
+        worldTitle.Font = Enum.Font.GothamMedium
         worldTitle.TextScaled = true
         worldTitle.TextColor3 = Color3.fromRGB(200, 200, 220)
         worldTitle.ZIndex = BASE_Z_INDEX + 3

@@ -148,7 +148,7 @@ function NinjaQuestUI.init(parent, baseY, options)
 		btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 		btn.BackgroundTransparency = 0.2
 		btn.TextColor3 = Color3.fromRGB(200, 200, 220)
-		btn.Font = Enum.Font.GothamSemibold
+                btn.Font = Enum.Font.GothamMedium
 		btn.TextScaled = true
 		btn.AutoButtonColor = true
 		btn.Text = (icon or "⚫") .. " " .. text
@@ -197,7 +197,7 @@ function NinjaQuestUI.init(parent, baseY, options)
         abilityHeader.BackgroundTransparency = 1
         abilityHeader.TextXAlignment = Enum.TextXAlignment.Left
         abilityHeader.Text = "⚡ Abilities"
-        abilityHeader.Font = Enum.Font.GothamSemibold
+        abilityHeader.Font = Enum.Font.GothamMedium
         abilityHeader.TextScaled = true
         abilityHeader.TextColor3 = Color3.fromRGB(200, 200, 220)
         abilityHeader.ZIndex = 7
@@ -429,7 +429,7 @@ function NinjaQuestUI.init(parent, baseY, options)
                 btn.BackgroundTransparency = 0.35
                 btn.Text = string.format("%s %s", def.icon or "⚡", def.label or abilityName)
                 btn.TextColor3 = Color3.fromRGB(140, 140, 160)
-                btn.Font = Enum.Font.GothamSemibold
+                btn.Font = Enum.Font.GothamMedium
                 btn.TextScaled = true
                 btn.AutoButtonColor = false
                 btn.BorderSizePixel = 0

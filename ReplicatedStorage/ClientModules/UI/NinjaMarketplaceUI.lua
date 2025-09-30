@@ -244,7 +244,7 @@ function NinjaMarketplaceUI.init(config, shop, bootUI, defaultTab)
 		btn.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
 		btn.BackgroundTransparency = 0.2
 		btn.TextColor3 = Color3.fromRGB(200, 200, 220)
-		btn.Font = Enum.Font.GothamSemibold
+                btn.Font = Enum.Font.GothamMedium
 		btn.TextScaled = true
 		btn.BorderSizePixel = 0
                 btn.ZIndex = BASE_Z_INDEX + 2
@@ -346,7 +346,7 @@ function NinjaMarketplaceUI.init(config, shop, bootUI, defaultTab)
 		rarityLabel.BackgroundColor3 = Color3.fromRGB(50, 25, 80)
 		rarityLabel.BackgroundTransparency = 0.3
 		rarityLabel.Text = itemInfo.rarity or "Common"
-		rarityLabel.Font = Enum.Font.GothamSemibold
+                rarityLabel.Font = Enum.Font.GothamMedium
 		rarityLabel.TextScaled = true
 		rarityLabel.TextColor3 = Color3.fromRGB(180, 150, 220)
 		rarityLabel.BorderSizePixel = 0

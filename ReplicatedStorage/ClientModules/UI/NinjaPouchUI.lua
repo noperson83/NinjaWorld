@@ -166,7 +166,7 @@ function NinjaPouchUI.init(parent, baseY)
 		btn.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
 		btn.BackgroundTransparency = 0.3
 		btn.TextColor3 = Color3.fromRGB(200, 200, 220)
-		btn.Font = Enum.Font.GothamSemibold
+                btn.Font = Enum.Font.GothamMedium
 		btn.TextScaled = true
 		btn.Text = tab.icon .. "\n" .. tab.name
 		btn.BorderSizePixel = 0
@@ -275,7 +275,7 @@ function NinjaPouchUI.init(parent, baseY)
 		nameLabel.Position = UDim2.new(0, 50, 0, 5)
 		nameLabel.BackgroundTransparency = 1
 		nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-		nameLabel.Font = Enum.Font.GothamSemibold
+                nameLabel.Font = Enum.Font.GothamMedium
 		nameLabel.TextScaled = true
 		nameLabel.TextColor3 = Color3.fromRGB(220, 220, 240)
 		nameLabel.Text = item.name
