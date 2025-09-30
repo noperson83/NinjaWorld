@@ -10,6 +10,13 @@ local Elements = ReplicatedStorage.Elements
 local DragonFX = nil
 local BeastFX = nil
 
+local DOUBLE_JUMP_CHARGES_ATTRIBUTE = "ActionUI_DoubleJumpCharges"
+local DOUBLE_JUMP_EXPIRE_ATTRIBUTE = "ActionUI_DoubleJumpExpire"
+local DOUBLE_JUMP_USED_ATTRIBUTE = "ActionUI_DoubleJumpUsed"
+local DOUBLE_JUMP_BOOST_ATTRIBUTE = "ActionUI_DoubleJumpBoost"
+local DOUBLE_JUMP_DURATION = 6
+local DOUBLE_JUMP_BOOST_MULTIPLIER = 1.3
+
 do
         local fireElem = Elements:FindFirstChild("FireElem")
         local beastElem = Elements:FindFirstChild("BeastElem")
@@ -60,10 +67,10 @@ end
 
 -- FX templates
 local function createOrb()
-	local orb = Instance.new("Part")
-	orb.Name = "Orb"
-	orb.Size = Vector3.new(1.455, 1.455, 1.455)
-	orb.Material = Enum.Material.SmoothPlastic
+        local orb = Instance.new("Part")
+        orb.Name = "Orb"
+        orb.Size = Vector3.new(1.455, 1.455, 1.455)
+        orb.Material = Enum.Material.SmoothPlastic
 	orb.BrickColor = BrickColor.new(Color3.fromRGB(4, 175, 236))
 	orb.Shape = Enum.PartType.Ball
 
@@ -83,13 +90,47 @@ local function createOrb()
 	smoke.TimeScale = 0.5
 	smoke.Parent = orb
 
-	return orb
+        return orb
+end
+
+local function playDoubleJumpEffect(rootPart)
+        if not rootPart then
+                return
+        end
+
+        local attachment = Instance.new("Attachment")
+        attachment.Name = "DoubleJumpEffectAttachment"
+        attachment.Parent = rootPart
+
+        local emitter = Instance.new("ParticleEmitter")
+        emitter.Texture = "rbxassetid://6528775231"
+        emitter.Speed = NumberRange.new(6, 10)
+        emitter.Lifetime = NumberRange.new(0.25, 0.4)
+        emitter.Rate = 200
+        emitter.SpreadAngle = Vector2.new(360, 360)
+        emitter.Color = ColorSequence.new(Color3.fromRGB(85, 255, 255), Color3.fromRGB(4, 175, 236))
+        emitter.LightInfluence = 0
+        emitter.Size = NumberSequence.new({
+                NumberSequenceKeypoint.new(0, 0.6),
+                NumberSequenceKeypoint.new(0.4, 0.8),
+                NumberSequenceKeypoint.new(1, 0.2),
+        })
+        emitter.Parent = attachment
+
+        emitter:Emit(35)
+
+        task.delay(0.6, function()
+                emitter.Enabled = false
+                task.delay(0.2, function()
+                        attachment:Destroy()
+                end)
+        end)
 end
 
 function Abilities.Toss()
         if not ensureUnlocked("Toss") then return end
         local animator = CharacterManager.animator
-	if not animator then return end
+        if not animator then return end
 
 	local tossAnimation = Instance.new("Animation")
 	tossAnimation.AnimationId = "rbxassetid://16094513608"
@@ -283,6 +324,27 @@ function Abilities.Beast()
         task.delay(0.5, function()
                 aura:Destroy()
         end)
+end
+
+function Abilities.DoubleJump()
+        if not ensureUnlocked("DoubleJump") then return end
+
+        local humanoid = CharacterManager.humanoid
+        local humanoidRoot = CharacterManager.humanoidRoot
+        if not humanoid or not humanoidRoot then
+                warn("?? DoubleJump ability missing humanoid references")
+                return
+        end
+
+        local jumpPower = humanoid.JumpPower or 50
+        local boost = math.max(jumpPower * DOUBLE_JUMP_BOOST_MULTIPLIER, jumpPower + 15)
+
+        humanoid:SetAttribute(DOUBLE_JUMP_CHARGES_ATTRIBUTE, 1)
+        humanoid:SetAttribute(DOUBLE_JUMP_USED_ATTRIBUTE, false)
+        humanoid:SetAttribute(DOUBLE_JUMP_EXPIRE_ATTRIBUTE, os.clock() + DOUBLE_JUMP_DURATION)
+        humanoid:SetAttribute(DOUBLE_JUMP_BOOST_ATTRIBUTE, boost)
+
+        playDoubleJumpEffect(humanoidRoot)
 end
 
 return Abilities
