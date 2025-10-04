@@ -588,59 +588,128 @@ function BootUI.start(config)
 	BootUI.populateBackpackUI(config.inventory)
 
 
-	-- =====================
-	-- Camera helpers (world)
-	-- =====================
-	local camerasFolder = Workspace:FindFirstChild("Cameras")
-	local startPos      = camerasFolder and camerasFolder:FindFirstChild("startPos")
-	local endPos        = camerasFolder and camerasFolder:FindFirstChild("endPos")
+        -- =====================
+        -- Camera helpers (world)
+        -- =====================
+        local camerasFolder
+        local startPos
+        local endPos
 
-	local function partAttr(p, name, default)
-		local v = p and p:GetAttribute(name)
-		return (typeof(v) == "number") and v or default
-	end
+        local function resolveCameraFolder()
+                if camerasFolder and camerasFolder.Parent then
+                        return camerasFolder
+                end
 
-	local function faceCF(part)
-		if not part then return cam.CFrame end
-		-- FRONT = LookVector
-		local f =  part.CFrame.LookVector
-		local u =  part.CFrame.UpVector
-		local dist   = partAttr(part, "Dist",   0)  -- pull camera back from the part
-		local height = partAttr(part, "Height", 0)  -- lift camera
-		local ahead  = partAttr(part, "Ahead",  10) -- how far ahead to look into the room
-		local pos    = part.Position - f*dist + u*height
-		local target = part.Position + f*ahead
-		return CFrame.lookAt(pos, target, u)
-	end
+                camerasFolder = Workspace:FindFirstChild("Cameras")
+                if camerasFolder and camerasFolder.Parent then
+                        return camerasFolder
+                end
 
-	local function partFOV(part)
-		return partAttr(part, "FOV", cam.FieldOfView)
-	end
+                local ok, folder = pcall(function()
+                        return Workspace:WaitForChild("Cameras", 5)
+                end)
+                if ok and folder then
+                        camerasFolder = folder
+                        return camerasFolder
+                end
 
-	local function applyStartCam()
-		cam.CameraType = Enum.CameraType.Scriptable
-		cam.CFrame = faceCF(startPos)
-		cam.FieldOfView = partFOV(startPos)
-	end
+                warn("BootUI: Cameras folder not found; intro camera will be skipped until available")
+                return nil
+        end
+
+        local function resolveCameraPart(name)
+                local folder = resolveCameraFolder()
+                if not folder then
+                        return nil
+                end
+
+                local part = folder:FindFirstChild(name)
+                if part and part.Parent == folder then
+                        return part
+                end
+
+                local ok, result = pcall(function()
+                        return folder:WaitForChild(name, 5)
+                end)
+                if ok and result then
+                        return result
+                end
+
+                warn(string.format("BootUI: Cameras folder missing part '%s'", tostring(name)))
+                return nil
+        end
+
+        local function ensureCameraParts()
+                startPos = resolveCameraPart("startPos")
+                endPos = resolveCameraPart("endPos")
+                return startPos, endPos
+        end
+
+        local function partAttr(p, name, default)
+                local v = p and p:GetAttribute(name)
+                return (typeof(v) == "number") and v or default
+        end
+
+        local function faceCF(part)
+                if not part then return cam.CFrame end
+                -- FRONT = LookVector
+                local f =  part.CFrame.LookVector
+                local u =  part.CFrame.UpVector
+                local dist   = partAttr(part, "Dist",   0)  -- pull camera back from the part
+                local height = partAttr(part, "Height", 0)  -- lift camera
+                local ahead  = partAttr(part, "Ahead",  10) -- how far ahead to look into the room
+                local pos    = part.Position - f*dist + u*height
+                local target = part.Position + f*ahead
+                return CFrame.lookAt(pos, target, u)
+        end
+
+        local function partFOV(part)
+                return partAttr(part, "FOV", cam.FieldOfView)
+        end
+
+        local function applyStartCam()
+                ensureCameraParts()
+                if not startPos then
+                        return
+                end
+                cam.CameraType = Enum.CameraType.Scriptable
+                cam.CFrame = faceCF(startPos)
+                cam.FieldOfView = partFOV(startPos)
+        end
 
         local function holdStartCam(seconds)
                 cam = Workspace.CurrentCamera or cam
+                ensureCameraParts()
+                if not startPos then
+                        warn("BootUI: Unable to hold start camera because startPos is missing")
+                        return
+                end
                 applyStartCam()
                 local untilT = os.clock() + (seconds or 1.0)
                 local key = "NW_HoldStart"
                 RunService:BindToRenderStep(key, Enum.RenderPriority.Camera.Value + 1, function()
                         cam = Workspace.CurrentCamera
-                        applyStartCam()
-			if os.clock() > untilT then RunService:UnbindFromRenderStep(key) end
-		end)
-		Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
-			cam = Workspace.CurrentCamera
-			applyStartCam()
-		end)
-	end
+                        if startPos then
+                                applyStartCam()
+                        else
+                                RunService:UnbindFromRenderStep(key)
+                        end
+                        if os.clock() > untilT then RunService:UnbindFromRenderStep(key) end
+                end)
+                Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+                        cam = Workspace.CurrentCamera
+                        if startPos then
+                                applyStartCam()
+                        end
+                end)
+        end
 
         local function tweenToEnd()
-                if not endPos then return end
+                ensureCameraParts()
+                if not endPos then
+                        warn("BootUI: Unable to tween to end camera because endPos is missing")
+                        return
+                end
                 local cf  = faceCF(endPos)
                 local fov = partFOV(endPos)
                 TweenService:Create(cam, TweenInfo.new(CAM_TWEEN_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = cf, FieldOfView = fov}):Play()
