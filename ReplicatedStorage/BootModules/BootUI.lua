@@ -594,6 +594,11 @@ function BootUI.start(config)
         local camerasFolder
         local startPos
         local endPos
+        local cameraFolderConn
+        local cameraPartsConn
+        local pendingIntroOptions
+
+        local replayIntroSequence
 
         local function resolveCameraFolder()
                 if camerasFolder and camerasFolder.Parent then
@@ -643,6 +648,57 @@ function BootUI.start(config)
                 startPos = resolveCameraPart("startPos")
                 endPos = resolveCameraPart("endPos")
                 return startPos, endPos
+        end
+
+        local function cloneOptions(options)
+                local copy = {}
+                if typeof(options) == "table" then
+                        for key, value in pairs(options) do
+                                copy[key] = value
+                        end
+                end
+                return copy
+        end
+
+        local function tryReplayPendingIntro()
+                if pendingIntroOptions then
+                        local optionsCopy = pendingIntroOptions
+                        pendingIntroOptions = nil
+                        replayIntroSequence(optionsCopy)
+                end
+        end
+
+        local function connectCameraPartsListener()
+                if cameraPartsConn then
+                        return
+                end
+                if not camerasFolder or not camerasFolder.Parent then
+                        return
+                end
+
+                cameraPartsConn = camerasFolder.ChildAdded:Connect(function(part)
+                        if part and (part.Name == "startPos" or part.Name == "endPos") then
+                                ensureCameraParts()
+                                tryReplayPendingIntro()
+                        end
+                end)
+        end
+
+        local function ensureCameraListeners()
+                if not cameraFolderConn then
+                        cameraFolderConn = Workspace.ChildAdded:Connect(function(child)
+                                if child and child.Name == "Cameras" then
+                                        camerasFolder = child
+                                        ensureCameraParts()
+                                        connectCameraPartsListener()
+                                        tryReplayPendingIntro()
+                                end
+                        end)
+                end
+
+                if camerasFolder and camerasFolder.Parent then
+                        connectCameraPartsListener()
+                end
         end
 
         local function partAttr(p, name, default)
@@ -818,10 +874,26 @@ function BootUI.start(config)
                 end
         end
 
-        local function replayIntroSequence(options)
+        replayIntroSequence = function(options)
                 options = options or {}
                 waitForCurrentCamera(options.cameraWait)
                 waitForCameraParts(options.cameraWait)
+
+                if not startPos then
+                        pendingIntroOptions = cloneOptions(options)
+                        ensureCameraListeners()
+                        return
+                end
+
+                pendingIntroOptions = nil
+                if cameraPartsConn then
+                        cameraPartsConn:Disconnect()
+                        cameraPartsConn = nil
+                end
+                if cameraFolderConn then
+                        cameraFolderConn:Disconnect()
+                        cameraFolderConn = nil
+                end
                 cam = Workspace.CurrentCamera or cam
                 applyStartCam()
                 holdStartCam(options.holdTime or 0.3)
