@@ -50,6 +50,55 @@ local function findSpawn()
 	return nil
 end
 
+local function findCamerasFolder()
+        local function isCameraContainer(inst)
+                return inst and inst.Name == "Cameras"
+        end
+
+        local direct = Workspace:FindFirstChild("Cameras")
+        if isCameraContainer(direct) then
+                return direct
+        end
+
+        local descendant = Workspace:FindFirstChild("Cameras", true)
+        if isCameraContainer(descendant) then
+                return descendant
+        end
+
+        local deadline = os.clock() + 5
+        local found
+        local conn
+        conn = Workspace.DescendantAdded:Connect(function(inst)
+                if not found and isCameraContainer(inst) then
+                        found = inst
+                end
+        end)
+
+        repeat
+                if found then break end
+                task.wait(0.1)
+                local candidate = Workspace:FindFirstChild("Cameras", true)
+                if isCameraContainer(candidate) then
+                        found = candidate
+                        break
+                end
+        until os.clock() >= deadline
+
+        if conn then
+                conn:Disconnect()
+        end
+
+        return found
+end
+
+local function getEndFacing()
+        local cams = findCamerasFolder()
+        local endPos = cams and cams:FindFirstChild("endPos")
+        if endPos and endPos:IsA("BasePart") then
+                -- Camera looks along endPos.LookVector; to face the camera, use the opposite.
+                return -endPos.CFrame.LookVector
+        end
+        return Vector3.new(0,0,1)
 local function getEndFacing()
         local cams = Workspace:FindFirstChild("Cameras", true)
 	local endPos = cams and cams:FindFirstChild("endPos")
