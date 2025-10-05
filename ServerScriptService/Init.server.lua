@@ -51,7 +51,7 @@ local function findSpawn()
 end
 
 local function getEndFacing()
-	local cams = Workspace:FindFirstChild("Cameras")
+        local cams = Workspace:FindFirstChild("Cameras", true)
 	local endPos = cams and cams:FindFirstChild("endPos")
 	if endPos and endPos:IsA("BasePart") then
 		-- Camera looks along endPos.LookVector; to face the camera, use the opposite.
