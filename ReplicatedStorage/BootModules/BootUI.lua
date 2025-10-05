@@ -712,10 +712,23 @@ function BootUI.start(config)
                         return cam
                 end
 
-                local deadline = os.clock() + (timeout or 5)
+                local cameraTimeout = timeout or 5
+
+                local ok, camera = pcall(function()
+                        return Workspace:WaitForChild("Camera", cameraTimeout)
+                end)
+                if ok and camera then
+                        cam = camera
+                        if Workspace.CurrentCamera ~= camera then
+                                Workspace.CurrentCamera = camera
+                        end
+                        return cam
+                end
+
+                local deadline = os.clock() + cameraTimeout
                 repeat
                         task.wait(0.05)
-                        cam = Workspace.CurrentCamera or cam
+                        cam = Workspace.CurrentCamera or cam or Workspace:FindFirstChildOfClass("Camera")
                         if cam then
                                 return cam
                         end
