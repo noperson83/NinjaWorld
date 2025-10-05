@@ -844,33 +844,9 @@ function BootUI.start(config)
 
         BootUI.replayIntroSequence = replayIntroSequence
 
-        local function playIntroSequence(options)
-                options = options or {}
-                replayIntroSequence(options)
-                print("BootUI: Playing intro sequence")
-
-                if options.tweenToEnd ~= false then
-                        local tweenDelay = options.tweenDelay
-                        if tweenDelay == nil then
-                                tweenDelay = options.holdTime or 0.3
-                        end
-
-                        if tweenDelay and tweenDelay > 0 then
-                                task.delay(tweenDelay, function()
-                                        tweenToEnd()
-                                end)
-                        else
-                                tweenToEnd()
-                        end
-                end
-        end
-
-        BootUI.playIntroSequence = playIntroSequence
-
         local introController = {
                 freezeCharacter = freezeCharacter,
                 replayIntroSequence = replayIntroSequence,
-                playIntroSequence = playIntroSequence,
                 disableUIBlur = disableUIBlur,
                 restoreUIBlur = restoreUIBlur,
         }
@@ -1030,7 +1006,7 @@ function BootUI.start(config)
 	-- =====================
 	-- FLOW
 	-- =====================
-        BootUI.playIntroSequence({
+        BootUI.replayIntroSequence({
                 holdTime = 0.3,
                 personaData = config.personaData,
         })
