@@ -650,8 +650,48 @@ function BootUI.start(config)
                 return (typeof(v) == "number") and v or default
         end
 
+        local function waitForCurrentCamera(timeout)
+                cam = Workspace.CurrentCamera or cam
+                if cam then
+                        return cam
+                end
+
+                local deadline = os.clock() + (timeout or 5)
+                repeat
+                        task.wait(0.05)
+                        cam = Workspace.CurrentCamera or cam
+                        if cam then
+                                return cam
+                        end
+                until os.clock() >= deadline
+
+                if not cam then
+                        warn("BootUI: Unable to resolve CurrentCamera before intro sequence")
+                end
+
+                return cam
+        end
+
+        local function waitForCameraParts(timeout, requireEnd)
+                ensureCameraParts()
+                if startPos and (not requireEnd or endPos) then
+                        return startPos, endPos
+                end
+
+                local deadline = os.clock() + (timeout or 5)
+                repeat
+                        task.wait(0.05)
+                        ensureCameraParts()
+                        if startPos and (not requireEnd or endPos) then
+                                return startPos, endPos
+                        end
+                until os.clock() >= deadline
+
+                return startPos, endPos
+        end
+
         local function faceCF(part)
-                if not part then return cam.CFrame end
+                if not part then return cam and cam.CFrame or CFrame.new() end
                 -- FRONT = LookVector
                 local f =  part.CFrame.LookVector
                 local u =  part.CFrame.UpVector
@@ -664,11 +704,17 @@ function BootUI.start(config)
         end
 
         local function partFOV(part)
-                return partAttr(part, "FOV", cam.FieldOfView)
+                cam = cam or waitForCurrentCamera()
+                return partAttr(part, "FOV", cam and cam.FieldOfView or 70)
         end
 
         local function applyStartCam()
-                ensureCameraParts()
+                cam = waitForCurrentCamera()
+                if not cam then
+                        return
+                end
+
+                waitForCameraParts()
                 if not startPos then
                         return
                 end
@@ -678,8 +724,12 @@ function BootUI.start(config)
         end
 
         local function holdStartCam(seconds)
-                cam = Workspace.CurrentCamera or cam
-                ensureCameraParts()
+                cam = waitForCurrentCamera()
+                if not cam then
+                        return
+                end
+
+                waitForCameraParts()
                 if not startPos then
                         warn("BootUI: Unable to hold start camera because startPos is missing")
                         return
@@ -688,7 +738,7 @@ function BootUI.start(config)
                 local untilT = os.clock() + (seconds or 1.0)
                 local key = "NW_HoldStart"
                 RunService:BindToRenderStep(key, Enum.RenderPriority.Camera.Value + 1, function()
-                        cam = Workspace.CurrentCamera
+                        cam = Workspace.CurrentCamera or cam
                         if startPos then
                                 applyStartCam()
                         else
@@ -697,7 +747,7 @@ function BootUI.start(config)
                         if os.clock() > untilT then RunService:UnbindFromRenderStep(key) end
                 end)
                 Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
-                        cam = Workspace.CurrentCamera
+                        cam = Workspace.CurrentCamera or cam
                         if startPos then
                                 applyStartCam()
                         end
@@ -705,8 +755,12 @@ function BootUI.start(config)
         end
 
         local function tweenToEnd()
-                cam = Workspace.CurrentCamera or cam
-                ensureCameraParts()
+                cam = waitForCurrentCamera()
+                if not cam then
+                        return
+                end
+
+                waitForCameraParts(nil, true)
                 if not endPos then
                         warn("BootUI: Unable to tween to end camera because endPos is missing")
                         return
@@ -766,6 +820,8 @@ function BootUI.start(config)
 
         local function replayIntroSequence(options)
                 options = options or {}
+                waitForCurrentCamera(options.cameraWait)
+                waitForCameraParts(options.cameraWait)
                 cam = Workspace.CurrentCamera or cam
                 applyStartCam()
                 holdStartCam(options.holdTime or 0.3)
@@ -791,6 +847,7 @@ function BootUI.start(config)
         local function playIntroSequence(options)
                 options = options or {}
                 replayIntroSequence(options)
+                print("BootUI: Playing intro sequence")
 
                 if options.tweenToEnd ~= false then
                         local tweenDelay = options.tweenDelay
