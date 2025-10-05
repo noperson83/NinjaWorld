@@ -99,6 +99,14 @@ local function getEndFacing()
                 return -endPos.CFrame.LookVector
         end
         return Vector3.new(0,0,1)
+local function getEndFacing()
+        local cams = Workspace:FindFirstChild("Cameras", true)
+	local endPos = cams and cams:FindFirstChild("endPos")
+	if endPos and endPos:IsA("BasePart") then
+		-- Camera looks along endPos.LookVector; to face the camera, use the opposite.
+		return -endPos.CFrame.LookVector
+	end
+	return Vector3.new(0,0,1)
 end
 
 -- Optional: a HumanoidDescription for Ninja (for fallback if there's no model)
