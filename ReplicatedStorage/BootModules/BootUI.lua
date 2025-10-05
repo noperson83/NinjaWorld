@@ -705,6 +705,7 @@ function BootUI.start(config)
         end
 
         local function tweenToEnd()
+                cam = Workspace.CurrentCamera or cam
                 ensureCameraParts()
                 if not endPos then
                         warn("BootUI: Unable to tween to end camera because endPos is missing")
@@ -787,9 +788,32 @@ function BootUI.start(config)
 
         BootUI.replayIntroSequence = replayIntroSequence
 
+        local function playIntroSequence(options)
+                options = options or {}
+                replayIntroSequence(options)
+
+                if options.tweenToEnd ~= false then
+                        local tweenDelay = options.tweenDelay
+                        if tweenDelay == nil then
+                                tweenDelay = options.holdTime or 0.3
+                        end
+
+                        if tweenDelay and tweenDelay > 0 then
+                                task.delay(tweenDelay, function()
+                                        tweenToEnd()
+                                end)
+                        else
+                                tweenToEnd()
+                        end
+                end
+        end
+
+        BootUI.playIntroSequence = playIntroSequence
+
         local introController = {
                 freezeCharacter = freezeCharacter,
                 replayIntroSequence = replayIntroSequence,
+                playIntroSequence = playIntroSequence,
                 disableUIBlur = disableUIBlur,
                 restoreUIBlur = restoreUIBlur,
         }
@@ -949,11 +973,10 @@ function BootUI.start(config)
 	-- =====================
 	-- FLOW
 	-- =====================
-        BootUI.replayIntroSequence({
+        BootUI.playIntroSequence({
                 holdTime = 0.3,
                 personaData = config.personaData,
         })
-        -- We do NOT tween to end here anymore; only after "Use".
 
 
 end
