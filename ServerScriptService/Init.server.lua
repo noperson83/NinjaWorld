@@ -91,6 +91,70 @@ local function findCamerasFolder()
         return found
 end
 
+local introCameraFolder = ReplicatedStorage:FindFirstChild("PersonaIntroCameraParts")
+if not introCameraFolder then
+        introCameraFolder = Instance.new("Folder")
+        introCameraFolder.Name = "PersonaIntroCameraParts"
+        introCameraFolder.Parent = ReplicatedStorage
+end
+
+local function cloneCameraPart(source)
+        if not (source and source:IsA("BasePart")) then
+                return nil
+        end
+
+        local existing = introCameraFolder:FindFirstChild(source.Name)
+        if existing then
+                existing:Destroy()
+        end
+
+        local clone = source:Clone()
+        clone.Name = source.Name
+        clone.Anchored = true
+        clone.CanCollide = false
+        clone.Parent = introCameraFolder
+        return clone
+end
+
+local function syncIntroCameraParts()
+        local cams = findCamerasFolder()
+        if not cams then
+                return false
+        end
+
+        local synced = false
+        local startPart = cams:FindFirstChild("startPos")
+        if cloneCameraPart(startPart) then
+                synced = true
+        end
+        local endPart = cams:FindFirstChild("endPos")
+        if cloneCameraPart(endPart) then
+                synced = true
+        end
+
+        return synced
+end
+
+task.spawn(function()
+        local attempts = 0
+        while attempts < 10 do
+                if syncIntroCameraParts() then
+                        break
+                end
+                attempts += 1
+                task.wait(1)
+        end
+end)
+
+Workspace.DescendantAdded:Connect(function(inst)
+        if not inst then
+                return
+        end
+        if inst.Name == "Cameras" or inst.Name == "startPos" or inst.Name == "endPos" then
+                task.defer(syncIntroCameraParts)
+        end
+end)
+
 local function getEndFacing()
         local cams = findCamerasFolder()
         local endPos = cams and cams:FindFirstChild("endPos")
