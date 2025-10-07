@@ -108,8 +108,50 @@ local function cloneCameraPart(source)
                 existing:Destroy()
         end
 
-        local clone = source:Clone()
-        clone.Name = source.Name
+        local clone
+        local ok, err = pcall(function()
+                clone = source:Clone()
+        end)
+
+        if not ok or not clone then
+                -- Some camera parts (especially the ones provided by Roblox templates)
+                -- ship with Archivable=false, which causes :Clone() to error/return nil.
+                -- Fall back to manually constructing a simple BasePart that keeps the
+                -- important transform/visual data so the client still has something to
+                -- drive the intro camera with.
+                local className = source.ClassName
+                ok, err = pcall(function()
+                        clone = Instance.new(className)
+                end)
+
+                if not ok or not (clone and clone:IsA("BasePart")) then
+                        clone = Instance.new("Part")
+                end
+
+                clone.Name = source.Name
+                clone.Size = source.Size
+                clone.CFrame = source.CFrame
+                clone.Color = source.Color
+                clone.Material = source.Material
+                clone.Transparency = source.Transparency
+                clone.Reflectance = source.Reflectance
+                clone.CastShadow = source.CastShadow
+
+                if clone:IsA("Part") and source:IsA("Part") then
+                        clone.Shape = source.Shape
+                elseif clone:IsA("MeshPart") and source:IsA("MeshPart") then
+                        clone.MeshId = source.MeshId
+                        clone.TextureID = source.TextureID
+                        clone.DoubleSided = source.DoubleSided
+                end
+
+                for attrName, attrValue in pairs(source:GetAttributes()) do
+                        clone:SetAttribute(attrName, attrValue)
+                end
+        else
+                clone.Name = source.Name
+        end
+
         clone.Anchored = true
         clone.CanCollide = false
         clone.Parent = introCameraFolder
