@@ -19,24 +19,23 @@ function IntroCamera.new(options)
         self._startName = options.startPartName or "startPos"
         self._endName = options.endPartName or "endPos"
         self._folderName = options.folderName or "Cameras"
-        self._fallbackFolderName = options.fallbackFolderName or "PersonaIntroCameraParts"
         self._cameraWait = options.cameraWait or 5
         self._holdPriority = (options.holdPriority or Enum.RenderPriority.Camera.Value) + 1
 
         self._connections = {}
+        self._folderConnections = {}
         self._pendingReadyCallbacks = {}
 
-        self._workspaceFolder = nil
-        self._fallbackFolder = nil
+        self._cameraFolder = nil
         self.startPart = nil
         self.endPart = nil
+
         self._camera = options.camera
         self._holdKey = nil
         self._holdCameraConn = nil
         self._holdDeadline = nil
-        self._fallbackPartsConn = nil
 
-        self:_refreshFolders()
+        self:_refreshCameraFolder()
         self:_refreshParts()
         self:_startListeners()
 
@@ -49,10 +48,8 @@ function IntroCamera:destroy()
                 conn:Disconnect()
         end
         self._connections = {}
-        if self._fallbackPartsConn then
-                self._fallbackPartsConn:Disconnect()
-                self._fallbackPartsConn = nil
-        end
+
+        self:_disconnectFolderListeners()
         self._pendingReadyCallbacks = {}
 end
 
@@ -108,25 +105,16 @@ function IntroCamera:waitForCamera(timeout)
 end
 
 function IntroCamera:waitForParts(timeout, requireEnd)
-        self:_refreshParts()
-        local startPart = self.startPart
-        local endPart = self.endPart
-        if startPart and (not requireEnd or endPart) then
-                return startPart, endPart
-        end
-
         local deadline = os.clock() + (timeout or self._cameraWait or 5)
         repeat
-                task.wait(0.05)
-                self:_refreshParts()
-                startPart = self.startPart
-                endPart = self.endPart
+                local startPart, endPart = self:_refreshParts()
                 if startPart and (not requireEnd or endPart) then
                         return startPart, endPart
                 end
+                task.wait(0.05)
         until os.clock() >= deadline
 
-        return startPart, endPart
+        return self.startPart, self.endPart
 end
 
 function IntroCamera:applyStartCamera()
@@ -178,10 +166,7 @@ function IntroCamera:holdStartCamera(duration)
 
         self._runService:BindToRenderStep(key, self._holdPriority, function()
                 self._camera = self._workspace.CurrentCamera or self._camera
-                if not (self.startPart and self.startPart.Parent) then
-                        self:_refreshParts()
-                end
-                if self.startPart then
+                if self.startPart and self.startPart.Parent then
                         self:applyStartCamera()
                 end
                 if self._holdDeadline and os.clock() >= self._holdDeadline then
@@ -251,124 +236,71 @@ function IntroCamera:onReady(callback)
         end
 end
 
-function IntroCamera:_refreshFolders()
-        self:_resolveWorkspaceFolder()
-        self:_resolveFallbackFolder()
-end
-
 function IntroCamera:_startListeners()
-        table.insert(self._connections, self._workspace.DescendantAdded:Connect(function(inst)
-                if not inst then
-                        return
-                end
-                if inst.Name == self._folderName then
-                        self._workspaceFolder = inst
-                        self:_refreshParts()
-                        return
-                end
-                if inst.Name == self._startName or inst.Name == self._endName then
-                        if self:_isInCameraFolder(inst) then
-                                self:_refreshParts()
-                        end
-                end
-        end))
-
-        table.insert(self._connections, self._workspace.DescendantRemoving:Connect(function(inst)
-                if inst == self._workspaceFolder then
-                        self._workspaceFolder = nil
-                        task.defer(function()
-                                self:_refreshParts()
-                        end)
-                        return
-                end
-
-                if inst == self.startPart or inst == self.endPart then
-                        task.defer(function()
-                                self:_refreshParts()
-                        end)
-                end
-        end))
-
-        table.insert(self._connections, self._replicatedStorage.ChildAdded:Connect(function(child)
-                if child and child.Name == self._fallbackFolderName then
-                        self._fallbackFolder = child
-                        self:_connectFallbackListener(child)
+        table.insert(self._connections, self._workspace.ChildAdded:Connect(function(child)
+                if child and child.Name == self._folderName then
+                        self:_refreshCameraFolder()
                         self:_refreshParts()
                 end
         end))
 
-        local fallback = self:_resolveFallbackFolder()
-        if fallback then
-                self:_connectFallbackListener(fallback)
-        end
+        table.insert(self._connections, self._workspace.ChildRemoved:Connect(function(child)
+                if child == self._cameraFolder then
+                        self._cameraFolder = nil
+                        self:_disconnectFolderListeners()
+                        self:_refreshParts()
+                end
+        end))
 end
 
-function IntroCamera:_connectFallbackListener(folder)
-        if self._fallbackPartsConn then
-                self._fallbackPartsConn:Disconnect()
-                self._fallbackPartsConn = nil
-        end
-
-        if folder then
-                self._fallbackPartsConn = folder.ChildAdded:Connect(function(child)
-                        if child and (child.Name == self._startName or child.Name == self._endName) then
-                                self:_refreshParts()
-                        end
-                end)
-        end
-end
-
-function IntroCamera:_resolveWorkspaceFolder()
-        local folder = self._workspaceFolder
-        if folder and folder.Parent then
-                        return folder
-        end
-
-        local direct = self._workspace:FindFirstChild(self._folderName)
-        if direct and direct.Parent then
-                self._workspaceFolder = direct
-                return direct
-        end
-
-        local descendant = self._workspace:FindFirstChild(self._folderName, true)
-        if descendant and descendant.Parent then
-                self._workspaceFolder = descendant
-                return descendant
-        end
-
-        return nil
-end
-
-function IntroCamera:_resolveFallbackFolder()
-        local folder = self._fallbackFolder
+function IntroCamera:_refreshCameraFolder()
+        local folder = self._cameraFolder
         if folder and folder.Parent then
                 return folder
         end
 
-        folder = self._replicatedStorage:FindFirstChild(self._fallbackFolderName)
+        folder = self._workspace:FindFirstChild(self._folderName)
         if folder then
-                self._fallbackFolder = folder
-                self:_connectFallbackListener(folder)
+                self._cameraFolder = folder
+                self:_connectFolderListeners(folder)
                 return folder
         end
 
         return nil
 end
 
-function IntroCamera:_isInCameraFolder(inst)
-        local folder = self:_resolveWorkspaceFolder()
+function IntroCamera:_connectFolderListeners(folder)
+        self:_disconnectFolderListeners()
+
         if not folder then
-                return false
+                return
         end
-        return inst == folder or inst:IsDescendantOf(folder)
+
+        table.insert(self._folderConnections, folder.ChildAdded:Connect(function(child)
+                if child and (child.Name == self._startName or child.Name == self._endName) then
+                        self:_refreshParts()
+                end
+        end))
+
+        table.insert(self._folderConnections, folder.ChildRemoved:Connect(function(child)
+                if child and (child == self.startPart or child == self.endPart) then
+                        self:_refreshParts()
+                end
+        end))
+end
+
+function IntroCamera:_disconnectFolderListeners()
+        for _, conn in ipairs(self._folderConnections) do
+                conn:Disconnect()
+        end
+        self._folderConnections = {}
 end
 
 function IntroCamera:_refreshParts()
-        local workspaceFolder = self:_resolveWorkspaceFolder()
-        local fallbackFolder = self:_resolveFallbackFolder()
+        local folder = self:_refreshCameraFolder()
 
-        local newStart = self:_findPart(workspaceFolder, self._startName) or self:_findPart(fallbackFolder, self._startName)
-        local newEnd = self:_findPart(workspaceFolder, self._endName) or self:_findPart(fallbackFolder, self._endName)
+        local newStart = self:_findPart(folder, self._startName)
+        local newEnd = self:_findPart(folder, self._endName)
 
         local startChanged = newStart ~= self.startPart
         local endChanged = newEnd ~= self.endPart
@@ -402,14 +334,9 @@ function IntroCamera:_findPart(container, name)
                 return nil
         end
 
-        local direct = container:FindFirstChild(name)
-        if direct and direct:IsA("BasePart") then
-                return direct
-        end
-
-        local descendant = container:FindFirstChild(name, true)
-        if descendant and descendant:IsA("BasePart") then
-                return descendant
+        local part = container:FindFirstChild(name)
+        if part and part:IsA("BasePart") then
+                return part
         end
 
         return nil
@@ -467,3 +394,4 @@ function IntroCamera:releaseHold()
 end
 
 return IntroCamera
+
