@@ -33,6 +33,7 @@ function IntroCamera.new(options)
         self._camera = options.camera
         self._holdKey = nil
         self._holdCameraConn = nil
+        self._holdDeadline = nil
         self._fallbackPartsConn = nil
 
         self:_refreshFolders()
@@ -43,7 +44,7 @@ function IntroCamera.new(options)
 end
 
 function IntroCamera:destroy()
-        self:_unbindHold()
+        self:releaseHold()
         for _, conn in ipairs(self._connections) do
                 conn:Disconnect()
         end
@@ -159,16 +160,21 @@ function IntroCamera:holdStartCamera(duration)
 
         self:applyStartCamera()
 
-        duration = duration or 0.3
+        duration = duration or math.huge
         if duration <= 0 then
                 return true
         end
 
         self:_unbindHold()
 
+        if duration == math.huge then
+                self._holdDeadline = nil
+        else
+                self._holdDeadline = os.clock() + duration
+        end
+
         local key = self._holdKey or "IntroCameraHold"
         self._holdKey = key
-        local deadline = os.clock() + duration
 
         self._runService:BindToRenderStep(key, self._holdPriority, function()
                 self._camera = self._workspace.CurrentCamera or self._camera
@@ -177,19 +183,15 @@ function IntroCamera:holdStartCamera(duration)
                 end
                 if self.startPart then
                         self:applyStartCamera()
-                else
-                        self._runService:UnbindFromRenderStep(key)
-                        self._holdKey = nil
                 end
-                if os.clock() >= deadline then
-                        self._runService:UnbindFromRenderStep(key)
-                        self._holdKey = nil
+                if self._holdDeadline and os.clock() >= self._holdDeadline then
+                        self:_unbindHold()
                 end
         end)
 
         if self._holdCameraConn then
-                        self._holdCameraConn:Disconnect()
-                        self._holdCameraConn = nil
+                self._holdCameraConn:Disconnect()
+                self._holdCameraConn = nil
         end
         self._holdCameraConn = self._workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
                 self._camera = self._workspace.CurrentCamera or self._camera
@@ -202,6 +204,7 @@ function IntroCamera:holdStartCamera(duration)
 end
 
 function IntroCamera:tweenToEnd(duration, easingStyle, easingDirection)
+        self:releaseHold()
         local camera = self:waitForCamera()
         if not camera then
                 return false
@@ -454,6 +457,13 @@ function IntroCamera:_unbindHold()
                 self._holdCameraConn:Disconnect()
                 self._holdCameraConn = nil
         end
+        self._holdDeadline = nil
+end
+
+function IntroCamera:releaseHold()
+        local hadHold = self._holdKey ~= nil or self._holdCameraConn ~= nil
+        self:_unbindHold()
+        return hadHold
 end
 
 return IntroCamera

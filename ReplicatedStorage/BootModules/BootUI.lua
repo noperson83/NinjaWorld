@@ -467,7 +467,15 @@ function BootUI.destroyHUD()
 	BootUI.hud = nil
 end
 
+function BootUI.releaseIntroHold()
+        local introCamera = BootUI.introCamera
+        if introCamera and introCamera.releaseHold then
+                introCamera:releaseHold()
+        end
+end
+
 function BootUI.hideOverlay()
+        BootUI.releaseIntroHold()
         if BootUI.introGui then
                 BootUI.introGui.Enabled = false
         end
@@ -646,6 +654,7 @@ function BootUI.start(config)
         end
 
         local function holdStartCam(seconds)
+                introCamera:releaseHold()
                 if introCamera:holdStartCamera(seconds) then
                         cam = getCamera()
                         return true
@@ -736,7 +745,7 @@ function BootUI.start(config)
                 cancelPendingReplay()
                 cam = currentCamera or getCamera()
                 applyStartCam()
-                holdStartCam(options.holdTime or 0.3)
+                holdStartCam(options.holdTime)
                 if options.disableBlur ~= false then
                         disableUIBlur()
                 end
@@ -761,6 +770,7 @@ function BootUI.start(config)
                 replayIntroSequence = replayIntroSequence,
                 disableUIBlur = disableUIBlur,
                 restoreUIBlur = restoreUIBlur,
+                releaseIntroHold = BootUI.releaseIntroHold,
         }
 
         BootUI.introController = introController
@@ -860,14 +870,15 @@ function BootUI.start(config)
 					warn("EnterDojoRE missing on server")
 				end
 
-				task.wait(0.2)
-				local char = player.Character or player.CharacterAdded:Wait()
-				local hum = char:FindFirstChildOfClass("Humanoid")
-				cam = getCamera()
-				if cam then
-					cam.CameraType = Enum.CameraType.Custom
-					if hum then cam.CameraSubject = hum end
-				end
+                                task.wait(0.2)
+                                local char = player.Character or player.CharacterAdded:Wait()
+                                local hum = char:FindFirstChildOfClass("Humanoid")
+                                BootUI.releaseIntroHold()
+                                cam = getCamera()
+                                if cam then
+                                        cam.CameraType = Enum.CameraType.Custom
+                                        if hum then cam.CameraSubject = hum end
+                                end
 
 				DojoClient.hide()
 				restoreUIBlur()
@@ -908,10 +919,11 @@ function BootUI.start(config)
 						realm = realmName,
 					})
 				end
-				DojoClient.hide()
-				local ok, err = pcall(function()
-					TeleportService:Teleport(placeId, player, {slot = chosenSlot})
-				end)
+                                BootUI.releaseIntroHold()
+                                DojoClient.hide()
+                                local ok, err = pcall(function()
+                                        TeleportService:Teleport(placeId, player, {slot = chosenSlot})
+                                end)
 				if not ok then warn("Teleport failed:", err) end
 				BootUI.hideOverlay()
 			end
@@ -922,7 +934,6 @@ function BootUI.start(config)
 	-- FLOW
 	-- =====================
         BootUI.replayIntroSequence({
-                holdTime = 0.3,
                 personaData = config.personaData,
         })
 
