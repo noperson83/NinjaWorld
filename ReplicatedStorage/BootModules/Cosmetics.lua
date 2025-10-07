@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local ContentProvider = game:GetService("ContentProvider")
+local Workspace = game:GetService("Workspace")
 
 -- ═══════════════════════════════════════════════════════════════
 --                      CONFIGURATION
@@ -54,6 +55,9 @@ local slotButtons = {}
 local uiBridge = nil
 local rootUI = nil
 local slotsContainer = nil
+local fallbackBackdrop = nil
+local fallbackOverlay = nil
+local fallbackConnections = {}
 
 -- ═══════════════════════════════════════════════════════════════
 --                     UTILITY FUNCTIONS
@@ -258,6 +262,90 @@ local function createStyledFrame(parent, size, position, anchorPoint)
 	corners.Parent = frame
 
 	return frame
+end
+
+local function disconnectFallbackConnections()
+        for _, conn in ipairs(fallbackConnections) do
+                if conn then
+                        conn:Disconnect()
+                end
+        end
+        table.clear(fallbackConnections)
+end
+
+local function hasVisibleDojoBackdrop(dojo)
+        dojo = dojo or Workspace:FindFirstChild("HiddenDojo")
+        if not dojo then
+                return false
+        end
+
+        for _, descendant in ipairs(dojo:GetDescendants()) do
+                if descendant:IsA("BasePart") then
+                        local size = descendant.Size
+                        if size and (size.X > 0 or size.Y > 0 or size.Z > 0) then
+                                if descendant.Transparency < 0.95 then
+                                        return true
+                                end
+                        end
+                elseif descendant:IsA("Decal")
+                        or descendant:IsA("Texture")
+                        or descendant:IsA("SurfaceAppearance")
+                        or descendant:IsA("Beam")
+                        or descendant:IsA("ParticleEmitter") then
+                        return true
+                elseif descendant:IsA("BillboardGui") or descendant:IsA("SurfaceGui") then
+                        if descendant.Enabled ~= false then
+                                return true
+                        end
+                end
+        end
+
+        return false
+end
+
+local function updateFallbackBackdropVisibility()
+        local hasBackdrop = hasVisibleDojoBackdrop()
+        if fallbackBackdrop then
+                fallbackBackdrop.Visible = not hasBackdrop
+        end
+        if fallbackOverlay then
+                fallbackOverlay.Visible = not hasBackdrop
+        end
+end
+
+local function trackHiddenDojo()
+        disconnectFallbackConnections()
+
+        local function connectDojo(dojo)
+                if not dojo then
+                        return
+                end
+
+                table.insert(fallbackConnections, dojo.DescendantAdded:Connect(function()
+                        updateFallbackBackdropVisibility()
+                end))
+                table.insert(fallbackConnections, dojo.DescendantRemoving:Connect(function()
+                        updateFallbackBackdropVisibility()
+                end))
+                updateFallbackBackdropVisibility()
+        end
+
+        local hiddenDojo = Workspace:FindFirstChild("HiddenDojo")
+        if hiddenDojo then
+                connectDojo(hiddenDojo)
+        end
+
+        table.insert(fallbackConnections, Workspace.ChildAdded:Connect(function(child)
+                if child.Name == "HiddenDojo" then
+                        connectDojo(child)
+                end
+        end))
+
+        table.insert(fallbackConnections, Workspace.ChildRemoved:Connect(function(child)
+                if child.Name == "HiddenDojo" then
+                        updateFallbackBackdropVisibility()
+                end
+        end))
 end
 
 local function createNinjaButton(parent, text, size, position, color, onClick)
@@ -833,25 +921,66 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
 	--                    MAIN DOJO INTERFACE
 	-- ═══════════════════════════════════════════════════════════════
 
-	dojoInterface = Instance.new("Frame")
-	dojoInterface.Size = UDim2.fromScale(1, 1)
-	dojoInterface.BackgroundTransparency = 1
-	dojoInterface.Visible = false
-	dojoInterface.ZIndex = 10
-	dojoInterface.Parent = rootInterface
+        dojoInterface = Instance.new("Frame")
+        dojoInterface.Size = UDim2.fromScale(1, 1)
+        dojoInterface.BackgroundTransparency = 1
+        dojoInterface.Visible = false
+        dojoInterface.ZIndex = 10
+        dojoInterface.Parent = rootInterface
 
-	-- Background with ninja aesthetic but transparent for camera scene
-	local background = Instance.new("Frame")
-	background.Size = UDim2.fromScale(1, 1)
-	background.BackgroundTransparency = 1
-	background.BorderSizePixel = 0
-	background.ZIndex = 10
-	background.Parent = dojoInterface
+        -- Background with ninja aesthetic but transparent for camera scene
+        local background = Instance.new("Frame")
+        background.Size = UDim2.fromScale(1, 1)
+        background.BackgroundTransparency = 1
+        background.BorderSizePixel = 0
+        background.ZIndex = 10
+        background.Parent = dojoInterface
 
-	-- Header with ninja branding
-	local headerFrame = createStyledFrame(dojoInterface,
-		UDim2.new(0, 0, 0, 0),
-		UDim2.fromScale(0.5, 0.02),
+        local fallbackImage = Instance.new("ImageLabel")
+        fallbackImage.Name = "FallbackBackdrop"
+        fallbackImage.Size = UDim2.fromScale(1.05, 1.05)
+        fallbackImage.Position = UDim2.fromScale(0.5, 0.5)
+        fallbackImage.AnchorPoint = Vector2.new(0.5, 0.5)
+        fallbackImage.BackgroundTransparency = 1
+        fallbackImage.BorderSizePixel = 0
+        fallbackImage.Image = "rbxassetid://137361385013636"
+        fallbackImage.ScaleType = Enum.ScaleType.Crop
+        fallbackImage.ImageTransparency = 0
+        fallbackImage.ZIndex = background.ZIndex
+        fallbackImage.Parent = background
+        fallbackBackdrop = fallbackImage
+
+        fallbackOverlay = Instance.new("Frame")
+        fallbackOverlay.Name = "FallbackOverlay"
+        fallbackOverlay.Size = UDim2.fromScale(1, 1)
+        fallbackOverlay.BackgroundColor3 = NINJA_COLORS.PRIMARY
+        fallbackOverlay.BackgroundTransparency = 0.5
+        fallbackOverlay.BorderSizePixel = 0
+        fallbackOverlay.ZIndex = fallbackImage.ZIndex
+        fallbackOverlay.Parent = fallbackImage
+
+        local overlayGradient = Instance.new("UIGradient")
+        overlayGradient.Rotation = 90
+        overlayGradient.Transparency = NumberSequence.new({
+                NumberSequenceKeypoint.new(0, 0.2),
+                NumberSequenceKeypoint.new(0.3, 0.35),
+                NumberSequenceKeypoint.new(0.7, 0.35),
+                NumberSequenceKeypoint.new(1, 0.5),
+        })
+        overlayGradient.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(15, 15, 25)),
+                ColorSequenceKeypoint.new(0.5, Color3.fromRGB(25, 30, 45)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 25)),
+        })
+        overlayGradient.Parent = fallbackOverlay
+
+        trackHiddenDojo()
+        updateFallbackBackdropVisibility()
+
+        -- Header with ninja branding
+        local headerFrame = createStyledFrame(dojoInterface,
+                UDim2.new(0, 0, 0, 0),
+                UDim2.fromScale(0.5, 0.02),
 		Vector2.new(0.5, 0)
 	)
 	headerFrame.AutomaticSize = Enum.AutomaticSize.XY
