@@ -177,19 +177,93 @@ local function findCameraPart(container, name)
         return nil
 end
 
-local function syncIntroCameraParts()
-        local cams = findCamerasFolder()
-        if not cams then
+local function ensureFallbackIntroCameraParts()
+        local existingStart = introCameraFolder:FindFirstChild("startPos")
+        local existingEnd = introCameraFolder:FindFirstChild("endPos")
+
+        if existingStart and existingEnd then
                 return false
         end
 
-        local synced = false
-        local startPart = findCameraPart(cams, "startPos")
-        if cloneCameraPart(startPart) then
-                synced = true
+        local spawnPart = findSpawn()
+        local baseCF = spawnPart and spawnPart.CFrame or CFrame.new(0, 0, 0)
+        local forward = spawnPart and baseCF.LookVector or Vector3.new(0, 0, -1)
+        local right = spawnPart and baseCF.RightVector or Vector3.new(1, 0, 0)
+        local up = Vector3.new(0, 1, 0)
+        local created = false
+
+        local function createCameraPart(name, position, lookTarget, attributes)
+                local direction = lookTarget - position
+                local distance = direction.Magnitude
+                if distance <= 0.01 then
+                        local safeForward = forward
+                        if safeForward.Magnitude <= 0.001 then
+                                safeForward = Vector3.new(0, 0, -1)
+                        end
+                        distance = 10
+                        direction = safeForward.Unit * distance
+                else
+                        direction = direction.Unit * distance
+                end
+
+                local part = Instance.new("Part")
+                part.Name = name
+                part.Anchored = true
+                part.CanCollide = false
+                part.CanQuery = false
+                part.CanTouch = false
+                part.CastShadow = false
+                part.Transparency = 1
+                part.Size = Vector3.new(2, 2, 2)
+                part.CFrame = CFrame.lookAt(position, position + direction, up)
+
+                part:SetAttribute("Ahead", distance)
+                if attributes then
+                        for key, value in pairs(attributes) do
+                                part:SetAttribute(key, value)
+                        end
+                end
+
+                part.Parent = introCameraFolder
+                return part
         end
-        local endPart = findCameraPart(cams, "endPos")
-        if cloneCameraPart(endPart) then
+
+        if not existingStart then
+                local startPosition = baseCF.Position - forward * 24 + up * 16 + right * 6
+                local lookTarget = baseCF.Position + up * 4
+                createCameraPart("startPos", startPosition, lookTarget, {
+                        FOV = 55,
+                })
+                created = true
+        end
+
+        if not existingEnd then
+                local endPosition = baseCF.Position - forward * 10 + up * 8 - right * 3
+                local lookTarget = baseCF.Position + forward * 6 + up * 3
+                createCameraPart("endPos", endPosition, lookTarget, {
+                        FOV = 60,
+                })
+                created = true
+        end
+
+        return created
+end
+
+local function syncIntroCameraParts()
+        local cams = findCamerasFolder()
+        local synced = false
+        if cams then
+                local startPart = findCameraPart(cams, "startPos")
+                if cloneCameraPart(startPart) then
+                        synced = true
+                end
+                local endPart = findCameraPart(cams, "endPos")
+                if cloneCameraPart(endPart) then
+                        synced = true
+                end
+        end
+
+        if ensureFallbackIntroCameraParts() then
                 synced = true
         end
 
