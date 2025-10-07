@@ -722,6 +722,12 @@ function BootUI.start(config)
                         return result
                 end
 
+                local descendant = search(folder)
+                if descendant then
+                        return descendant
+                end
+
+                warn(string.format("BootUI: Cameras folder missing part '%s'", tostring(name)))
                 return nil
         end
 
