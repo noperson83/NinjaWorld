@@ -99,7 +99,7 @@ if not introCameraFolder then
 end
 
 local function cloneCameraPart(source)
-        if not (source and source:IsA("BasePart")) then
+        if not (source and (source:IsA("BasePart") or source:IsA("Camera"))) then
                 return nil
         end
 
@@ -114,35 +114,56 @@ local function cloneCameraPart(source)
         end)
 
         if not ok or not clone then
-                -- Some camera parts (especially the ones provided by Roblox templates)
-                -- ship with Archivable=false, which causes :Clone() to error/return nil.
-                -- Fall back to manually constructing a simple BasePart that keeps the
-                -- important transform/visual data so the client still has something to
-                -- drive the intro camera with.
-                local className = source.ClassName
-                ok, err = pcall(function()
-                        clone = Instance.new(className)
-                end)
-
-                if not ok or not (clone and clone:IsA("BasePart")) then
-                        clone = Instance.new("Part")
+                -- Some camera pieces (especially Roblox template content) may have
+                -- Archivable=false. Rebuild a lightweight replica that keeps the
+                -- important data so the client intro camera still matches the map.
+                local function newInstance(className)
+                        local created
+                        local success
+                        success, err = pcall(function()
+                                created = Instance.new(className)
+                        end)
+                        if success then
+                                return created
+                        end
+                        return nil
                 end
 
-                clone.Name = source.Name
-                clone.Size = source.Size
-                clone.CFrame = source.CFrame
-                clone.Color = source.Color
-                clone.Material = source.Material
-                clone.Transparency = source.Transparency
-                clone.Reflectance = source.Reflectance
-                clone.CastShadow = source.CastShadow
+                if source:IsA("Camera") then
+                        clone = newInstance("Camera")
+                        if not clone then
+                                return nil
+                        end
 
-                if clone:IsA("Part") and source:IsA("Part") then
-                        clone.Shape = source.Shape
-                elseif clone:IsA("MeshPart") and source:IsA("MeshPart") then
-                        clone.MeshId = source.MeshId
-                        clone.TextureID = source.TextureID
-                        clone.DoubleSided = source.DoubleSided
+                        clone.Name = source.Name
+                        clone.CFrame = source.CFrame
+                        clone.FieldOfView = source.FieldOfView
+                        clone.FieldOfViewMode = source.FieldOfViewMode
+                        clone.HeadLocked = source.HeadLocked
+                        clone.HeadScale = source.HeadScale
+                else
+                        local className = source.ClassName
+                        clone = newInstance(className)
+                        if not (clone and clone:IsA("BasePart")) then
+                                clone = Instance.new("Part")
+                        end
+
+                        clone.Name = source.Name
+                        clone.Size = source.Size
+                        clone.CFrame = source.CFrame
+                        clone.Color = source.Color
+                        clone.Material = source.Material
+                        clone.Transparency = source.Transparency
+                        clone.Reflectance = source.Reflectance
+                        clone.CastShadow = source.CastShadow
+
+                        if clone:IsA("Part") and source:IsA("Part") then
+                                clone.Shape = source.Shape
+                        elseif clone:IsA("MeshPart") and source:IsA("MeshPart") then
+                                clone.MeshId = source.MeshId
+                                clone.TextureID = source.TextureID
+                                clone.DoubleSided = source.DoubleSided
+                        end
                 end
 
                 for attrName, attrValue in pairs(source:GetAttributes()) do
@@ -152,8 +173,11 @@ local function cloneCameraPart(source)
                 clone.Name = source.Name
         end
 
-        clone.Anchored = true
-        clone.CanCollide = false
+        if clone:IsA("BasePart") then
+                clone.Anchored = true
+                clone.CanCollide = false
+        end
+
         clone.Parent = introCameraFolder
         return clone
 end
@@ -164,12 +188,12 @@ local function findCameraPart(container, name)
         end
 
         local direct = container:FindFirstChild(name)
-        if direct and direct:IsA("BasePart") then
+        if direct and (direct:IsA("BasePart") or direct:IsA("Camera")) then
                 return direct
         end
 
         for _, descendant in ipairs(container:GetDescendants()) do
-                if descendant.Name == name and descendant:IsA("BasePart") then
+                if descendant.Name == name and (descendant:IsA("BasePart") or descendant:IsA("Camera")) then
                         return descendant
                 end
         end
