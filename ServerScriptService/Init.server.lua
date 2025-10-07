@@ -116,6 +116,25 @@ local function cloneCameraPart(source)
         return clone
 end
 
+local function findCameraPart(container, name)
+        if not container then
+                return nil
+        end
+
+        local direct = container:FindFirstChild(name)
+        if direct and direct:IsA("BasePart") then
+                return direct
+        end
+
+        for _, descendant in ipairs(container:GetDescendants()) do
+                if descendant.Name == name and descendant:IsA("BasePart") then
+                        return descendant
+                end
+        end
+
+        return nil
+end
+
 local function syncIntroCameraParts()
         local cams = findCamerasFolder()
         if not cams then
@@ -123,11 +142,11 @@ local function syncIntroCameraParts()
         end
 
         local synced = false
-        local startPart = cams:FindFirstChild("startPos")
+        local startPart = findCameraPart(cams, "startPos")
         if cloneCameraPart(startPart) then
                 synced = true
         end
-        local endPart = cams:FindFirstChild("endPos")
+        local endPart = findCameraPart(cams, "endPos")
         if cloneCameraPart(endPart) then
                 synced = true
         end
