@@ -5,7 +5,71 @@ local Workspace = game:GetService("Workspace")
 local BootUI = require(ReplicatedStorage:WaitForChild("BootModules"):WaitForChild("BootUI"))
 
 local player = Players.LocalPlayer
-local orb = Workspace:WaitForChild("HiddenDojo"):WaitForChild("Orbs"):WaitForChild("WaterCoin")
+
+local function waitForPath(root, path, timeout)
+        local current = root
+        local deadline = os.clock() + (timeout or 5)
+
+        for _, name in ipairs(path) do
+                if not current then
+                        return nil
+                end
+
+                local child = current:FindFirstChild(name)
+                if not child then
+                        local remaining = deadline - os.clock()
+                        if remaining <= 0 then
+                                return nil
+                        end
+                        child = current:WaitForChild(name, remaining)
+                end
+
+                if not child then
+                        return nil
+                end
+
+                current = child
+        end
+
+        return current
+end
+
+local function resolveWaterOrb()
+        local candidates = {
+                {"HiddenDojo", "Orbs", "WaterCoin"},
+                {"HiddenDojo", "OrbSpawns", "Orbs", "WaterOrb"},
+                {"HiddenDojo", "OrbSpawns", "Orbs", "WaterCoin"},
+        }
+
+        for _, path in ipairs(candidates) do
+                local orbInstance = waitForPath(Workspace, path, 8)
+                if orbInstance then
+                        return orbInstance
+                end
+        end
+
+        return nil
+end
+
+local orbInstance = resolveWaterOrb()
+if not orbInstance then
+        warn("WaterOrbCollector: Water orb could not be located in Workspace")
+        return
+end
+
+local orbPart
+if orbInstance:IsA("BasePart") then
+        orbPart = orbInstance
+elseif orbInstance:IsA("Model") then
+        orbPart = orbInstance.PrimaryPart or orbInstance:FindFirstChildWhichIsA("BasePart", true)
+else
+        orbPart = orbInstance:FindFirstChildWhichIsA("BasePart", true)
+end
+
+if not orbPart then
+        warn("WaterOrbCollector: No touchable part found within water orb container")
+        return
+end
 local claimed = false
 
 local function isPlayerCharacterPart(part)
@@ -26,7 +90,7 @@ local function isPlayerCharacterPart(part)
         return humanoid ~= nil
 end
 
-orb.Touched:Connect(function(hit)
+orbPart.Touched:Connect(function(hit)
         if claimed then
                 return
         end
@@ -44,7 +108,7 @@ orb.Touched:Connect(function(hit)
         claimed = true
         currencyService:AddOrb("Water")
 
-        if orb.Parent then
-                orb:Destroy()
+        if orbInstance and orbInstance.Parent then
+                orbInstance:Destroy()
         end
 end)
