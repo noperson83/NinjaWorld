@@ -605,8 +605,18 @@ function BootUI.start(config)
                         return camerasFolder
                 end
 
-                camerasFolder = Workspace:FindFirstChild("Cameras")
-                if camerasFolder and camerasFolder.Parent then
+                local function findCameraContainer()
+                        local direct = Workspace:FindFirstChild("Cameras")
+                        if direct and direct.Parent then
+                                return direct
+                        end
+
+                        return Workspace:FindFirstChild("Cameras", true)
+                end
+
+                local found = findCameraContainer()
+                if found then
+                        camerasFolder = found
                         return camerasFolder
                 end
 
@@ -615,6 +625,12 @@ function BootUI.start(config)
                 end)
                 if ok and folder then
                         camerasFolder = folder
+                        return camerasFolder
+                end
+
+                local descendant = Workspace:FindFirstChild("Cameras", true)
+                if descendant then
+                        camerasFolder = descendant
                         return camerasFolder
                 end
 
@@ -628,8 +644,16 @@ function BootUI.start(config)
                         return nil
                 end
 
-                local part = folder:FindFirstChild(name)
-                if part and part.Parent == folder then
+                local function search(partContainer)
+                        local direct = partContainer:FindFirstChild(name)
+                        if direct then
+                                return direct
+                        end
+                        return partContainer:FindFirstChild(name, true)
+                end
+
+                local part = search(folder)
+                if part and part.Parent then
                         return part
                 end
 
@@ -638,6 +662,11 @@ function BootUI.start(config)
                 end)
                 if ok and result then
                         return result
+                end
+
+                local descendant = search(folder)
+                if descendant then
+                        return descendant
                 end
 
                 warn(string.format("BootUI: Cameras folder missing part '%s'", tostring(name)))
@@ -676,7 +705,7 @@ function BootUI.start(config)
                         return
                 end
 
-                cameraPartsConn = camerasFolder.ChildAdded:Connect(function(part)
+                cameraPartsConn = camerasFolder.DescendantAdded:Connect(function(part)
                         if part and (part.Name == "startPos" or part.Name == "endPos") then
                                 ensureCameraParts()
                                 tryReplayPendingIntro()
@@ -686,7 +715,7 @@ function BootUI.start(config)
 
         local function ensureCameraListeners()
                 if not cameraFolderConn then
-                        cameraFolderConn = Workspace.ChildAdded:Connect(function(child)
+                        cameraFolderConn = Workspace.DescendantAdded:Connect(function(child)
                                 if child and child.Name == "Cameras" then
                                         camerasFolder = child
                                         ensureCameraParts()
