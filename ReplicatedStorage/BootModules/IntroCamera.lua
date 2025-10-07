@@ -330,16 +330,16 @@ function IntroCamera:_flushReadyCallbacks(startPart, endPart)
 end
 
 function IntroCamera:_findPart(container, name)
-        if not container then
-                return nil
-        end
+	if not container then
+		return nil
+	end
 
-        local part = container:FindFirstChild(name)
-        if part and part:IsA("BasePart") then
-                return part
-        end
+	local part = container:FindFirstChild(name)
+	if part and (part:IsA("BasePart") or part:IsA("Camera")) then
+		return part
+	end
 
-        return nil
+	return nil
 end
 
 function IntroCamera:_partAttr(part, name, default)
@@ -354,25 +354,32 @@ function IntroCamera:_partAttr(part, name, default)
 end
 
 function IntroCamera:_faceCFrame(part)
-        if not part then
-                local camera = self:getCurrentCamera()
-                return camera and camera.CFrame or CFrame.new()
-        end
+	if not part then
+		local camera = self:getCurrentCamera()
+		return camera and camera.CFrame or CFrame.new()
+	end
 
-        local forward = part.CFrame.LookVector
-        local up = part.CFrame.UpVector
-        local dist = self:_partAttr(part, "Dist", 0)
-        local height = self:_partAttr(part, "Height", 0)
-        local ahead = self:_partAttr(part, "Ahead", 10)
-        local position = part.Position - forward * dist + up * height
-        local target = part.Position + forward * ahead
-        return CFrame.lookAt(position, target, up)
+	if part:IsA("Camera") then
+		return part.CFrame
+	end
+
+	local forward = part.CFrame.LookVector
+	local up = part.CFrame.UpVector
+	local dist = self:_partAttr(part, "Dist", 0)
+	local height = self:_partAttr(part, "Height", 0)
+	local ahead = self:_partAttr(part, "Ahead", 10)
+	local position = part.Position - forward * dist + up * height
+	local target = part.Position + forward * ahead
+	return CFrame.lookAt(position, target, up)
 end
 
 function IntroCamera:_partFOV(part, camera)
-        local cam = camera or self:getCurrentCamera()
-        local defaultFOV = cam and cam.FieldOfView or 70
-        return self:_partAttr(part, "FOV", defaultFOV)
+	local cam = camera or self:getCurrentCamera()
+	local defaultFOV = cam and cam.FieldOfView or 70
+	if part and part:IsA("Camera") then
+		return part.FieldOfView
+	end
+	return self:_partAttr(part, "FOV", defaultFOV)
 end
 
 function IntroCamera:_unbindHold()
