@@ -710,8 +710,26 @@ function BootUI.start(config)
                         return nil
                 end
 
-                local part = folder:FindFirstChild(name)
-                if part and part:IsA("BasePart") then
+                local function findPart(container)
+                        if not container then
+                                return nil
+                        end
+
+                        local direct = container:FindFirstChild(name)
+                        if direct and direct:IsA("BasePart") then
+                                return direct
+                        end
+
+                        local descendant = container:FindFirstChild(name, true)
+                        if descendant and descendant:IsA("BasePart") then
+                                return descendant
+                        end
+
+                        return nil
+                end
+
+                local part = findPart(folder)
+                if part then
                         return part
                 end
 
@@ -722,9 +740,9 @@ function BootUI.start(config)
                         return result
                 end
 
-                local descendant = search(folder)
-                if descendant then
-                        return descendant
+                part = findPart(folder)
+                if part then
+                        return part
                 end
 
                 warn(string.format("BootUI: Cameras folder missing part '%s'", tostring(name)))
