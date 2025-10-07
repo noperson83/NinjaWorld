@@ -592,11 +592,15 @@ function BootUI.start(config)
         -- Camera helpers (world)
         -- =====================
         local camerasFolder
+        local fallbackCameraFolder
         local startPos
         local endPos
         local cameraFolderConn
         local cameraPartsConn
+        local fallbackFolderConn
+        local fallbackPartsConn
         local pendingIntroOptions
+        local missingCameraWarnings = {}
 
         local replayIntroSequence
 
@@ -605,8 +609,18 @@ function BootUI.start(config)
                         return camerasFolder
                 end
 
-                camerasFolder = Workspace:FindFirstChild("Cameras")
-                if camerasFolder and camerasFolder.Parent then
+                local function findCameraContainer()
+                        local direct = Workspace:FindFirstChild("Cameras")
+                        if direct and direct.Parent then
+                                return direct
+                        end
+
+                        return Workspace:FindFirstChild("Cameras", true)
+                end
+
+                local found = findCameraContainer()
+                if found then
+                        camerasFolder = found
                         return camerasFolder
                 end
 
@@ -615,6 +629,12 @@ function BootUI.start(config)
                 end)
                 if ok and folder then
                         camerasFolder = folder
+                        return camerasFolder
+                end
+
+                local descendant = Workspace:FindFirstChild("Cameras", true)
+                if descendant then
+                        camerasFolder = descendant
                         return camerasFolder
                 end
 
@@ -628,8 +648,17 @@ function BootUI.start(config)
                         return nil
                 end
 
-                local part = folder:FindFirstChild(name)
-                if part and part.Parent == folder then
+                local function search(partContainer)
+                        local direct = partContainer:FindFirstChild(name)
+                        if direct then
+                                return direct
+                        end
+                        return partContainer:FindFirstChild(name, true)
+                end
+
+                local part = search(folder)
+                if part and part.Parent then
+                        missingCameraWarnings[name] = nil
                         return part
                 end
 
@@ -637,16 +666,73 @@ function BootUI.start(config)
                         return folder:WaitForChild(name, 5)
                 end)
                 if ok and result then
+                        missingCameraWarnings[name] = nil
                         return result
                 end
 
-                warn(string.format("BootUI: Cameras folder missing part '%s'", tostring(name)))
+                local descendant = search(folder)
+                if descendant then
+                        missingCameraWarnings[name] = nil
+                        return descendant
+                end
+
+                if not missingCameraWarnings[name] then
+                        missingCameraWarnings[name] = true
+                        warn(string.format("BootUI: Cameras folder missing part '%s'", tostring(name)))
+                end
+                return nil
+        end
+
+        local function resolveFallbackFolder()
+                if fallbackCameraFolder and fallbackCameraFolder.Parent then
+                        return fallbackCameraFolder
+                end
+
+                fallbackCameraFolder = ReplicatedStorage:FindFirstChild("PersonaIntroCameraParts")
+                if fallbackCameraFolder and fallbackCameraFolder.Parent then
+                        return fallbackCameraFolder
+                end
+
+                local ok, folder = pcall(function()
+                        return ReplicatedStorage:WaitForChild("PersonaIntroCameraParts", 2)
+                end)
+                if ok and folder then
+                        fallbackCameraFolder = folder
+                        return fallbackCameraFolder
+                end
+
+                return nil
+        end
+
+        local function resolveFallbackPart(name)
+                local folder = resolveFallbackFolder()
+                if not folder then
+                        return nil
+                end
+
+                local part = folder:FindFirstChild(name)
+                if part and part:IsA("BasePart") then
+                        return part
+                end
+
+                local ok, result = pcall(function()
+                        return folder:WaitForChild(name, 2)
+                end)
+                if ok and result and result:IsA("BasePart") then
+                        return result
+                end
+
                 return nil
         end
 
         local function ensureCameraParts()
-                startPos = resolveCameraPart("startPos")
-                endPos = resolveCameraPart("endPos")
+                local workspaceStart = resolveCameraPart("startPos")
+                local workspaceEnd = resolveCameraPart("endPos")
+                local fallbackStart = resolveFallbackPart("startPos")
+                local fallbackEnd = resolveFallbackPart("endPos")
+
+                startPos = workspaceStart or fallbackStart
+                endPos = workspaceEnd or fallbackEnd
                 return startPos, endPos
         end
 
@@ -676,7 +762,7 @@ function BootUI.start(config)
                         return
                 end
 
-                cameraPartsConn = camerasFolder.ChildAdded:Connect(function(part)
+                cameraPartsConn = camerasFolder.DescendantAdded:Connect(function(part)
                         if part and (part.Name == "startPos" or part.Name == "endPos") then
                                 ensureCameraParts()
                                 tryReplayPendingIntro()
@@ -684,9 +770,43 @@ function BootUI.start(config)
                 end)
         end
 
+        local function connectFallbackPartsListener()
+                if fallbackPartsConn then
+                        return
+                end
+
+                if not fallbackCameraFolder or not fallbackCameraFolder.Parent then
+                        return
+                end
+
+                fallbackPartsConn = fallbackCameraFolder.ChildAdded:Connect(function(part)
+                        if part and (part.Name == "startPos" or part.Name == "endPos") then
+                                ensureCameraParts()
+                                tryReplayPendingIntro()
+                        end
+                end)
+        end
+
+        local function ensureFallbackListeners()
+                if not fallbackFolderConn then
+                        fallbackFolderConn = ReplicatedStorage.ChildAdded:Connect(function(child)
+                                if child and child.Name == "PersonaIntroCameraParts" then
+                                        fallbackCameraFolder = child
+                                        ensureCameraParts()
+                                        connectFallbackPartsListener()
+                                        tryReplayPendingIntro()
+                                end
+                        end)
+                end
+
+                if resolveFallbackFolder() then
+                        connectFallbackPartsListener()
+                end
+        end
+
         local function ensureCameraListeners()
                 if not cameraFolderConn then
-                        cameraFolderConn = Workspace.ChildAdded:Connect(function(child)
+                        cameraFolderConn = Workspace.DescendantAdded:Connect(function(child)
                                 if child and child.Name == "Cameras" then
                                         camerasFolder = child
                                         ensureCameraParts()
@@ -698,6 +818,25 @@ function BootUI.start(config)
 
                 if camerasFolder and camerasFolder.Parent then
                         connectCameraPartsListener()
+                end
+        end
+
+        local function disconnectCameraListeners()
+                if cameraPartsConn then
+                        cameraPartsConn:Disconnect()
+                        cameraPartsConn = nil
+                end
+                if cameraFolderConn then
+                        cameraFolderConn:Disconnect()
+                        cameraFolderConn = nil
+                end
+                if fallbackPartsConn then
+                        fallbackPartsConn:Disconnect()
+                        fallbackPartsConn = nil
+                end
+                if fallbackFolderConn then
+                        fallbackFolderConn:Disconnect()
+                        fallbackFolderConn = nil
                 end
         end
 
@@ -895,18 +1034,12 @@ function BootUI.start(config)
                 if not startPos then
                         pendingIntroOptions = cloneOptions(options)
                         ensureCameraListeners()
+                        ensureFallbackListeners()
                         return
                 end
 
                 pendingIntroOptions = nil
-                if cameraPartsConn then
-                        cameraPartsConn:Disconnect()
-                        cameraPartsConn = nil
-                end
-                if cameraFolderConn then
-                        cameraFolderConn:Disconnect()
-                        cameraFolderConn = nil
-                end
+                disconnectCameraListeners()
                 cam = Workspace.CurrentCamera or cam
                 applyStartCam()
                 holdStartCam(options.holdTime or 0.3)
