@@ -48,7 +48,7 @@ local function enableIntroGui()
         end
 end
 
-local ZONE_INFO = TeleportUI.ZONE_INFO or {}
+local ZONE_INFO = (TeleportUI.getZoneInfo and TeleportUI.getZoneInfo()) or (TeleportUI.ZONE_INFO or {})
 
 local REALM_INFO = {
 	{key = "StarterDojo",   name = "Starter Dojo"},
@@ -1118,6 +1118,9 @@ function WorldHUD:showTeleportBanner(teleportContext)
         if teleportContext.source == "Zone" then
                 local zoneLookup = self.zoneDisplayLookup
                 displayName = zoneLookup and zoneLookup[teleportContext.name]
+                if not displayName then
+                        displayName = teleportContext.label
+                end
         elseif teleportContext.source == "Realm" then
                 local realmKey = teleportContext.realm or teleportContext.name
                 local realmLookup = self.realmDisplayLookup
