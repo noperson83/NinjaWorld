@@ -602,7 +602,6 @@ function BootUI.start(config)
         -- =====================
         local introCamera = IntroCamera.new({
                 workspace = Workspace,
-                replicatedStorage = ReplicatedStorage,
                 tweenService = TweenService,
                 runService = RunService,
         })
