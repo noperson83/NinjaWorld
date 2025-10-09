@@ -310,26 +310,22 @@ local function createNinjaButton(parent, text, size, position, color, onClick)
         local button = Instance.new("TextButton")
         button.Size = size
         button.Position = position
-        local hasEmoji, richText = buildRichTextForEmoji(text)
-        if hasEmoji then
-                button.RichText = true
-                button.Text = richText
-        else
-                button.RichText = false
-                button.Text = text
-        end
         button.Font = Enum.Font.GothamMedium
         button.TextScaled = true
         button.TextColor3 = NINJA_COLORS.TEXT_PRIMARY
         button.BackgroundColor3 = color or NINJA_COLORS.ACCENT
-	button.BorderSizePixel = 0
-	button.ZIndex = 12
-	button.Parent = parent
+        button.BorderSizePixel = 0
+        button.ZIndex = 12
+        button.Parent = parent
 
-	-- Add corner rounding
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 8)
-	corner.Parent = button
+        local hasEmoji, richText = buildRichTextForEmoji(text)
+        button.RichText = hasEmoji
+        button.Text = hasEmoji and richText or text
+
+        -- Add corner rounding
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 8)
+        corner.Parent = button
 
 	-- Add hover and click animations using UIScale for smooth transitions
 	local scale = Instance.new("UIScale")
