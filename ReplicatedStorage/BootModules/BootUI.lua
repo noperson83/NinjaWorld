@@ -1,5 +1,8 @@
 local BootUI = {}
 
+BootUI._initialIntroReplayDone = false
+BootUI._queuedInitialIntroOptions = nil
+
 -- =====================
 -- Services & locals
 -- =====================
@@ -420,9 +423,9 @@ function BootUI.populateBackpackUI(data)
 end
 
 function BootUI.applyFetchedData(data)
-	data = data or {}
+        data = data or {}
 
-	BootUI.config = BootUI.config or {}
+        BootUI.config = BootUI.config or {}
 
 	local inventory = data.inventory
 	if typeof(inventory) == "table" then
@@ -432,17 +435,31 @@ function BootUI.applyFetchedData(data)
 	end
 
 	local personaData = data.personaData
-	if personaData ~= nil then
-		local sanitized = sanitizePersonaData(personaData)
-		BootUI.config.personaData = sanitized
-		BootUI.personaData = sanitized
+        if personaData ~= nil then
+                local sanitized = sanitizePersonaData(personaData)
+                BootUI.config.personaData = sanitized
+                BootUI.personaData = sanitized
                 if typeof(Cosmetics.refreshSlots) == "function" then
                         Cosmetics.refreshSlots(sanitized)
                 end
                 if typeof(Cosmetics.showDojoPicker) == "function" then
                         Cosmetics.showDojoPicker()
                 end
-	end
+        end
+
+        local personaSnapshot = BootUI.personaData
+        if not BootUI._initialIntroReplayDone then
+                BootUI._initialIntroReplayDone = true
+                local options = {
+                        personaData = personaSnapshot,
+                }
+                local replay = BootUI.replayIntroSequence
+                if typeof(replay) == "function" then
+                        task.defer(replay, options)
+                else
+                        BootUI._queuedInitialIntroOptions = options
+                end
+        end
 end
 
 function BootUI.getSelectedRealm()
@@ -763,6 +780,11 @@ function BootUI.start(config)
         end
 
         BootUI.replayIntroSequence = replayIntroSequence
+        if BootUI._queuedInitialIntroOptions then
+                local queuedOptions = BootUI._queuedInitialIntroOptions
+                BootUI._queuedInitialIntroOptions = nil
+                task.defer(replayIntroSequence, queuedOptions)
+        end
 
         local introController = {
                 freezeCharacter = freezeCharacter,
