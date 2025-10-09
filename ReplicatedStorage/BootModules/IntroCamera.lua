@@ -295,12 +295,57 @@ function IntroCamera:_refreshParts()
         self.endPart = newEnd
 
         if startChanged or endChanged then
+                self:_reportCameraStatus(startChanged, endChanged)
                 if self.startPart then
                         self:_flushReadyCallbacks(self.startPart, self.endPart)
                 end
         end
 
         return self.startPart, self.endPart
+end
+
+function IntroCamera:_reportCameraStatus(startChanged, endChanged)
+        local messages = {}
+
+        local function partLabel(part)
+                if not part then
+                        return nil
+                end
+
+                if typeof(part) == "Instance" then
+                        local ok, fullName = pcall(function()
+                                return part:GetFullName()
+                        end)
+                        if ok then
+                                return fullName
+                        end
+                        return part.Name
+                end
+
+                return tostring(part)
+        end
+
+        if startChanged then
+                local label = partLabel(self.startPart)
+                if label then
+                        table.insert(messages, string.format("start camera loaded: %s", label))
+                else
+                        table.insert(messages, "start camera removed")
+                end
+        end
+
+        if endChanged then
+                local label = partLabel(self.endPart)
+                if label then
+                        table.insert(messages, string.format("end camera loaded: %s", label))
+                else
+                        table.insert(messages, "end camera removed")
+                end
+        end
+
+        if #messages > 0 then
+                print(string.format("[IntroCamera] %s", table.concat(messages, "; ")))
+        end
 end
 
 function IntroCamera:_flushReadyCallbacks(startPart, endPart)
