@@ -17,6 +17,7 @@ function IntroCamera.new(options)
         self._startName = options.startPartName or "startPos"
         self._endName = options.endPartName or "endPos"
         self._folderName = options.folderName or "Cameras"
+        self._fallbackFolderName = options.fallbackFolderName or "PersonaIntroCameraParts"
         self._cameraWait = options.cameraWait or 5
         self._holdPriority = (options.holdPriority or Enum.RenderPriority.Camera.Value) + 1
 
@@ -217,6 +218,22 @@ function IntroCamera:_startListeners()
                 end
         end))
 
+        if self._replicatedStorage and self._fallbackFolderName then
+                table.insert(self._connections, self._replicatedStorage.ChildAdded:Connect(function(child)
+                        if child and child.Name == self._fallbackFolderName then
+                                self:_refreshCameraFolder(true)
+                                self:_refreshParts()
+                        end
+                end))
+
+                table.insert(self._connections, self._replicatedStorage.ChildRemoved:Connect(function(child)
+                        if child and child.Name == self._fallbackFolderName then
+                                self:_refreshCameraFolder(true)
+                                self:_refreshParts()
+                        end
+                end))
+        end
+
         table.insert(self._connections, self._workspace.DescendantRemoving:Connect(function(descendant)
                 if descendant == self._cameraFolder or (self._cameraFolder and descendant:IsDescendantOf(self._cameraFolder)) then
                         if descendant == self._cameraFolder then
@@ -239,7 +256,23 @@ function IntroCamera:_refreshCameraFolder(force)
                 if direct then
                         return direct
                 end
-                return self._workspace:FindFirstChild(self._folderName, true)
+
+                local descendant = self._workspace:FindFirstChild(self._folderName, true)
+                if descendant then
+                        return descendant
+                end
+
+                if self._replicatedStorage and self._fallbackFolderName then
+                        local fallback = self._replicatedStorage:FindFirstChild(self._fallbackFolderName)
+                        if fallback and (fallback:IsA("Folder") or fallback:IsA("Model")) then
+                                return fallback
+                        end
+
+                        fallback = self._replicatedStorage:FindFirstChild(self._fallbackFolderName, true)
+                        if fallback and (fallback:IsA("Folder") or fallback:IsA("Model")) then
+                                return fallback
+                        end
+                end
         end
 
         folder = findFolder()
@@ -250,6 +283,7 @@ function IntroCamera:_refreshCameraFolder(force)
         end
 
         self._cameraFolder = nil
+        self:_disconnectFolderListeners()
         return nil
 end
 
