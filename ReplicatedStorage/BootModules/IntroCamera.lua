@@ -19,11 +19,28 @@ function IntroCamera.new(options)
         self._startName = options.startPartName or "startPos"
         self._endName = options.endPartName or "endPos"
         self._folderName = options.folderName or "Cameras"
+        self._fallbackFolderName = options.fallbackFolderName
         self._cameraWait = options.cameraWait or 5
         self._holdPriority = (options.holdPriority or Enum.RenderPriority.Camera.Value) + 1
 
         self._connections = {}
         self._folderConnections = {}
+        self._fallbackContainer = options.fallbackContainer or self._replicatedStorage
+
+        if self._fallbackFolderName == false then
+                self._fallbackFolderName = nil
+                self._fallbackContainer = nil
+        elseif self._fallbackFolderName == nil then
+                self._fallbackFolderName = "PersonaIntroCameraParts"
+        end
+
+        if not self._fallbackContainer then
+                self._fallbackFolderName = nil
+        end
+
+        if not self._fallbackFolderName then
+                self._fallbackContainer = nil
+        end
         self._pendingReadyCallbacks = {}
 
         self._cameraFolder = nil
@@ -208,18 +225,30 @@ function IntroCamera:onReady(callback)
 end
 
 function IntroCamera:_startListeners()
-        table.insert(self._connections, self._workspace.DescendantAdded:Connect(function(descendant)
-                if descendant and descendant.Name == self._folderName then
+        local function handleDescendantAdded(descendant)
+                if not descendant then
+                        return
+                end
+
+                local name = descendant.Name
+                if name == self._folderName or name == self._fallbackFolderName then
                         self:_refreshCameraFolder(true)
                         self:_refreshParts()
-                elseif descendant and (descendant.Name == self._startName or descendant.Name == self._endName) then
-                        if self._cameraFolder and descendant:IsDescendantOf(self._cameraFolder) then
+                        return
+                end
+
+                if self._cameraFolder and descendant:IsDescendantOf(self._cameraFolder) then
+                        if name == self._startName or name == self._endName then
                                 self:_refreshParts()
                         end
                 end
-        end))
+        end
 
-        table.insert(self._connections, self._workspace.DescendantRemoving:Connect(function(descendant)
+        local function handleDescendantRemoving(descendant)
+                if not descendant then
+                        return
+                end
+
                 if descendant == self._cameraFolder or (self._cameraFolder and descendant:IsDescendantOf(self._cameraFolder)) then
                         if descendant == self._cameraFolder then
                                 self._cameraFolder = nil
@@ -227,7 +256,15 @@ function IntroCamera:_startListeners()
                         end
                         self:_refreshParts()
                 end
-        end))
+        end
+
+        table.insert(self._connections, self._workspace.DescendantAdded:Connect(handleDescendantAdded))
+        table.insert(self._connections, self._workspace.DescendantRemoving:Connect(handleDescendantRemoving))
+
+        if self._fallbackContainer and self._fallbackContainer ~= self._workspace and self._fallbackFolderName then
+                table.insert(self._connections, self._fallbackContainer.DescendantAdded:Connect(handleDescendantAdded))
+                table.insert(self._connections, self._fallbackContainer.DescendantRemoving:Connect(handleDescendantRemoving))
+        end
 end
 
 function IntroCamera:_refreshCameraFolder(force)
@@ -241,7 +278,24 @@ function IntroCamera:_refreshCameraFolder(force)
                 if direct then
                         return direct
                 end
-                return self._workspace:FindFirstChild(self._folderName, true)
+
+                direct = self._workspace:FindFirstChild(self._folderName, true)
+                if direct then
+                        return direct
+                end
+
+                if self._fallbackContainer and self._fallbackFolderName then
+                        local fallback = self._fallbackContainer:FindFirstChild(self._fallbackFolderName)
+                        if fallback then
+                                return fallback
+                        end
+                        fallback = self._fallbackContainer:FindFirstChild(self._fallbackFolderName, true)
+                        if fallback then
+                                return fallback
+                        end
+                end
+
+                return nil
         end
 
         folder = findFolder()
