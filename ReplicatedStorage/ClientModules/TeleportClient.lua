@@ -10,17 +10,35 @@ local TeleportClient = {}
 
 local debounce = false
 
-local function isSpawnCandidate(inst)
+local function findSpawnPart(inst)
         if inst:IsA("SpawnLocation") then
-                return true
+                return inst, inst
         end
+
         if inst:IsA("BasePart") then
                 local lowerName = string.lower(inst.Name)
                 if lowerName:find("spawn", 1, true) then
-                        return true
+                        return inst, inst
                 end
         end
-        return false
+
+        if inst:IsA("Model") then
+                local lowerName = string.lower(inst.Name)
+                if lowerName:find("spawn", 1, true) then
+                        local primary = inst.PrimaryPart
+                        if primary and primary:IsA("BasePart") then
+                                return primary, inst
+                        end
+
+                        for _, desc in ipairs(inst:GetDescendants()) do
+                                if desc:IsA("BasePart") then
+                                        return desc, inst
+                                end
+                        end
+                end
+        end
+
+        return nil, nil
 end
 
 local function getPathSegments(inst)
@@ -141,16 +159,25 @@ end
 
 function TeleportClient.getAvailableZoneSpawns()
         local results = {}
+        local seen = {}
+
         for _, inst in ipairs(Workspace:GetDescendants()) do
-                if isSpawnCandidate(inst) then
-                        local segments = getPathSegments(inst)
-                        local key = makeSpawnKey(segments)
-                        local label = makeDisplayLabel(segments)
-                        results[#results + 1] = {
-                                key = key,
-                                label = label,
-                                instance = inst,
-                        }
+                local spawnPart, labelInstance = findSpawnPart(inst)
+                if spawnPart then
+                        local identifier = spawnPart:GetFullName()
+                        if not seen[identifier] then
+                                seen[identifier] = true
+
+                                local segments = getPathSegments(labelInstance or spawnPart)
+                                local key = makeSpawnKey(segments)
+                                local label = makeDisplayLabel(segments)
+
+                                results[#results + 1] = {
+                                        key = key,
+                                        label = label,
+                                        instance = spawnPart,
+                                }
+                        end
                 end
         end
 
