@@ -234,12 +234,41 @@ function IntroCamera:_refreshCameraFolder(force)
                 return folder
         end
 
+        local function folderHasCameraParts(candidate)
+                if not candidate then
+                        return false
+                end
+
+                if self:_findPart(candidate, self._startName) then
+                        return true
+                end
+
+                if self:_findPart(candidate, self._endName) then
+                        return true
+                end
+
+                return false
+        end
+
         local function findFolder()
                 local direct = self._workspace:FindFirstChild(self._folderName)
-                if direct then
+                if folderHasCameraParts(direct) then
                         return direct
                 end
-                return self._workspace:FindFirstChild(self._folderName, true)
+
+                local fallback = direct
+                for _, descendant in ipairs(self._workspace:GetDescendants()) do
+                        if descendant.Name == self._folderName then
+                                if folderHasCameraParts(descendant) then
+                                        return descendant
+                                end
+                                if not fallback then
+                                        fallback = descendant
+                                end
+                        end
+                end
+
+                return fallback
         end
 
         folder = findFolder()
