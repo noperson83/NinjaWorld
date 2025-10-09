@@ -719,7 +719,7 @@ local function createPersonaSlot(parent, slotIndex, size, position, anchorPoint)
 	placeholder.Position = UDim2.fromScale(0.5, 0.5)
 	placeholder.AnchorPoint = Vector2.new(0.5, 0.5)
 	placeholder.BackgroundTransparency = 1
-	placeholder.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
+	placeholder.Image = "rbxassetid://138217463115431"
 	placeholder.ImageColor3 = NINJA_COLORS.TEXT_SECONDARY
 	placeholder.ScaleType = Enum.ScaleType.Fit
 	placeholder.ZIndex = 11
