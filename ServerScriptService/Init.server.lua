@@ -35,19 +35,56 @@ if not EnterDojoRE then
 end
 
 -- 3) Helpers to find spawn and a facing direction
+local function firstSpawnFrom(container)
+        for _, child in ipairs(container:GetChildren()) do
+                if child:IsA("SpawnLocation") or child:IsA("BasePart") then
+                        return child
+                end
+
+                if child:IsA("Model") then
+                        local primary = child.PrimaryPart
+                        if primary and primary:IsA("BasePart") then
+                                return primary
+                        end
+
+                        for _, desc in ipairs(child:GetDescendants()) do
+                                if desc:IsA("BasePart") then
+                                        return desc
+                                end
+                        end
+                end
+
+                local nested = firstSpawnFrom(child)
+                if nested then
+                        return nested
+                end
+        end
+        return nil
+end
+
 local function findSpawn()
-	-- Preferred: a BasePart named DojoSpawn anywhere in the map
-	local named = Workspace:FindFirstChild("DojoSpawn", true)
-	if named and named:IsA("BasePart") then return named end
-	-- Any SpawnLocation
-	for _,d in ipairs(Workspace:GetDescendants()) do
-		if d:IsA("SpawnLocation") then return d end
-	end
-	-- A BasePart called exactly "SpawnLocation"
-	for _,d in ipairs(Workspace:GetDescendants()) do
-		if d:IsA("BasePart") and d.Name == "SpawnLocation" then return d end
-	end
-	return nil
+        -- Preferred: a spawn defined under Workspace.SpawnLocations
+        local spawnFolder = Workspace:FindFirstChild("SpawnLocations")
+        if spawnFolder then
+                local fromFolder = firstSpawnFrom(spawnFolder)
+                if fromFolder then
+                        return fromFolder
+                end
+        end
+
+        -- Legacy fallbacks
+        local named = Workspace:FindFirstChild("DojoSpawn", true)
+        if named and named:IsA("BasePart") then return named end
+
+        for _,d in ipairs(Workspace:GetDescendants()) do
+                if d:IsA("SpawnLocation") then return d end
+        end
+
+        for _,d in ipairs(Workspace:GetDescendants()) do
+                if d:IsA("BasePart") and d.Name == "SpawnLocation" then return d end
+        end
+
+        return nil
 end
 
 local function findCamerasFolder()

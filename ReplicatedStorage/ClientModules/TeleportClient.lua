@@ -66,6 +66,14 @@ local function prettifyName(raw)
         return cleaned
 end
 
+local function formatLabelFromName(name)
+        local pretty = prettifyName(name or "")
+        if pretty == "" then
+                return name
+        end
+        return pretty
+end
+
 local function makeDisplayLabel(segments)
         local prettySegments = {}
         for _, name in ipairs(segments) do
@@ -161,22 +169,75 @@ function TeleportClient.getAvailableZoneSpawns()
         local results = {}
         local seen = {}
 
-        for _, inst in ipairs(Workspace:GetDescendants()) do
-                local spawnPart, labelInstance = findSpawnPart(inst)
-                if spawnPart then
-                        local identifier = spawnPart:GetFullName()
-                        if not seen[identifier] then
-                                seen[identifier] = true
+        local function addSpawn(spawnPart, labelInstance, explicitLabel)
+                if not (spawnPart and spawnPart:IsA("BasePart")) then
+                        return
+                end
 
-                                local segments = getPathSegments(labelInstance or spawnPart)
-                                local key = makeSpawnKey(segments)
-                                local label = makeDisplayLabel(segments)
+                local identifier = spawnPart:GetFullName()
+                if seen[identifier] then
+                        return
+                end
+                seen[identifier] = true
 
-                                results[#results + 1] = {
-                                        key = key,
-                                        label = label,
-                                        instance = spawnPart,
-                                }
+                local segments
+                local label
+
+                if explicitLabel then
+                        segments = {explicitLabel}
+                        label = formatLabelFromName(explicitLabel)
+                else
+                        segments = getPathSegments(labelInstance or spawnPart)
+                        label = makeDisplayLabel(segments)
+                end
+
+                local key = makeSpawnKey(segments)
+
+                results[#results + 1] = {
+                        key = key,
+                        label = label,
+                        instance = spawnPart,
+                }
+        end
+
+        local spawnFolder = Workspace:FindFirstChild("SpawnLocations")
+
+        local function gatherFromSpawnFolder(container)
+                for _, child in ipairs(container:GetChildren()) do
+                        if child:IsA("Folder") then
+                                gatherFromSpawnFolder(child)
+                        else
+                                local spawnPart
+                                if child:IsA("SpawnLocation") or child:IsA("BasePart") then
+                                        spawnPart = child
+                                elseif child:IsA("Model") then
+                                        spawnPart = child.PrimaryPart
+                                        if not (spawnPart and spawnPart:IsA("BasePart")) then
+                                                for _, desc in ipairs(child:GetDescendants()) do
+                                                        if desc:IsA("BasePart") then
+                                                                spawnPart = desc
+                                                                break
+                                                        end
+                                                end
+                                        end
+                                end
+
+                                if spawnPart then
+                                        addSpawn(spawnPart, child, child.Name)
+                                else
+                                        gatherFromSpawnFolder(child)
+                                end
+                        end
+                end
+        end
+
+        if spawnFolder then
+                gatherFromSpawnFolder(spawnFolder)
+        else
+                for _, inst in ipairs(Workspace:GetDescendants()) do
+                        local spawnPart, labelInstance = findSpawnPart(inst)
+                        if spawnPart then
+                                addSpawn(spawnPart, labelInstance)
                         end
                 end
         end
