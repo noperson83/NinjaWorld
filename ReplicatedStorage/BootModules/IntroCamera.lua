@@ -2,7 +2,6 @@ local IntroCamera = {}
 IntroCamera.__index = IntroCamera
 
 local Workspace = game:GetService("Workspace")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 
@@ -12,7 +11,6 @@ function IntroCamera.new(options)
         local self = setmetatable({}, IntroCamera)
 
         self._workspace = options.workspace or Workspace
-        self._replicatedStorage = options.replicatedStorage or ReplicatedStorage
         self._tweenService = options.tweenService or TweenService
         self._runService = options.runService or RunService
 
