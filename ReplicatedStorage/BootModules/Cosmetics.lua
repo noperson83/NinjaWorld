@@ -260,15 +260,68 @@ local function createStyledFrame(parent, size, position, anchorPoint)
 	return frame
 end
 
+local function isEmojiGrapheme(grapheme)
+        local codepoint = utf8.codepoint(grapheme)
+        if not codepoint then
+                return false
+        end
+
+        if (codepoint >= 0x1F300 and codepoint <= 0x1FAFF)
+                or (codepoint >= 0x1F600 and codepoint <= 0x1F64F)
+                or (codepoint >= 0x2600 and codepoint <= 0x27BF) then
+                return true
+        end
+
+        return false
+end
+
+local function buildRichTextForEmoji(text)
+        local hasEmoji = false
+        local segments = {}
+        local lastIndex = 1
+
+        for startPos, endPos in utf8.graphemes(text) do
+                local grapheme = string.sub(text, startPos, endPos)
+                if isEmojiGrapheme(grapheme) then
+                        hasEmoji = true
+
+                        if startPos > lastIndex then
+                                table.insert(segments, string.sub(text, lastIndex, startPos - 1))
+                        end
+
+                        table.insert(segments, string.format("<font face=\"Emoji\">%s</font>", grapheme))
+                        lastIndex = endPos + 1
+                end
+        end
+
+        if lastIndex <= #text then
+                table.insert(segments, string.sub(text, lastIndex))
+        end
+
+        if not hasEmoji then
+                        return false, text
+        end
+
+        local richText = string.format("<font face=\"GothamSSm\">%s</font>", table.concat(segments))
+        return true, richText
+end
+
 local function createNinjaButton(parent, text, size, position, color, onClick)
-	local button = Instance.new("TextButton")
-	button.Size = size
-	button.Position = position
-	button.Text = text
+        local button = Instance.new("TextButton")
+        button.Size = size
+        button.Position = position
+        local hasEmoji, richText = buildRichTextForEmoji(text)
+        if hasEmoji then
+                button.RichText = true
+                button.Text = richText
+        else
+                button.RichText = false
+                button.Text = text
+        end
         button.Font = Enum.Font.GothamMedium
-	button.TextScaled = true
-	button.TextColor3 = NINJA_COLORS.TEXT_PRIMARY
-	button.BackgroundColor3 = color or NINJA_COLORS.ACCENT
+        button.TextScaled = true
+        button.TextColor3 = NINJA_COLORS.TEXT_PRIMARY
+        button.BackgroundColor3 = color or NINJA_COLORS.ACCENT
 	button.BorderSizePixel = 0
 	button.ZIndex = 12
 	button.Parent = parent
