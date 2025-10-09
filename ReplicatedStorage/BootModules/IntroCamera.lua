@@ -388,17 +388,30 @@ function IntroCamera:_flushReadyCallbacks(startPart, endPart)
 end
 
 function IntroCamera:_findPart(container, name)
-        if not container then
+        local function resolve(from)
+                if not from then
+                        return nil
+                end
+
+                local part = from:FindFirstChild(name)
+                if not part then
+                        part = from:FindFirstChild(name, true)
+                end
+
+                if part and (part:IsA("BasePart") or part:IsA("Camera")) then
+                        return part
+                end
+
                 return nil
         end
 
-        local part = container:FindFirstChild(name)
-        if not part then
-                part = container:FindFirstChild(name, true)
+        local part = resolve(container)
+        if part then
+                return part
         end
 
-        if part and (part:IsA("BasePart") or part:IsA("Camera")) then
-                return part
+        if container ~= self._workspace then
+                return resolve(self._workspace)
         end
 
         return nil
