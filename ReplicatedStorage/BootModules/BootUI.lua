@@ -604,6 +604,8 @@ function BootUI.start(config)
                 workspace = Workspace,
                 tweenService = TweenService,
                 runService = RunService,
+                fallbackContainer = ReplicatedStorage,
+                fallbackFolderName = "PersonaIntroCameraParts",
         })
         BootUI.introCamera = introCamera
 
