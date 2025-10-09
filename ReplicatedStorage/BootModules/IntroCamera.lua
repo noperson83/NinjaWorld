@@ -207,18 +207,34 @@ end
 
 function IntroCamera:_startListeners()
         table.insert(self._connections, self._workspace.DescendantAdded:Connect(function(descendant)
-                if descendant and descendant.Name == self._folderName then
+                if not descendant then
+                        return
+                end
+
+                if descendant.Name == self._folderName then
                         self:_refreshCameraFolder(true)
                         self:_refreshParts()
-                elseif descendant and (descendant.Name == self._startName or descendant.Name == self._endName) then
-                        if self._cameraFolder and descendant:IsDescendantOf(self._cameraFolder) then
-                                self:_refreshParts()
-                        end
+                        return
+                end
+
+                if descendant.Name ~= self._startName and descendant.Name ~= self._endName then
+                        return
+                end
+
+                if not self._cameraFolder or descendant:IsDescendantOf(self._cameraFolder) then
+                        self:_refreshParts()
                 end
         end))
 
         table.insert(self._connections, self._workspace.DescendantRemoving:Connect(function(descendant)
-                if descendant == self._cameraFolder or (self._cameraFolder and descendant:IsDescendantOf(self._cameraFolder)) then
+                if not descendant then
+                        return
+                end
+
+                local withinFolder = self._cameraFolder and descendant:IsDescendantOf(self._cameraFolder)
+                local isTrackedPart = descendant == self.startPart or descendant == self.endPart
+
+                if descendant == self._cameraFolder or withinFolder or isTrackedPart then
                         if descendant == self._cameraFolder then
                                 self._cameraFolder = nil
                                 self:_disconnectFolderListeners()
