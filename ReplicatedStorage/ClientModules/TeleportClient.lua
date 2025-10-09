@@ -8,6 +8,159 @@ local player = Players.LocalPlayer
 
 local TeleportClient = {}
 
+local debounce = false
+
+local function isSpawnCandidate(inst)
+        if inst:IsA("SpawnLocation") then
+                return true
+        end
+        if inst:IsA("BasePart") then
+                local lowerName = string.lower(inst.Name)
+                if lowerName:find("spawn", 1, true) then
+                        return true
+                end
+        end
+        return false
+end
+
+local function getPathSegments(inst)
+        local segments = {}
+        local current = inst
+        while current and current ~= Workspace do
+                table.insert(segments, 1, current.Name)
+                current = current.Parent
+        end
+        return segments
+end
+
+local function prettifyName(raw)
+        local cleaned = raw
+        cleaned = cleaned:gsub("^Zone", "")
+        cleaned = cleaned:gsub("SpawnLocation$", "")
+        cleaned = cleaned:gsub("Spawn$", "")
+        cleaned = cleaned:gsub("_%d+$", "")
+        cleaned = cleaned:gsub("(%l)(%u)", "%1 %2")
+        cleaned = cleaned:gsub("%s+", " ")
+        cleaned = cleaned:match("^%s*(.-)%s*$") or cleaned
+        if cleaned == "" then
+                cleaned = raw
+        end
+        return cleaned
+end
+
+local function makeDisplayLabel(segments)
+        local prettySegments = {}
+        for _, name in ipairs(segments) do
+                local pretty = prettifyName(name)
+                if pretty == "" then
+                        pretty = name
+                end
+                if prettySegments[#prettySegments] ~= pretty then
+                        prettySegments[#prettySegments + 1] = pretty
+                end
+        end
+        return table.concat(prettySegments, " / ")
+end
+
+local function makeSpawnKey(segments)
+        local joined = table.concat(segments, "_")
+        joined = joined:gsub("[^%w_]", "_")
+        if joined == "" then
+                joined = "Spawn"
+        end
+        return joined
+end
+
+local function resolveSpawnPart(islandOrPart, locationName)
+        if typeof(islandOrPart) == "Instance" then
+                if islandOrPart:IsA("BasePart") then
+                        return islandOrPart
+                end
+                return nil
+        end
+
+        if typeof(islandOrPart) == "table" then
+                local instance = islandOrPart.instance
+                if typeof(instance) == "Instance" and instance:IsA("BasePart") then
+                        return instance
+                end
+        end
+
+        if typeof(islandOrPart) ~= "string" then
+                return nil
+        end
+
+        local parentZone = Workspace:FindFirstChild(islandOrPart)
+        if parentZone then
+                local point = parentZone:FindFirstChild(locationName)
+                if point and point:IsA("BasePart") then
+                        return point
+                end
+        end
+
+        return nil
+end
+
+local function teleportToSpawnPart(spawnPart)
+        if debounce then
+                return
+        end
+        if not (spawnPart and spawnPart:IsA("BasePart")) then
+                warn("TeleportClient: spawn part missing or invalid")
+                return
+        end
+
+        debounce = true
+        task.wait(1)
+
+        local char = player.Character or player.CharacterAdded:Wait()
+        local torso = char:FindFirstChild("HumanoidRootPart")
+        if not torso then
+                torso = char:FindFirstChild("LowerTorso")
+        end
+        if not torso then
+                local humanoid = char:FindFirstChildOfClass("Humanoid")
+                if humanoid and humanoid.RootPart then
+                        torso = humanoid.RootPart
+                end
+        end
+
+        if not torso then
+                warn("TeleportClient: unable to find character root part")
+                resetDebounceAfter(2)
+                return
+        end
+
+        local upOffset = spawnPart.Size.Y / 2 + 3
+        local destination = spawnPart.Position + Vector3.new(0, upOffset, 0)
+        local lookAt = destination + spawnPart.CFrame.LookVector
+        torso.CFrame = CFrame.new(destination, lookAt)
+
+        resetDebounceAfter(2)
+end
+
+function TeleportClient.getAvailableZoneSpawns()
+        local results = {}
+        for _, inst in ipairs(Workspace:GetDescendants()) do
+                if isSpawnCandidate(inst) then
+                        local segments = getPathSegments(inst)
+                        local key = makeSpawnKey(segments)
+                        local label = makeDisplayLabel(segments)
+                        results[#results + 1] = {
+                                key = key,
+                                label = label,
+                                instance = inst,
+                        }
+                end
+        end
+
+        table.sort(results, function(a, b)
+                return a.label < b.label
+        end)
+
+        return results
+end
+
 -- Place ids for the various realms in the experience.  Ids of ``0``
 -- indicate a realm that does not yet have a destination place.  This
 -- table is exposed so other modules (eg, BootUI) can look up the asset
@@ -28,7 +181,6 @@ TeleportClient.worldSpawnIds = {
 -- Maintain legacy name for compatibility
 TeleportClient.WorldPlaceIds = TeleportClient.worldSpawnIds
 
-local debounce = false
 local function resetDebounceAfter(seconds)
         task.delay(seconds, function()
                 debounce = false
@@ -58,24 +210,14 @@ function TeleportClient.unlockRealm(name)
 end
 
 local function teleportToIsland(islandName, locationName)
-	if debounce then return end
-	debounce = true
-	task.wait(1)
-	local char = player.Character or player.CharacterAdded:Wait()
-	local torso = char:FindFirstChild("LowerTorso")
-	if not torso then warn("LowerTorso not found") resetDebounceAfter(2) return end
-	local parentZone = Workspace:FindFirstChild(islandName)
-	if parentZone then
-		local point = parentZone:FindFirstChild(locationName)
-		if point then
-			torso.CFrame = point.CFrame
-		else
-			warn("Spawn point missing: " .. islandName .. "/" .. locationName)
-		end
-	else
-		warn("Island parent missing: " .. islandName)
-	end
-	resetDebounceAfter(2)
+        local spawnPart = resolveSpawnPart(islandName, locationName)
+        if spawnPart then
+                teleportToSpawnPart(spawnPart)
+        else
+                local island = tostring(islandName)
+                local location = tostring(locationName)
+                warn("TeleportClient: spawn point missing for " .. island .. "/" .. location)
+        end
 end
 
 local function teleportToPlace(placeId)
@@ -100,35 +242,31 @@ function TeleportClient.bindZoneButtons(gui, callbacks)
                 return
         end
 
-        local islandSpawns = {
-                Atom = {"ZoneAtom", "AtomSpawnLocation"},
-                Fire = {"ZoneFire", "FireSpawnLocation"},
-                Grow = {"ZoneGrow", "GrowSpawnLocation"},
-                Ice = {"ZoneIce", "IceSpawnLocation"},
-                Light = {"ZoneLight", "LightSpawnLocation"},
-                Metal = {"ZoneMetal", "MetalSpawnLocation"},
-                Water = {"ZoneWater", "WaterSpawnLocation"},
-                Wind = {"ZoneWind", "WindSpawnLocation"},
-                Dojo = {"ZoneStarter", "StarterSpawnLocation"},
-                Starter = {"ZoneStarter", "StarterZoneSpawnLocation"}
-        }
+        local spawnInfos = TeleportClient.getAvailableZoneSpawns()
 
-        for name, zoneInfo in pairs(islandSpawns) do
-                local button = teleFrame:FindFirstChild(name .. "Button")
+        for _, info in ipairs(spawnInfos) do
+                local button = teleFrame:FindFirstChild(info.key .. "Button")
                 if button then
                         button.Activated:Connect(function()
+                                local spawnPart = info.instance
+                                if not (spawnPart and spawnPart.Parent) then
+                                        warn("TeleportClient: spawn part missing for button " .. info.key)
+                                        return
+                                end
+
                                 if onTeleport then
                                         onTeleport({
                                                 source = "Zone",
-                                                name = name,
-                                                island = zoneInfo[1],
-                                                location = zoneInfo[2],
+                                                name = info.key,
+                                                label = info.label,
+                                                spawnPath = spawnPart:GetFullName(),
                                         })
                                 end
-                                teleportToIsland(unpack(zoneInfo))
+
+                                teleportToSpawnPart(spawnPart)
                         end)
                 else
-                        warn("Zone button not found for: " .. name)
+                        warn("TeleportClient: zone button not found for " .. info.key)
                 end
         end
 end

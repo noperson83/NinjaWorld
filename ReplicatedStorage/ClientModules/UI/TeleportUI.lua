@@ -8,18 +8,25 @@ local player = Players.LocalPlayer
 
 local BASE_Z_INDEX = 25
 
-TeleportUI.ZONE_INFO = {
-        {name = "Starter", label = "Starter Zone"},
-        {name = "Dojo", label = "Dojo Entrance"},
-        {name = "Water", label = "Water Island"},
-        {name = "Fire", label = "Fire Island"},
-        {name = "Wind", label = "Wind Island"},
-        {name = "Grow", label = "Growth Island"},
-        {name = "Ice", label = "Ice Island"},
-        {name = "Light", label = "Light Island"},
-        {name = "Metal", label = "Metal Island"},
-        {name = "Atom", label = "Atoms Island"},
-}
+local function buildZoneInfo()
+        local zoneInfo = {}
+        local spawnInfos = TeleportClient.getAvailableZoneSpawns()
+        for _, info in ipairs(spawnInfos) do
+                zoneInfo[#zoneInfo + 1] = {
+                        key = info.key,
+                        name = info.key,
+                        label = info.label,
+                        instance = info.instance,
+                }
+        end
+        return zoneInfo
+end
+
+function TeleportUI.getZoneInfo()
+        return buildZoneInfo()
+end
+
+TeleportUI.ZONE_INFO = TeleportUI.getZoneInfo()
 
 local DEFAULT_REALM_INFO = {
         {key = "StarterDojo",   name = "Starter Dojo"},
@@ -279,31 +286,51 @@ function TeleportUI.init(parent, baseY, dependencies)
         telePadding.Parent = teleFrame
 
         local teleGrid = Instance.new("UIGridLayout")
-        teleGrid.CellSize = UDim2.new(0.5, -10, 0, 52)
+        teleGrid.CellSize = UDim2.new(1, -10, 0, 52)
         teleGrid.CellPadding = UDim2.new(0, 8, 0, 8)
         teleGrid.SortOrder = Enum.SortOrder.LayoutOrder
         teleGrid.HorizontalAlignment = Enum.HorizontalAlignment.Center
         teleGrid.VerticalAlignment = Enum.VerticalAlignment.Top
         teleGrid.Parent = teleFrame
 
-        for index, info in ipairs(TeleportUI.ZONE_INFO) do
-                local button = Instance.new("TextButton")
-                button.Name = info.name .. "Button"
-                button.Size = UDim2.new(0, 0, 0, 0)
-                button.LayoutOrder = index
-                button.BackgroundColor3 = Color3.fromRGB(50, 120, 255)
-                button.BackgroundTransparency = 0.2
-                button.TextColor3 = Color3.new(1, 1, 1)
-                button.Font = Enum.Font.GothamMedium
-                button.TextScaled = true
-                button.AutoButtonColor = true
-                button.Text = info.label
-                button.ZIndex = BASE_Z_INDEX + 4
-                button.Parent = teleFrame
+        local zoneInfo = TeleportUI.getZoneInfo()
+        self.zoneInfo = zoneInfo
+        TeleportUI.ZONE_INFO = zoneInfo
 
-                local corner = Instance.new("UICorner")
-                corner.CornerRadius = UDim.new(0, 8)
-                corner.Parent = button
+        if #zoneInfo == 0 then
+                local emptyLabel = Instance.new("TextLabel")
+                emptyLabel.Name = "NoSpawnsLabel"
+                emptyLabel.LayoutOrder = 1
+                emptyLabel.Size = UDim2.new(1, 0, 0, 40)
+                emptyLabel.BackgroundTransparency = 1
+                emptyLabel.Text = "No spawn points found"
+                emptyLabel.TextColor3 = Color3.fromRGB(220, 220, 230)
+                emptyLabel.Font = Enum.Font.Gotham
+                emptyLabel.TextScaled = true
+                emptyLabel.TextWrapped = true
+                emptyLabel.ZIndex = BASE_Z_INDEX + 4
+                emptyLabel.Parent = teleFrame
+        else
+                for index, info in ipairs(zoneInfo) do
+                        local button = Instance.new("TextButton")
+                        button.Name = info.key .. "Button"
+                        button.Size = UDim2.new(1, -10, 0, 52)
+                        button.LayoutOrder = index
+                        button.BackgroundColor3 = Color3.fromRGB(50, 120, 255)
+                        button.BackgroundTransparency = 0.2
+                        button.TextColor3 = Color3.new(1, 1, 1)
+                        button.Font = Enum.Font.GothamMedium
+                        button.TextScaled = true
+                        button.TextWrapped = true
+                        button.AutoButtonColor = true
+                        button.Text = info.label
+                        button.ZIndex = BASE_Z_INDEX + 4
+                        button.Parent = teleFrame
+
+                        local corner = Instance.new("UICorner")
+                        corner.CornerRadius = UDim.new(0, 8)
+                        corner.Parent = button
+                end
         end
 
         local worldTitle = Instance.new("TextLabel")
