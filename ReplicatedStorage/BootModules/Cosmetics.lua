@@ -192,7 +192,7 @@ local function describeSelectedPersona()
 		end
 	end
 
-	local prefix = chosenSlot and string.format("Slot %d: ", chosenSlot) or ""
+	local prefix = chosenSlot and (getSlotDisplayName(chosenSlot) .. ": ") or ""
 	return string.format("🌟 Active Persona - %s%s", prefix, slotText)
 end
 
@@ -440,6 +440,16 @@ local function getHighestUsedSlot()
 	return highest
 end
 
+local function getSlotDisplayName(slotIndex)
+	if slotIndex == 2 then
+		return "persona left"
+	elseif slotIndex == 3 then
+		return "persona right"
+	end
+
+	return string.format("Slot %d", slotIndex)
+end
+
 local function preloadPersonaModel(model)
 	if not model then return end
 
@@ -457,7 +467,8 @@ local refreshSlotData
 
 local function updateSlotDisplays()
         local highestUsed = math.min(getHighestUsedSlot(), #slotButtons)
-        local visibleSlots = math.min(highestUsed + 1, #slotButtons)
+        local minimumVisibleSlots = math.min(#slotButtons, 3)
+        local visibleSlots = math.max(math.min(highestUsed + 1, #slotButtons), minimumVisibleSlots)
 
 	for slotIndex = 1, #slotButtons do
 		local slotData = personaCache.slots[slotIndex]
@@ -476,6 +487,9 @@ local function updateSlotDisplays()
 		end
 
 		slotUI.frame.Visible = slotIndex <= visibleSlots
+		if slotUI.frame then
+			slotUI.frame.Name = getSlotDisplayName(slotIndex)
+		end
 
 		if slotIndex <= visibleSlots then
 			if slotData then
@@ -513,7 +527,7 @@ local function updateSlotDisplays()
 				if not slotUI.clearConnection then
 					slotUI.clearConnection = slotUI.clearButton.MouseButton1Click:Connect(function()
 						showNinjaConfirmation(
-							string.format("🗑️ Remove the shadow warrior from slot %d?", slotIndex),
+							string.format("🗑️ Remove the shadow warrior from %s?", getSlotDisplayName(slotIndex)),
 							function()
 								local result = invokePersonaService("clear", {slot = slotIndex})
                                                                 if result and result.ok then
