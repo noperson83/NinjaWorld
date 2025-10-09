@@ -275,21 +275,22 @@ local function isEmojiGrapheme(grapheme)
         return false
 end
 
+local DEFAULT_FONT_FAMILY = "GothamSSm"
+local DEFAULT_FONT_ASSET = "rbxasset://fonts/families/GothamSSm.json"
+local EMOJI_FONT_FAMILY = "rbxasset://fonts/families/Emoji.json"
+
 local function buildRichTextForEmoji(text)
-        local hasEmoji = false
         local segments = {}
         local lastIndex = 1
 
         for startPos, endPos in utf8.graphemes(text) do
                 local grapheme = string.sub(text, startPos, endPos)
                 if isEmojiGrapheme(grapheme) then
-                        hasEmoji = true
-
                         if startPos > lastIndex then
                                 table.insert(segments, string.sub(text, lastIndex, startPos - 1))
                         end
 
-                        table.insert(segments, string.format("<font face=\"Emoji\">%s</font>", grapheme))
+                        table.insert(segments, string.format("<font face=\"%s\">%s</font>", EMOJI_FONT_FAMILY, grapheme))
                         lastIndex = endPos + 1
                 end
         end
@@ -298,12 +299,13 @@ local function buildRichTextForEmoji(text)
                 table.insert(segments, string.sub(text, lastIndex))
         end
 
-        if not hasEmoji then
-                        return false, text
+        local content = table.concat(segments)
+        if content == "" then
+                content = text
         end
 
-        local richText = string.format("<font face=\"GothamSSm\">%s</font>", table.concat(segments))
-        return true, richText
+        local richText = string.format("<font face=\"%s\">%s</font>", DEFAULT_FONT_FAMILY, content)
+        return richText
 end
 
 local function createNinjaButton(parent, text, size, position, color, onClick)
@@ -318,9 +320,10 @@ local function createNinjaButton(parent, text, size, position, color, onClick)
         button.ZIndex = 12
         button.Parent = parent
 
-        local hasEmoji, richText = buildRichTextForEmoji(text)
-        button.RichText = hasEmoji
-        button.Text = hasEmoji and richText or text
+        local richText = buildRichTextForEmoji(text)
+        button.RichText = true
+        button.Text = richText
+        button.FontFace = Font.new(DEFAULT_FONT_ASSET, Enum.FontWeight.Medium, Enum.FontStyle.Normal)
 
         -- Add corner rounding
         local corner = Instance.new("UICorner")
