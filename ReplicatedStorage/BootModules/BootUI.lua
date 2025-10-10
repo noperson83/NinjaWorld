@@ -277,6 +277,7 @@ local CurrencyService = require(ReplicatedStorage.BootModules.CurrencyService)
 local Shop            = require(ReplicatedStorage.BootModules.Shop)
 local AbilityUI       = require(ReplicatedStorage.BootModules.AbilityUI)
 local IntroCamera     = require(ReplicatedStorage.BootModules.IntroCamera)
+local LogoIntroCamera = require(ReplicatedStorage.BootModules.LogoIntroCamera)
 local WorldHUD        = require(ReplicatedStorage.ClientModules.UI.WorldHUD)
 local TeleportClient  = require(ReplicatedStorage.ClientModules.TeleportClient)
 local DojoClient      = require(ReplicatedStorage.BootModules.DojoClient)
@@ -489,6 +490,11 @@ function BootUI.releaseIntroHold()
         if introCamera and introCamera.releaseHold then
                 introCamera:releaseHold()
         end
+
+        local logoCamera = BootUI.logoCamera
+        if logoCamera and typeof(logoCamera.resume) == "function" then
+                logoCamera:resume()
+        end
 end
 
 function BootUI.hideOverlay()
@@ -501,6 +507,11 @@ end
 
 function BootUI.destroy()
         BootUI.hideOverlay()
+        local logoCamera = BootUI.logoCamera
+        if logoCamera and typeof(logoCamera.destroy) == "function" then
+                logoCamera:destroy()
+        end
+        BootUI.logoCamera = nil
         local abilityUI = BootUI.abilityUI
         if abilityUI and typeof(abilityUI.destroy) == "function" then
                 abilityUI:destroy()
@@ -614,15 +625,28 @@ function BootUI.start(config)
 	BootUI.populateBackpackUI(config.inventory)
 
 
-        -- =====================
-        -- Camera helpers (world)
-        -- =====================
-        local introCamera = IntroCamera.new({
-                workspace = Workspace,
-                tweenService = TweenService,
-                runService = RunService,
-        })
-        BootUI.introCamera = introCamera
+	-- =====================
+	-- Camera helpers (world)
+	-- =====================
+	local introCamera = IntroCamera.new({
+		workspace = Workspace,
+		tweenService = TweenService,
+		runService = RunService,
+	})
+	BootUI.introCamera = introCamera
+
+	local logoCamera = LogoIntroCamera.new(introCamera, {
+		workspace = Workspace,
+		tweenService = TweenService,
+		maxTargets = 10,
+		cycleInterval = 4.5,
+		transitionTime = 1.25,
+		defaultDistance = 20,
+		defaultHeight = 4,
+		defaultFOV = 40,
+	})
+	BootUI.logoCamera = logoCamera
+	logoCamera:start()
 
         local pendingIntroOptions
         local pendingReadyDisconnect

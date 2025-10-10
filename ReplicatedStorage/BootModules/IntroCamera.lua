@@ -28,10 +28,11 @@ function IntroCamera.new(options)
         self.startPart = nil
         self.endPart = nil
 
-        self._camera = options.camera
-        self._holdKey = nil
-        self._holdCameraConn = nil
-        self._holdDeadline = nil
+	self._camera = options.camera
+	self._holdKey = nil
+	self._holdCameraConn = nil
+	self._holdDeadline = nil
+	self._focusProvider = nil
 
         self:_refreshCameraFolder()
         self:_refreshParts()
@@ -47,8 +48,9 @@ function IntroCamera:destroy()
         end
         self._connections = {}
 
-        self:_disconnectFolderListeners()
-        self._pendingReadyCallbacks = {}
+	self:_disconnectFolderListeners()
+	self._pendingReadyCallbacks = {}
+	self._focusProvider = nil
 end
 
 function IntroCamera:getCurrentCamera()
@@ -93,14 +95,12 @@ function IntroCamera:applyStartCamera()
         end
 
         local startPart = self.startPart or select(1, self:waitForParts(nil, false))
-        if not startPart then
+        if not startPart and not self._focusProvider then
                 return false
         end
 
         camera.CameraType = Enum.CameraType.Scriptable
-        camera.CFrame = self:_faceCFrame(startPart)
-        camera.FieldOfView = self:_partFOV(startPart, camera)
-        return true
+        return self:_applyCameraFrame(camera, startPart)
 end
 
 function IntroCamera:holdStartCamera(duration)
@@ -110,7 +110,7 @@ function IntroCamera:holdStartCamera(duration)
         end
 
         local startPart = self.startPart or select(1, self:waitForParts(nil, false))
-        if not startPart then
+        if not startPart and not self._focusProvider then
                 warn("IntroCamera: Unable to hold start camera because start part is missing")
                 return false
         end
@@ -135,8 +135,11 @@ function IntroCamera:holdStartCamera(duration)
 
         self._runService:BindToRenderStep(key, self._holdPriority, function()
                 self._camera = self._workspace.CurrentCamera or self._camera
-                if self.startPart and self.startPart.Parent then
-                        self:applyStartCamera()
+                local currentCamera = self._camera
+                if currentCamera then
+                        currentCamera.CameraType = Enum.CameraType.Scriptable
+                        local activeStart = (self.startPart and self.startPart.Parent) and self.startPart or nil
+                        self:_applyCameraFrame(currentCamera, activeStart)
                 end
                 if self._holdDeadline and os.clock() >= self._holdDeadline then
                         self:_unbindHold()
@@ -149,8 +152,11 @@ function IntroCamera:holdStartCamera(duration)
         end
         self._holdCameraConn = self._workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
                 self._camera = self._workspace.CurrentCamera or self._camera
-                if self.startPart then
-                        self:applyStartCamera()
+                local currentCamera = self._camera
+                if currentCamera then
+                        currentCamera.CameraType = Enum.CameraType.Scriptable
+                        local activeStart = (self.startPart and self.startPart.Parent) and self.startPart or nil
+                        self:_applyCameraFrame(currentCamera, activeStart)
                 end
         end)
 
@@ -465,12 +471,79 @@ function IntroCamera:_faceCFrame(part)
 end
 
 function IntroCamera:_partFOV(part, camera)
-	local cam = camera or self:getCurrentCamera()
-	local defaultFOV = cam and cam.FieldOfView or 70
-	if part and part:IsA("Camera") then
-		return part.FieldOfView
-	end
-	return self:_partAttr(part, "FOV", defaultFOV)
+        local cam = camera or self:getCurrentCamera()
+        local defaultFOV = cam and cam.FieldOfView or 70
+        if part and part:IsA("Camera") then
+                return part.FieldOfView
+        end
+        return self:_partAttr(part, "FOV", defaultFOV)
+end
+
+function IntroCamera:_resolveCameraFrame(camera, startPart)
+        local provider = self._focusProvider
+        local providerCFrame
+        local providerFOV
+
+        if provider then
+                local ok, resultCFrame, resultFOV = pcall(provider, self, camera, startPart)
+                if ok then
+                        if typeof(resultCFrame) == "CFrame" then
+                                providerCFrame = resultCFrame
+                        end
+                        if typeof(resultFOV) == "number" then
+                                providerFOV = resultFOV
+                        end
+                else
+                        warn("IntroCamera focus provider error:", resultCFrame)
+                end
+        end
+
+        local defaultCFrame
+        local defaultFOV = nil
+
+        if startPart and startPart.Parent then
+                defaultCFrame = self:_faceCFrame(startPart)
+                defaultFOV = self:_partFOV(startPart, camera)
+        else
+                local cam = camera or self:getCurrentCamera()
+                if cam then
+                        defaultCFrame = cam.CFrame
+                        defaultFOV = cam.FieldOfView
+                else
+                        defaultCFrame = CFrame.new()
+                        defaultFOV = 70
+                end
+        end
+
+        return providerCFrame or defaultCFrame, providerFOV or defaultFOV
+end
+
+function IntroCamera:_applyCameraFrame(camera, startPart)
+        if not camera then
+                return false
+        end
+
+        local cframe, fov = self:_resolveCameraFrame(camera, startPart)
+        if cframe then
+                camera.CFrame = cframe
+        end
+        if fov then
+                camera.FieldOfView = fov
+        end
+        return true
+end
+
+function IntroCamera:setFocusProvider(provider)
+        if provider ~= nil and typeof(provider) ~= "function" then
+                error("IntroCamera:setFocusProvider expects a function or nil", 2)
+        end
+
+        self._focusProvider = provider
+        local camera = self:getCurrentCamera()
+        if camera then
+                local startPart = (self.startPart and self.startPart.Parent) and self.startPart or nil
+                self:_applyCameraFrame(camera, startPart)
+        end
 end
 
 function IntroCamera:_unbindHold()
