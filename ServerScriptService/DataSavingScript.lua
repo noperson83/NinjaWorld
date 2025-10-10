@@ -4,6 +4,7 @@ local DataStoreService = game:GetService("DataStoreService")
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GameSettings = require(ReplicatedStorage.GameSettings)
+local SpawnRegistry = require(ReplicatedStorage:WaitForChild("SpawnRegistry"))
 
 -- single datastore for all player data
 local DataStore = DataStoreService:GetDataStore("PlayerData")
@@ -37,6 +38,7 @@ local DEFAULT_DATA = {
         Atom = 0,
     },
     unlockedAbilities = {},
+    unlockedSpawns = {},
     -- realms the player has unlocked; start with all locked
     unlockedRealms = {
         StarterDojo = true,
@@ -218,18 +220,50 @@ local function loadPlayerData(player)
 
         fillMissing(data, DEFAULT_DATA)
         data.elements = sanitizeElements(data.elements)
+
+        local cleanedSpawns = {}
+        if typeof(data.unlockedSpawns) == "table" then
+            for key, value in pairs(data.unlockedSpawns) do
+                if value then
+                    cleanedSpawns[key] = true
+                end
+            end
+        end
+        for _, info in ipairs(SpawnRegistry.getSpawnInfos()) do
+            if info.defaultUnlocked then
+                cleanedSpawns[info.key] = true
+            end
+        end
+        data.unlockedSpawns = cleanedSpawns
+
         data.slots = typeof(data.slots) == "table" and data.slots or {}
         local slotData = data.slots["1"]
         if not slotData then
             slotData = {
                 inventory = deepCopy(data.inventory),
                 unlockedRealms = deepCopy(data.unlockedRealms),
+                unlockedSpawns = deepCopy(data.unlockedSpawns),
                 rebirths = data.rebirths or 0,
             }
             data.slots["1"] = slotData
         end
+        slotData.unlockedSpawns = typeof(slotData.unlockedSpawns) == "table" and slotData.unlockedSpawns or data.unlockedSpawns
+        local slotSpawnData = {}
+        for key, value in pairs(slotData.unlockedSpawns) do
+            if value then
+                slotSpawnData[key] = true
+            end
+        end
+        for key, value in pairs(cleanedSpawns) do
+            if value then
+                slotSpawnData[key] = true
+            end
+        end
+        slotData.unlockedSpawns = slotSpawnData
+
         data.inventory = slotData.inventory or data.inventory
         data.unlockedRealms = slotData.unlockedRealms or data.unlockedRealms
+        data.unlockedSpawns = slotData.unlockedSpawns or data.unlockedSpawns
         data.rebirths = slotData.rebirths or data.rebirths or 0
         -- ensure all realm flags exist
         data.unlockedRealms = type(data.unlockedRealms) == "table" and data.unlockedRealms or {}
@@ -260,10 +294,22 @@ local function savePlayerData(player)
     else
         data.inventory.orbs = sanitizeOrbs(data.inventory.orbs)
     end
+    local zoneFolder = player:FindFirstChild("ZoneSpawns")
+    local savedSpawns = {}
+    if zoneFolder then
+        for _, child in ipairs(zoneFolder:GetChildren()) do
+            if child:IsA("BoolValue") and child.Value then
+                savedSpawns[child.Name] = true
+            end
+        end
+    end
+    data.unlockedSpawns = savedSpawns
+
     local slot = tonumber(player:GetAttribute("PersonaSlot")) or 1
     data.slots[tostring(slot)] = data.slots[tostring(slot)] or {}
     data.slots[tostring(slot)].inventory = data.inventory
     data.slots[tostring(slot)].unlockedRealms = data.unlockedRealms
+    data.slots[tostring(slot)].unlockedSpawns = data.unlockedSpawns
     data.slots[tostring(slot)].rebirths = data.rebirths
 
     data.elements = sanitizeElements(data.elements)
@@ -280,6 +326,7 @@ local function savePlayerData(player)
     local pSlot = raw[tostring(slot)] or {}
     pSlot.inventory = data.inventory
     pSlot.unlockedRealms = data.unlockedRealms
+    pSlot.unlockedSpawns = data.unlockedSpawns
     pSlot.rebirths = data.rebirths
     raw[tostring(slot)] = pSlot
     local ok2, err2 = pcall(function() PersonaStore:SetAsync(personaKey, raw) end)
@@ -349,12 +396,15 @@ local function playerAdded(player)
         sd.slots[tostring(old)] = sd.slots[tostring(old)] or {}
         sd.slots[tostring(old)].inventory = sd.inventory
         sd.slots[tostring(old)].unlockedRealms = sd.unlockedRealms
+        sd.slots[tostring(old)].unlockedSpawns = sd.unlockedSpawns
         sd.slots[tostring(old)].rebirths = sd.rebirths
         sd.slot = tonumber(player:GetAttribute("PersonaSlot")) or 1
         local new = sd.slots[tostring(sd.slot)] or {}
         sd.inventory = new.inventory or sd.inventory
         sd.unlockedRealms = new.unlockedRealms or sd.unlockedRealms
+        sd.unlockedSpawns = new.unlockedSpawns or sd.unlockedSpawns or {}
         sd.rebirths = new.rebirths or sd.rebirths or 0
+        syncZoneSpawns()
     end)
 
     data.inventory.orbs = sanitizeOrbs(data.inventory.orbs)
@@ -520,6 +570,83 @@ local function playerAdded(player)
             child:GetPropertyChangedSignal("Value"):Connect(function()
                 sessionData[player.UserId].unlockedRealms[child.Name] = child.Value
             end)
+        end
+    end)
+
+    local zoneSpawnsFolder = player:FindFirstChild("ZoneSpawns")
+    if not zoneSpawnsFolder then
+        zoneSpawnsFolder = Instance.new("Folder")
+        zoneSpawnsFolder.Name = "ZoneSpawns"
+        zoneSpawnsFolder.Parent = player
+    end
+
+    local function updateSpawnFlag(flag)
+        if not flag then
+            return
+        end
+        if flag:GetAttribute("__ZoneSpawnWatcher") then
+            return
+        end
+        flag:SetAttribute("__ZoneSpawnWatcher", true)
+        flag:GetPropertyChangedSignal("Value"):Connect(function()
+            if flag.Value then
+                sessionData[player.UserId].unlockedSpawns[flag.Name] = true
+            else
+                sessionData[player.UserId].unlockedSpawns[flag.Name] = nil
+            end
+        end)
+    end
+
+    local function syncZoneSpawns()
+        local desired = sessionData[player.UserId].unlockedSpawns or {}
+        for _, child in ipairs(zoneSpawnsFolder:GetChildren()) do
+            if child:IsA("BoolValue") and not desired[child.Name] then
+                child:Destroy()
+            end
+        end
+        for key, value in pairs(desired) do
+            if value then
+                local flag = zoneSpawnsFolder:FindFirstChild(key)
+                if not flag then
+                    flag = Instance.new("BoolValue")
+                    flag.Name = key
+                    flag.Parent = zoneSpawnsFolder
+                    updateSpawnFlag(flag)
+                end
+                flag.Value = true
+            end
+        end
+    end
+
+    for key, value in pairs(data.unlockedSpawns) do
+        if value then
+            local flag = zoneSpawnsFolder:FindFirstChild(key)
+            if not flag then
+                flag = Instance.new("BoolValue")
+                flag.Name = key
+                flag.Parent = zoneSpawnsFolder
+            end
+            flag.Value = true
+            updateSpawnFlag(flag)
+        end
+    end
+
+    syncZoneSpawns()
+
+    zoneSpawnsFolder.ChildAdded:Connect(function(child)
+        if child:IsA("BoolValue") then
+            if child.Value then
+                sessionData[player.UserId].unlockedSpawns[child.Name] = true
+            else
+                sessionData[player.UserId].unlockedSpawns[child.Name] = nil
+            end
+            updateSpawnFlag(child)
+        end
+    end)
+
+    zoneSpawnsFolder.ChildRemoved:Connect(function(child)
+        if child:IsA("BoolValue") then
+            sessionData[player.UserId].unlockedSpawns[child.Name] = nil
         end
     end)
 

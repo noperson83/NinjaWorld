@@ -17,6 +17,7 @@ local function buildZoneInfo()
                         name = info.key,
                         label = info.label,
                         instance = info.instance,
+                        defaultUnlocked = info.defaultUnlocked and true or false,
                 }
         end
         return zoneInfo
@@ -161,8 +162,14 @@ function TeleportUI:destroy()
         for _, conn in ipairs(self._flagConnections) do
                 if conn.Disconnect then conn:Disconnect() end
         end
+        if self._zoneConnections then
+                for _, conn in ipairs(self._zoneConnections) do
+                        if conn.Disconnect then conn:Disconnect() end
+                end
+        end
         self._connections = {}
         self._flagConnections = {}
+        self._zoneConnections = {}
         if self.root then
                 self.root:Destroy()
         end
@@ -185,6 +192,10 @@ function TeleportUI.init(parent, baseY, dependencies)
         self.realmInfo = dependencies.REALM_INFO or DEFAULT_REALM_INFO
         self.getRealmFolder = dependencies.getRealmFolder or defaultGetRealmFolder
         self.onTeleport = dependencies.onTeleport
+        self.zoneButtons = {}
+        self.zoneInfoLookup = {}
+        self.zoneDefaultLookup = {}
+        self._zoneConnections = {}
 
         local teleportContainer = Instance.new("Frame")
         teleportContainer.Name = "TeleportContainer"
@@ -297,6 +308,88 @@ function TeleportUI.init(parent, baseY, dependencies)
         self.zoneInfo = zoneInfo
         TeleportUI.ZONE_INFO = zoneInfo
 
+        local function getZoneFolder()
+                return player:FindFirstChild("ZoneSpawns")
+        end
+
+        local function isZoneUnlocked(key)
+                local folder = getZoneFolder()
+                if folder then
+                        local flag = folder:FindFirstChild(key)
+                        if flag then
+                                return flag.Value and true or false
+                        end
+                end
+                return self.zoneDefaultLookup[key] and true or false
+        end
+
+        local function updateZoneButton(key)
+                local button = self.zoneButtons[key]
+                local info = self.zoneInfoLookup[key]
+                if not (button and info) then
+                        return
+                end
+                local unlocked = isZoneUnlocked(key)
+                button.Active = unlocked
+                button.AutoButtonColor = unlocked
+                button.BackgroundColor3 = unlocked and Color3.fromRGB(50,120,255) or Color3.fromRGB(40,40,48)
+                button.TextColor3 = unlocked and Color3.new(1,1,1) or Color3.fromRGB(170,170,170)
+                button.Text = unlocked and info.label or (info.label .. " (Locked)")
+                button:SetAttribute("Unlocked", unlocked)
+        end
+
+        local function updateAllZoneButtons()
+                for key in pairs(self.zoneButtons) do
+                        updateZoneButton(key)
+                end
+        end
+
+        local function watchZoneFlag(flag)
+                if not flag then
+                        return
+                end
+                updateZoneButton(flag.Name)
+                local conn = flag:GetPropertyChangedSignal("Value"):Connect(function()
+                        updateZoneButton(flag.Name)
+                end)
+                self._zoneConnections[#self._zoneConnections + 1] = conn
+        end
+
+        local function clearZoneConnections()
+                for _, conn in ipairs(self._zoneConnections) do
+                        if conn.Disconnect then
+                                conn:Disconnect()
+                        end
+                end
+                self._zoneConnections = {}
+        end
+
+        local function watchZoneFolder(folder)
+                clearZoneConnections()
+                if not folder then
+                        updateAllZoneButtons()
+                        return
+                end
+                for _, child in ipairs(folder:GetChildren()) do
+                        if child:IsA("BoolValue") then
+                                watchZoneFlag(child)
+                        end
+                end
+                local addedConn = folder.ChildAdded:Connect(function(child)
+                        if child:IsA("BoolValue") then
+                                watchZoneFlag(child)
+                        end
+                end)
+                local removedConn = folder.ChildRemoved:Connect(function(child)
+                        if child:IsA("BoolValue") then
+                                updateZoneButton(child.Name)
+                        end
+                end)
+                self._zoneConnections[#self._zoneConnections + 1] = addedConn
+                self._zoneConnections[#self._zoneConnections + 1] = removedConn
+                updateAllZoneButtons()
+        end
+
         if #zoneInfo == 0 then
                 local emptyLabel = Instance.new("TextLabel")
                 emptyLabel.Name = "NoSpawnsLabel"
@@ -323,15 +416,32 @@ function TeleportUI.init(parent, baseY, dependencies)
                         button.TextScaled = true
                         button.TextWrapped = true
                         button.AutoButtonColor = true
-                        button.Text = info.label
                         button.ZIndex = BASE_Z_INDEX + 4
                         button.Parent = teleFrame
 
                         local corner = Instance.new("UICorner")
                         corner.CornerRadius = UDim.new(0, 8)
                         corner.Parent = button
+
+                        self.zoneButtons[info.key] = button
+                        self.zoneInfoLookup[info.key] = info
+                        self.zoneDefaultLookup[info.key] = info.defaultUnlocked and true or false
+                        button:SetAttribute("SpawnKey", info.key)
+                        updateZoneButton(info.key)
                 end
         end
+
+        watchZoneFolder(getZoneFolder())
+        track(self, player.ChildAdded:Connect(function(child)
+                if child:IsA("Folder") and child.Name == "ZoneSpawns" then
+                        watchZoneFolder(child)
+                end
+        end))
+        track(self, player.ChildRemoved:Connect(function(child)
+                if child.Name == "ZoneSpawns" then
+                        watchZoneFolder(nil)
+                end
+        end))
 
         local worldTitle = Instance.new("TextLabel")
         worldTitle.Size = UDim2.new(1, 0, 0, 28)
