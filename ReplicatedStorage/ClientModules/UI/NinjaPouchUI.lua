@@ -1,11 +1,59 @@
 local NinjaPouchUI = {}
 
+local ELEMENT_ICONS = {
+        Water = "💧",
+        Fire = "🔥",
+        Wind = "🌪️",
+        Growth = "🌿",
+        Grow = "🌿",
+        Ice = "❄️",
+        Light = "✨",
+        Metal = "⚙️",
+        Magic = "🔮",
+        Strength = "💪",
+        Atom = "🧪",
+        Atoms = "🧪",
+}
+
+local ELEMENT_DISPLAY_NAMES = {
+        Grow = "Growth",
+        Atom = "Atoms",
+        Atoms = "Atoms",
+}
+
+local function getElementDisplayName(element)
+        local pretty = ELEMENT_DISPLAY_NAMES[element]
+        if pretty then
+                return pretty
+        end
+        return element or "Unknown"
+end
+
 local function clearChildren(parent)
-	for _, child in ipairs(parent:GetChildren()) do
-		if not child:IsA("UIListLayout") then
-			child:Destroy()
-		end
-	end
+        for _, child in ipairs(parent:GetChildren()) do
+                if not child:IsA("UIListLayout") then
+                        child:Destroy()
+                end
+        end
+end
+
+local function sanitizeNumber(value)
+        local num = tonumber(value)
+        if not num then
+                return 0
+        end
+        return math.max(0, math.floor(num))
+end
+
+local function copyNumberDictionary(dict)
+        local result = {}
+        if typeof(dict) ~= "table" then
+                return result
+        end
+        for key, value in pairs(dict) do
+                result[key] = sanitizeNumber(value)
+        end
+        return result
 end
 
 local function createCorner(parent, radius)
@@ -59,6 +107,7 @@ end
 function NinjaPouchUI.init(parent, baseY)
         local self = {}
         self.data = {gold = 0, shurikens = 0, kunai = 0, scrolls = 0}
+        self.currency = {coins = 0, orbs = {}, elements = {}}
         self.currentTab = "Tools"
 
 	-- Main pouch container
@@ -219,11 +268,11 @@ function NinjaPouchUI.init(parent, baseY)
 		label.Parent = header
 	end
 
-	local function addStatRow(name, value, icon)
-		local row = Instance.new("Frame")
-		row.Size = UDim2.new(1, -10, 0, 32)
-		row.BackgroundTransparency = 1
-		row.Parent = scrollFrame
+        local function addStatRow(name, value, icon)
+                local row = Instance.new("Frame")
+                row.Size = UDim2.new(1, -10, 0, 32)
+                row.BackgroundTransparency = 1
+                row.Parent = scrollFrame
 
 		local nameLabel = Instance.new("TextLabel")
 		nameLabel.Size = UDim2.new(0.65, -15, 1, 0)
@@ -244,15 +293,33 @@ function NinjaPouchUI.init(parent, baseY)
 		valueLabel.Font = Enum.Font.GothamBold
 		valueLabel.TextScaled = true
 		valueLabel.TextColor3 = Color3.fromRGB(100, 200, 150)
-		valueLabel.Text = tostring(value or 0)
-		valueLabel.Parent = row
-	end
+                valueLabel.Text = tostring(value or 0)
+                valueLabel.Parent = row
+        end
 
-	local function addItemRow(item)
-		local row = Instance.new("Frame")
-		row.Size = UDim2.new(1, -10, 0, 45)
-		row.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
-		row.BackgroundTransparency = 0.3
+        local function addInfoRow(text)
+                local row = Instance.new("Frame")
+                row.Size = UDim2.new(1, -10, 0, 28)
+                row.BackgroundTransparency = 1
+                row.Parent = scrollFrame
+
+                local label = Instance.new("TextLabel")
+                label.Size = UDim2.new(1, -20, 1, 0)
+                label.Position = UDim2.new(0, 10, 0, 0)
+                label.BackgroundTransparency = 1
+                label.TextXAlignment = Enum.TextXAlignment.Left
+                label.Font = Enum.Font.Gotham
+                label.TextScaled = true
+                label.TextColor3 = Color3.fromRGB(160, 160, 180)
+                label.Text = text
+                label.Parent = row
+        end
+
+        local function addItemRow(item)
+                local row = Instance.new("Frame")
+                row.Size = UDim2.new(1, -10, 0, 45)
+                row.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+                row.BackgroundTransparency = 0.3
 		row.BorderSizePixel = 0
 		row.Parent = scrollFrame
 		createCorner(row, 6)
@@ -320,22 +387,85 @@ function NinjaPouchUI.init(parent, baseY)
 			end
 		end
 
-		local data = self.data
-		if not data then return end
+                local data = self.data
+                local currency = self.currency or {}
+                if not data then return end
 
-		if self.currentTab == "Tools" then
-			addSectionHeader("Resources", "💰")
-			addStatRow("Gold Coins", data.gold or 0, "🪙")
-			addStatRow("Honor Points", data.honor or 100, "⭐")
+                if self.currentTab == "Tools" then
+                        addSectionHeader("Resources", "💰")
+                        addStatRow("Gold Coins", currency.coins or data.gold or 0, "🪙")
+                        addStatRow("Honor Points", data.honor or 100, "⭐")
 
-			addSectionHeader("Mission Stats", "📊")
-			addStatRow("Completed Missions", data.missions or 0, "✅")
-			addStatRow("Stealth Rating", "S-Rank", "🥷")
+                        addSectionHeader("Mission Stats", "📊")
+                        addStatRow("Completed Missions", data.missions or 0, "✅")
+                        addStatRow("Stealth Rating", "S-Rank", "🥷")
 
-		elseif self.currentTab == "Weapons" then
-			addSectionHeader("Arsenal", "⚔")
-			for _, weapon in ipairs(data.weapons or {}) do
-				addItemRow(weapon)
+                        addSectionHeader("Orb Collection", "🔮")
+                        local orbs = currency.orbs or {}
+                        local orbEntries = {}
+                        local totalOrbs = 0
+                        for element, count in pairs(orbs) do
+                                local num = sanitizeNumber(count)
+                                totalOrbs += num
+                                if num > 0 then
+                                        table.insert(orbEntries, {element = element, count = num})
+                                end
+                        end
+
+                        table.sort(orbEntries, function(a, b)
+                                if a.count == b.count then
+                                        return tostring(a.element) < tostring(b.element)
+                                end
+                                return a.count > b.count
+                        end)
+
+                        addStatRow("Total Orbs Held", totalOrbs, "🔷")
+
+                        if #orbEntries == 0 then
+                                addInfoRow("Collect elemental orbs to fill your pouch.")
+                        else
+                                for _, entry in ipairs(orbEntries) do
+                                        local elementName = getElementDisplayName(entry.element)
+                                        local icon = ELEMENT_ICONS[entry.element] or "🔹"
+                                        addStatRow(elementName .. " Orbs", entry.count, icon)
+                                end
+                        end
+
+                        addSectionHeader("Element Ranks", "🥋")
+                        local elementEntries = {}
+                        local hasProgress = false
+                        for element, level in pairs(currency.elements or {}) do
+                                local rankLevel = sanitizeNumber(level)
+                                if rankLevel > 0 then
+                                        hasProgress = true
+                                end
+                                table.insert(elementEntries, {element = element, level = rankLevel})
+                        end
+
+                        table.sort(elementEntries, function(a, b)
+                                if a.level == b.level then
+                                        return tostring(a.element) < tostring(b.element)
+                                end
+                                return a.level > b.level
+                        end)
+
+                        if #elementEntries == 0 then
+                                addInfoRow("No elemental history yet. Earn ranks by gathering orbs.")
+                        elseif not hasProgress then
+                                addInfoRow("No ranks unlocked. Gather more orbs to rank up your elements.")
+                        else
+                                for index, entry in ipairs(elementEntries) do
+                                        local elementName = getElementDisplayName(entry.element)
+                                        local icon = ELEMENT_ICONS[entry.element] or "🔹"
+                                        local valueText = string.format("Rank %d", entry.level)
+                                        addStatRow(string.format("#%d %s", index, elementName), valueText, icon)
+                                end
+                        end
+
+                elseif self.currentTab == "Weapons" then
+                        addSectionHeader("Arsenal", "⚔")
+                        for _, weapon in ipairs(data.weapons or {}) do
+                                addItemRow(weapon)
 			end
 
 		elseif self.currentTab == "Consumables" then
@@ -352,18 +482,50 @@ function NinjaPouchUI.init(parent, baseY)
 		end
 	end
 
-	function self:setData(pouchData)
-		self.data = pouchData or {}
-		self:render(self.currentTab)
-	end
+        function self:setData(pouchData)
+                self.data = pouchData or {}
+                self.currency = self.currency or {}
 
-	function self:updateResources(gold, honor, missions)
-		self.data = self.data or {}
-		self.data.gold = gold or self.data.gold or 0
-		self.data.honor = honor or self.data.honor or 100
-		self.data.missions = missions or self.data.missions or 0
-		self:render(self.currentTab)
-	end
+                if typeof(self.data.coins) == "number" then
+                        self.currency.coins = sanitizeNumber(self.data.coins)
+                end
+
+                if typeof(self.data.orbs) == "table" then
+                        self.currency.orbs = copyNumberDictionary(self.data.orbs)
+                end
+
+                if typeof(self.data.elements) == "table" then
+                        self.currency.elements = copyNumberDictionary(self.data.elements)
+                end
+
+                self:render(self.currentTab)
+        end
+
+        function self:updateResources(gold, honor, missions)
+                self.data = self.data or {}
+                self.data.gold = gold or self.data.gold or 0
+                self.data.honor = honor or self.data.honor or 100
+                self.data.missions = missions or self.data.missions or 0
+                self:render(self.currentTab)
+        end
+
+        function self:updateCurrency(coins, orbs, elements)
+                self.currency = self.currency or {}
+
+                if coins ~= nil then
+                        self.currency.coins = sanitizeNumber(coins)
+                end
+
+                if typeof(orbs) == "table" then
+                        self.currency.orbs = copyNumberDictionary(orbs)
+                end
+
+                if typeof(elements) == "table" then
+                        self.currency.elements = copyNumberDictionary(elements)
+                end
+
+                self:render(self.currentTab)
+        end
 
 	function self:setVisible(visible)
 		pouch.Visible = visible and true or false
