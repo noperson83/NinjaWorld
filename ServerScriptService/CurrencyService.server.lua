@@ -12,6 +12,16 @@ end
 local ORB_THRESHOLD = 10
 local balances = {}
 
+local function cloneDictionary(source)
+    local copy = {}
+    if typeof(source) == "table" then
+        for key, value in pairs(source) do
+            copy[key] = value
+        end
+    end
+    return copy
+end
+
 local function waitForSessionData()
     local data = shared.sessionData
     if data then
@@ -35,6 +45,18 @@ local sessionData = waitForSessionData()
 local CurrencyService = {balances = balances}
 shared.CurrencyService = CurrencyService
 
+local function updateLeaderstatsCoins(player, coins)
+    local leaderstats = player:FindFirstChild("leaderstats")
+    if not leaderstats then
+        return
+    end
+
+    local coinValue = leaderstats:FindFirstChild("Coins")
+    if coinValue and coinValue.Value ~= coins then
+        coinValue.Value = coins
+    end
+end
+
 local function sendBalance(player, leveled)
     local data = balances[player.UserId]
     if data then
@@ -54,6 +76,11 @@ function CurrencyService.AdjustCoins(player, amount)
         return false
     end
     balance.coins += amount
+    local sd = sessionData[player.UserId]
+    if sd and sd.currency then
+        sd.currency.Coins = balance.coins
+    end
+    updateLeaderstatsCoins(player, balance.coins)
     sendBalance(player)
     return true
 end
@@ -110,7 +137,15 @@ Players.PlayerAdded:Connect(function(player)
             end
         end
     end
-    balances[player.UserId] = {coins = 0, orbs = {}, elements = sd and sd.elements or {}}
+    local startCoins = 0
+    local startOrbs = {}
+    local startElements = {}
+    if sd then
+        startCoins = tonumber(sd.currency and sd.currency.Coins) or 0
+        startOrbs = cloneDictionary(sd.inventory and sd.inventory.orbs)
+        startElements = cloneDictionary(sd.elements)
+    end
+    balances[player.UserId] = {coins = startCoins, orbs = startOrbs, elements = startElements}
     sendBalance(player)
     player:GetAttributeChangedSignal("Inventory"):Connect(function()
         local invStr = player:GetAttribute("Inventory")
@@ -122,6 +157,15 @@ Players.PlayerAdded:Connect(function(player)
             end
         end
     end)
+    local initialInv = player:GetAttribute("Inventory")
+    if typeof(initialInv) == "string" then
+        local ok, inv = pcall(HttpService.JSONDecode, HttpService, initialInv)
+        if ok and type(inv.orbs) == "table" then
+            balances[player.UserId].orbs = inv.orbs
+            sendBalance(player)
+        end
+    end
+    updateLeaderstatsCoins(player, startCoins)
 end)
 
 Players.PlayerRemoving:Connect(function(player)
