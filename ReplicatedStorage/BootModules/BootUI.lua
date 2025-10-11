@@ -17,7 +17,6 @@ local HttpService       = game:GetService("HttpService")
 
 local player  = Players.LocalPlayer
 local rf      = nil
-local cam     = Workspace.CurrentCamera
 local enterRE -- RemoteEvent created by Init.server.lua
 local lastFreezeRestore
 
@@ -276,8 +275,6 @@ local Cosmetics       = require(ReplicatedStorage.BootModules.Cosmetics)
 local CurrencyService = require(ReplicatedStorage.BootModules.CurrencyService)
 local Shop            = require(ReplicatedStorage.BootModules.Shop)
 local AbilityUI       = require(ReplicatedStorage.BootModules.AbilityUI)
-local IntroCamera     = require(ReplicatedStorage.BootModules.IntroCamera)
-local LogoIntroCamera = require(ReplicatedStorage.BootModules.LogoIntroCamera)
 local WorldHUD        = require(ReplicatedStorage.ClientModules.UI.WorldHUD)
 local TeleportClient  = require(ReplicatedStorage.ClientModules.TeleportClient)
 local DojoClient      = require(ReplicatedStorage.BootModules.DojoClient)
@@ -486,15 +483,7 @@ function BootUI.destroyHUD()
 end
 
 function BootUI.releaseIntroHold()
-        local introCamera = BootUI.introCamera
-        if introCamera and introCamera.releaseHold then
-                introCamera:releaseHold()
-        end
-
-        local logoCamera = BootUI.logoCamera
-        if logoCamera and typeof(logoCamera.resume) == "function" then
-                logoCamera:resume()
-        end
+        -- Intentionally left blank. Camera scripting has been removed.
 end
 
 function BootUI.hideOverlay()
@@ -507,11 +496,6 @@ end
 
 function BootUI.destroy()
         BootUI.hideOverlay()
-        local logoCamera = BootUI.logoCamera
-        if logoCamera and typeof(logoCamera.destroy) == "function" then
-                logoCamera:destroy()
-        end
-        BootUI.logoCamera = nil
         local abilityUI = BootUI.abilityUI
         if abilityUI and typeof(abilityUI.destroy) == "function" then
                 abilityUI:destroy()
@@ -564,11 +548,9 @@ function BootUI.start(config)
 		end
 	end)
 
-	-- =====================
-	-- Config
-	-- =====================
-	local CAM_TWEEN_TIME = 1.6
-
+        -- =====================
+        -- Config
+        -- =====================
 	local StarterBackpack = config.inventory or config.starterBackpack or {
 		capacity = 20,
 		weapons = {},
@@ -625,126 +607,16 @@ function BootUI.start(config)
 	BootUI.populateBackpackUI(config.inventory)
 
 
-	-- =====================
-	-- Camera helpers (world)
-	-- =====================
-        local fallbackFocusPoint = Vector3.new(0, 6, 0)
-        local fallbackUpVector = Vector3.new(0, 1, 0)
-        local fallbackStartPosition = fallbackFocusPoint + Vector3.new(0, 7, -28)
-        local fallbackEndPosition = fallbackFocusPoint + Vector3.new(0, 5, -18)
-        local fallbackStartCFrame = CFrame.lookAt(fallbackStartPosition, fallbackFocusPoint, fallbackUpVector)
-        local fallbackEndCFrame = CFrame.lookAt(fallbackEndPosition, fallbackFocusPoint, fallbackUpVector)
-        local fallbackStartFOV = 55
-        local fallbackEndFOV = 60
-
-        local introCamera = IntroCamera.new({
-                workspace = Workspace,
-                tweenService = TweenService,
-                runService = RunService,
-                fallbackFocusPoint = fallbackFocusPoint,
-                fallbackUpVector = fallbackUpVector,
-                fallbackStartCFrame = fallbackStartCFrame,
-                fallbackEndCFrame = fallbackEndCFrame,
-                fallbackStartFOV = fallbackStartFOV,
-                fallbackEndFOV = fallbackEndFOV,
-        })
-	BootUI.introCamera = introCamera
-
-        local logoCamera = LogoIntroCamera.new(introCamera, {
-                workspace = Workspace,
-                tweenService = TweenService,
-                maxTargets = 10,
-                cycleInterval = 4.5,
-                transitionTime = 1.25,
-                defaultDistance = 20,
-                defaultHeight = 4,
-                defaultFOV = 40,
-                fallbackCFrame = fallbackStartCFrame,
-                fallbackFOV = fallbackStartFOV,
-                fallbackFocusPoint = fallbackFocusPoint,
-                fallbackUp = fallbackUpVector,
-        })
-	BootUI.logoCamera = logoCamera
-	logoCamera:start()
-
-        local pendingIntroOptions
-        local pendingReadyDisconnect
-
-        local replayIntroSequence
-
-        local function cloneOptions(options)
-                local copy = {}
-                if typeof(options) == "table" then
-                        for key, value in pairs(options) do
-                                copy[key] = value
-                        end
-                end
-                return copy
-        end
-
-        local function cancelPendingReplay()
-                if pendingReadyDisconnect then
-                        pendingReadyDisconnect()
-                        pendingReadyDisconnect = nil
-                end
-        end
-
-        local function getCamera()
-                cam = introCamera:getCurrentCamera() or cam or Workspace.CurrentCamera
-                return cam
-        end
-
-        local function waitForCurrentCamera(timeout)
-                cam = introCamera:waitForCamera(timeout) or cam
-                return cam
-        end
-
-        local function waitForCameraParts(timeout, requireEnd)
-                local startPart, endPart = introCamera:waitForParts(timeout, requireEnd)
-                return startPart, endPart
-        end
-
-        local function applyStartCam()
-                if introCamera:applyStartCamera() then
-                        cam = getCamera()
-                        return true
-                end
-                return false
-        end
-
-        local function holdStartCam(seconds)
-                introCamera:releaseHold()
-                if introCamera:holdStartCamera(seconds) then
-                        cam = getCamera()
-                        return true
-                end
-                return false
-        end
-
+        -- =====================
+        -- Camera helpers (world)
+        -- =====================
         local function tweenToEnd()
-                local success = select(1, introCamera:tweenToEnd(CAM_TWEEN_TIME))
-                if success then
-                        cam = getCamera()
-                end
-                return success
+                return false
         end
         BootUI.tweenToEnd = tweenToEnd
 
         if not cosmeticsInterface.tweenToEnd then
                 cosmeticsInterface.tweenToEnd = tweenToEnd
-        end
-
-        local function scheduleIntroReplay(options)
-                cancelPendingReplay()
-                pendingIntroOptions = cloneOptions(options)
-                pendingReadyDisconnect = introCamera:onReady(function()
-                        pendingReadyDisconnect = nil
-                        if pendingIntroOptions then
-                                local optionsCopy = pendingIntroOptions
-                                pendingIntroOptions = nil
-                                replayIntroSequence(optionsCopy)
-                        end
-                end)
         end
 
         -- Lighting helpers (disable DOF while UI is visible)
@@ -790,30 +662,8 @@ function BootUI.start(config)
                 end
         end
 
-        replayIntroSequence = function(options)
+        local function replayIntroSequence(options)
                 options = options or {}
-                local currentCamera = waitForCurrentCamera(options.cameraWait)
-                local startPart = waitForCameraParts(options.cameraWait)
-
-                if not startPart then
-                        scheduleIntroReplay(options)
-                        return
-                end
-
-                local logoCamera = BootUI.logoCamera
-                if logoCamera then
-                        if typeof(logoCamera.pauseForReplay) == "function" then
-                                logoCamera:pauseForReplay(options.holdTime)
-                        elseif typeof(logoCamera.pause) == "function" then
-                                logoCamera:pause()
-                        end
-                end
-
-                pendingIntroOptions = nil
-                cancelPendingReplay()
-                cam = currentCamera or getCamera()
-                applyStartCam()
-                holdStartCam(options.holdTime)
                 if options.disableBlur ~= false then
                         disableUIBlur()
                 end
@@ -901,7 +751,6 @@ function BootUI.start(config)
         if personaButton then
                 personaButton.MouseButton1Click:Connect(function()
                         local function openDojoPicker()
-                                applyStartCam()
                                 if typeof(Cosmetics.showDojoPicker) == "function" then
                                         Cosmetics.showDojoPicker()
                                 end
@@ -944,17 +793,9 @@ function BootUI.start(config)
 				end
 
                                 task.wait(0.2)
-                                local char = player.Character or player.CharacterAdded:Wait()
-                                local hum = char:FindFirstChildOfClass("Humanoid")
                                 BootUI.releaseIntroHold()
-                                cam = getCamera()
-                                if cam then
-                                        cam.CameraType = Enum.CameraType.Custom
-                                        if hum then cam.CameraSubject = hum end
-                                end
-
-				DojoClient.hide()
-				restoreUIBlur()
+                                DojoClient.hide()
+                                restoreUIBlur()
 				local hudAfterTeleport = BootUI.hud
 				if hudAfterTeleport and hudAfterTeleport.handlePostTeleport then
 					-- Re-open the loadout menu shortly after spawning so the quick-access
