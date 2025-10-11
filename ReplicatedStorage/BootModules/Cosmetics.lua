@@ -633,10 +633,16 @@ local function updateSlotDisplays()
 end
 
 refreshSlotData = function(newData)
-	personaCache = sanitizePersonaData(newData)
-	ensureValidSelection()
-	updateSlotDisplays()
-	updateSelectedPersonaLabel()
+        personaCache = sanitizePersonaData(newData)
+        local fallbackLevel = getPlayerLevel()
+        for slotIndex, slotData in pairs(personaCache.slots) do
+                if typeof(slotData) == "table" and slotData.level == nil then
+                        slotData.level = fallbackLevel
+                end
+        end
+        ensureValidSelection()
+        updateSlotDisplays()
+        updateSelectedPersonaLabel()
 end
 
 -- ═══════════════════════════════════════════════════════════════
@@ -1027,6 +1033,12 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
 
 	-- Initialize persona data
 	personaCache = sanitizePersonaData(config.personaData)
+	local initialLevel = getPlayerLevel()
+	for slotIndex, slotData in pairs(personaCache.slots) do
+		if typeof(slotData) == "table" and slotData.level == nil then
+			slotData.level = initialLevel
+		end
+	end
 	slotButtons = {}
 
 	-- Slot 1: Center (primary/featured slot)

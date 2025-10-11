@@ -79,6 +79,33 @@ end
 -- Preload the description so it's replicated before any players join.
 resolveNinjaHD()
 
+
+local function getPlayerLevel(player)
+        local stats = player:FindFirstChild("Stats")
+        local levelValue = stats and stats:FindFirstChild("Level")
+        if levelValue and typeof(levelValue.Value) == "number" then
+                return levelValue.Value
+        end
+        local leaderstats = player:FindFirstChild("leaderstats")
+        local leaderLevel = leaderstats and leaderstats:FindFirstChild("Level")
+        if leaderLevel and typeof(leaderLevel.Value) == "number" then
+                return leaderLevel.Value
+        end
+        local attribute = player:GetAttribute("Level")
+        if typeof(attribute) == "number" then
+                return attribute
+        end
+        return 1
+end
+
+local function ensurePersonaLevel(entry, level)
+        if typeof(entry) ~= "table" then
+                return
+        end
+        if entry.level == nil then
+                entry.level = level
+        end
+end
 -- Apply selected persona whenever the character loads (safely idempotent)
 local function onCharacterAppearance(player, character)
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -123,6 +150,11 @@ rf.OnServerInvoke = function(player, action, data)
                 end
         end
 
+        local currentLevel = getPlayerLevel(player)
+        for i = 1, MAX_SLOTS do
+                ensurePersonaLevel(personas[i], currentLevel)
+        end
+
         local function persist()
                 local toSave = {}
                 for i = 1, MAX_SLOTS do
@@ -150,6 +182,12 @@ rf.OnServerInvoke = function(player, action, data)
                if data.unlockedRealms or data.realms then
                        personas[s].unlockedRealms = data.unlockedRealms or data.realms
                end
+               local providedLevel = data and tonumber(data.level)
+               if providedLevel then
+                       personas[s].level = providedLevel
+               else
+                       ensurePersonaLevel(personas[s], currentLevel)
+               end
                persist()
                return {ok=true, slots = personas}
 
@@ -163,6 +201,7 @@ rf.OnServerInvoke = function(player, action, data)
                player:SetAttribute("PersonaSlot", s)
                p.inventory = p.inventory or {}
                p.unlockedRealms = p.unlockedRealms or {}
+               ensurePersonaLevel(p, currentLevel)
                return {ok=true, persona=p}
 
         elseif action == "clear" then
