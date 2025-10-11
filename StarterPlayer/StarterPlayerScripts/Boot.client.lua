@@ -10,10 +10,11 @@ local LocalPlayer = Players.LocalPlayer
 
 -- Configuration
 local CONFIG = {
-	CAMERA_LOCK_DURATION = 3, -- How long to lock camera (seconds)
-	CAMERA_TRANSITION_TIME = 1.5, -- Smooth transition time
-	BLUR_SIZE = 24,
-	BLUR_FADE_TIME = 0.5
+        CAMERA_LOCK_DURATION = 3, -- How long to lock camera (seconds)
+        CAMERA_TRANSITION_TIME = 1.5, -- Smooth transition time
+        BLUR_SIZE = 24,
+        BLUR_FADE_TIME = 0.5,
+        CAMERA_ASSET_WAIT_TIME = 5 -- How long to wait for intro camera assets to replicate
 }
 
 -- ═══════════════════════════════════════════════════════════════
@@ -47,17 +48,17 @@ CameraController.isLocked = false
 CameraController.originalCameraType = nil
 
 function CameraController.setToStartPos()
-	local cameraFolder = Workspace:FindFirstChild("IntroCameras")
-	if not cameraFolder then
-		warn("⚠️ IntroCameras folder not found in Workspace")
-		return false
-	end
-	
-	local startPos = cameraFolder:FindFirstChild("startPos")
-	if not (startPos and startPos:IsA("BasePart")) then
-		warn("⚠️ startPos part not found or invalid in IntroCameras")
-		return false
-	end
+        local cameraFolder = Workspace:WaitForChild("IntroCameras", CONFIG.CAMERA_ASSET_WAIT_TIME)
+        if not cameraFolder then
+                warn("⚠️ IntroCameras folder not found in Workspace")
+                return false
+        end
+
+        local startPos = cameraFolder:WaitForChild("startPos", CONFIG.CAMERA_ASSET_WAIT_TIME)
+        if not (startPos and startPos:IsA("BasePart")) then
+                warn("⚠️ startPos part not found or invalid in IntroCameras")
+                return false
+        end
 	
 	local camera = Workspace.CurrentCamera
 	if not camera then
