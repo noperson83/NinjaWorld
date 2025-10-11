@@ -47,17 +47,104 @@ local CameraController = {}
 CameraController.isLocked = false
 CameraController.originalCameraType = nil
 
-function CameraController.setToStartPos()
-        local cameraFolder = Workspace:WaitForChild("IntroCameras", CONFIG.CAMERA_ASSET_WAIT_TIME)
-        if not cameraFolder then
-                warn("⚠️ IntroCameras folder not found in Workspace")
-                return false
+local function findFirstSpawnPart(container)
+        if not container then
+                return nil
         end
 
-        local startPos = cameraFolder:WaitForChild("startPos", CONFIG.CAMERA_ASSET_WAIT_TIME)
-        if not (startPos and startPos:IsA("BasePart")) then
-                warn("⚠️ startPos part not found or invalid in IntroCameras")
-                return false
+        for _, child in ipairs(container:GetChildren()) do
+                if child:IsA("BasePart") then
+                        return child
+                end
+        end
+
+        for _, child in ipairs(container:GetChildren()) do
+                local found = findFirstSpawnPart(child)
+                if found then
+                        return found
+                end
+        end
+
+        return nil
+end
+
+local function findFallbackCameraCFrame()
+        local spawnFolder = Workspace:FindFirstChild("SpawnLocations")
+        local spawnPart = findFirstSpawnPart(spawnFolder)
+
+        if not spawnPart then
+                local dojoSpawn = Workspace:FindFirstChild("DojoSpawn", true)
+                if dojoSpawn and dojoSpawn:IsA("BasePart") then
+                        spawnPart = dojoSpawn
+                end
+        end
+
+        if not spawnPart then
+                for _, descendant in ipairs(Workspace:GetDescendants()) do
+                        if descendant:IsA("SpawnLocation") then
+                                spawnPart = descendant
+                                break
+                        end
+                end
+        end
+
+        if spawnPart and spawnPart:IsA("BasePart") then
+                local baseCFrame = spawnPart.CFrame
+                local lookTarget = baseCFrame.Position + baseCFrame.LookVector * 5
+                local eyePosition = baseCFrame.Position + Vector3.new(0, 5, 0) - baseCFrame.LookVector * 12
+                return CFrame.lookAt(eyePosition, lookTarget)
+        end
+
+        local character = LocalPlayer.Character
+        if not character then
+                local ok, result = pcall(function()
+                        return LocalPlayer.CharacterAdded:Wait()
+                end)
+                if ok then
+                        character = result
+                end
+        end
+
+        local hrp = character and character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+                local baseCFrame = hrp.CFrame
+                local lookTarget = baseCFrame.Position + baseCFrame.LookVector * 5
+                local eyePosition = baseCFrame.Position + Vector3.new(0, 5, 0) - baseCFrame.LookVector * 12
+                return CFrame.lookAt(eyePosition, lookTarget)
+        end
+
+        return CFrame.new(Vector3.new(0, 10, 0), Vector3.new(0, 0, 0))
+end
+
+function CameraController.setToStartPos()
+        local targetCFrame
+        local usingFallback = false
+        local cameraFolder = Workspace:WaitForChild("IntroCameras", CONFIG.CAMERA_ASSET_WAIT_TIME)
+
+        if cameraFolder then
+                local startPos = cameraFolder:WaitForChild("startPos", CONFIG.CAMERA_ASSET_WAIT_TIME)
+
+                if startPos and startPos:IsA("BasePart") then
+                        targetCFrame = startPos.CFrame
+                else
+                        if not startPos then
+                                warn("⚠️ startPos part not found in IntroCameras, using fallback")
+                        else
+                                warn("⚠️ startPos exists but is not a BasePart, using fallback")
+                        end
+                        usingFallback = true
+                end
+        else
+                warn("⚠️ IntroCameras folder not found in Workspace, using fallback")
+                usingFallback = true
+        end
+
+        if not targetCFrame then
+                targetCFrame = findFallbackCameraCFrame()
+                if not targetCFrame then
+                        warn("⚠️ Unable to determine fallback camera position")
+                        return false
+                end
         end
 	
 	local camera = Workspace.CurrentCamera
@@ -80,9 +167,9 @@ function CameraController.setToStartPos()
 		Enum.EasingDirection.Out
 	)
 	
-	local tween = TweenService:Create(camera, tweenInfo, {
-		CFrame = startPos.CFrame
-	})
+        local tween = TweenService:Create(camera, tweenInfo, {
+                CFrame = targetCFrame
+        })
 	
 	tween:Play()
 	
@@ -92,9 +179,13 @@ function CameraController.setToStartPos()
 	})
 	blurTween:Play()
 	
-	BootUI.setDebugLine("status", "📹 Camera locked to intro position")
-	
-	return true
+        if usingFallback then
+                BootUI.setDebugLine("status", "📹 Camera locked to fallback position")
+        else
+                BootUI.setDebugLine("status", "📹 Camera locked to intro position")
+        end
+
+        return true
 end
 
 function CameraController.unlock()
