@@ -312,15 +312,15 @@ local function createNinjaButton(parent, text, size, position, color, onClick)
 
 	-- Add depth with gradient
 	local gradient = Instance.new("UIGradient")
-	gradient.Color = ColorSequence.new{
-		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 200, 220))
-	}
-	gradient.Rotation = 90
-	gradient.Transparency = NumberSequence.new{
-		NumberSequenceKeypoint.new(0, 0.7),
-		NumberSequenceKeypoint.new(1, 0.9)
-	}
+        gradient.Color = ColorSequence.new{
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 200, 220))
+        }
+        gradient.Rotation = 90
+        gradient.Transparency = NumberSequence.new{
+                NumberSequenceKeypoint.new(0, 1),
+                NumberSequenceKeypoint.new(1, 1)
+        }
 	gradient.Parent = button
 
 	-- Add stroke for definition
