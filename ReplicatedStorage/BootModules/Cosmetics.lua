@@ -318,8 +318,8 @@ local function createNinjaButton(parent, text, size, position, color, onClick)
         }
         gradient.Rotation = 90
         gradient.Transparency = NumberSequence.new{
-                NumberSequenceKeypoint.new(0, 1),
-                NumberSequenceKeypoint.new(1, 1)
+                NumberSequenceKeypoint.new(0, .2),
+                NumberSequenceKeypoint.new(1, .3)
         }
 	gradient.Parent = button
 
