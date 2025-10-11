@@ -99,6 +99,38 @@ local function locateIntroCameraFolder()
         return nil
 end
 
+local function waitForDescendant(parent, descendantName, timeout)
+        if not parent then
+                return nil
+        end
+
+        local found = parent:FindFirstChild(descendantName, true)
+        if found then
+                return found
+        end
+
+        local deadline = os.clock() + math.max(timeout or 0, 0)
+        local connection
+        if timeout and timeout > 0 then
+                connection = parent.DescendantAdded:Connect(function(descendant)
+                        if descendant and descendant.Name == descendantName then
+                                found = descendant
+                        end
+                end)
+        end
+
+        while not found and os.clock() < deadline do
+                task.wait(0.05)
+                found = parent:FindFirstChild(descendantName, true)
+        end
+
+        if connection then
+                connection:Disconnect()
+        end
+
+        return found
+end
+
 local function findFallbackCameraCFrame()
         local spawnFolder = Workspace:FindFirstChild("SpawnLocations")
         local spawnPart = findFirstSpawnPart(spawnFolder)
@@ -162,6 +194,8 @@ function CameraController.setToStartPos()
         until os.clock() - startTime >= CONFIG.CAMERA_ASSET_WAIT_TIME
 
         if cameraFolder then
+                local elapsed = os.clock() - startTime
+                local remainingTime = math.max(CONFIG.CAMERA_ASSET_WAIT_TIME - elapsed, 0)
                 local startPos
 
                 local ok = pcall(function()
@@ -170,6 +204,10 @@ function CameraController.setToStartPos()
 
                 if not ok then
                         startPos = nil
+                end
+
+                if not startPos and remainingTime > 0 then
+                        startPos = waitForDescendant(cameraFolder, "startPos", remainingTime)
                 end
 
                 if startPos and startPos:IsA("BasePart") then
