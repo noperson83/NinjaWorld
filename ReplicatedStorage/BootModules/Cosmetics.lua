@@ -32,8 +32,9 @@ local NINJA_COLORS = {
 local ANIMATIONS = {
 	FADE_TIME = 0.3,
 	SCALE_TIME = 0.2,
-	HOVER_SCALE = 1.05,
-	CLICK_SCALE = 0.95
+	HOVER_SCALE = 1.08,
+	CLICK_SCALE = 0.92,
+	GLOW_PULSE_TIME = 2
 }
 
 -- ═══════════════════════════════════════════════════════════════
@@ -239,98 +240,95 @@ local function createStyledFrame(parent, size, position, anchorPoint)
 	frame.Position = position or UDim2.fromScale(0, 0)
 	frame.AnchorPoint = anchorPoint or Vector2.new(0, 0)
 	frame.BackgroundColor3 = NINJA_COLORS.PRIMARY
-	frame.BackgroundTransparency = 1
-	frame.BorderSizePixel = 2
-	frame.BorderColor3 = NINJA_COLORS.BORDER
+	frame.BackgroundTransparency = 0.15
+	frame.BorderSizePixel = 0
 	frame.ZIndex = 11
 	frame.Parent = parent
 
-	-- Add subtle glow effect
+	-- Enhanced glow effect with animation
 	local glow = Instance.new("UIStroke")
 	glow.Color = NINJA_COLORS.GLOW
-	glow.Thickness = 1
-	glow.Transparency = 0.7
+	glow.Thickness = 2
+	glow.Transparency = 0.5
 	glow.Parent = frame
 
-	-- Add rounded corners similar to NinjaPouchUI styling
+	-- Pulsing glow animation
+	task.spawn(function()
+		while glow and glow.Parent do
+			local pulseTween = TweenService:Create(glow, 
+				TweenInfo.new(ANIMATIONS.GLOW_PULSE_TIME, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+				{Transparency = 0.2}
+			)
+			pulseTween:Play()
+			task.wait(ANIMATIONS.GLOW_PULSE_TIME * 2)
+		end
+	end)
+
+	-- Add rounded corners
 	local corners = Instance.new("UICorner")
-	corners.CornerRadius = UDim.new(0, 12)
+	corners.CornerRadius = UDim.new(0, 16)
 	corners.Parent = frame
+
+	-- Add gradient overlay for depth
+	local gradient = Instance.new("UIGradient")
+	gradient.Color = ColorSequence.new{
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(180, 180, 200))
+	}
+	gradient.Rotation = 90
+	gradient.Transparency = NumberSequence.new{
+		NumberSequenceKeypoint.new(0, 0.8),
+		NumberSequenceKeypoint.new(1, 0.95)
+	}
+	gradient.Parent = frame
 
 	return frame
 end
 
-local function isEmojiGrapheme(grapheme)
-        local codepoint = utf8.codepoint(grapheme)
-        if not codepoint then
-                return false
-        end
-
-        if (codepoint >= 0x1F300 and codepoint <= 0x1FAFF)
-                or (codepoint >= 0x1F600 and codepoint <= 0x1F64F)
-                or (codepoint >= 0x2600 and codepoint <= 0x27BF) then
-                return true
-        end
-
-        return false
-end
-
 local DEFAULT_FONT_FAMILY = "GothamSSm"
 local DEFAULT_FONT_ASSET = "rbxasset://fonts/families/GothamSSm.json"
-local EMOJI_FONT_FAMILY = "rbxasset://fonts/families/Emoji.json"
-
-local function buildRichTextForEmoji(text)
-        local segments = {}
-        local lastIndex = 1
-
-        for startPos, endPos in utf8.graphemes(text) do
-                local grapheme = string.sub(text, startPos, endPos)
-                if isEmojiGrapheme(grapheme) then
-                        if startPos > lastIndex then
-                                table.insert(segments, string.sub(text, lastIndex, startPos - 1))
-                        end
-
-                        table.insert(segments, string.format("<font face=\"%s\">%s</font>", EMOJI_FONT_FAMILY, grapheme))
-                        lastIndex = endPos + 1
-                end
-        end
-
-        if lastIndex <= #text then
-                table.insert(segments, string.sub(text, lastIndex))
-        end
-
-        local content = table.concat(segments)
-        if content == "" then
-                content = text
-        end
-
-        local richText = string.format("<font face=\"%s\">%s</font>", DEFAULT_FONT_FAMILY, content)
-        return richText
-end
 
 local function createNinjaButton(parent, text, size, position, color, onClick)
-        local button = Instance.new("TextButton")
-        button.Size = size
-        button.Position = position
-        button.Font = Enum.Font.GothamMedium
-        button.TextScaled = true
-        button.TextColor3 = NINJA_COLORS.TEXT_PRIMARY
-        button.BackgroundColor3 = color or NINJA_COLORS.ACCENT
-        button.BackgroundTransparency = 0
-        button.BorderSizePixel = 0
-        button.ZIndex = 12
-        button.AutoButtonColor = false
-        button.Parent = parent
+	local button = Instance.new("TextButton")
+	button.Size = size
+	button.Position = position
+	button.Font = Enum.Font.GothamMedium
+	button.TextScaled = true
+	button.TextColor3 = NINJA_COLORS.TEXT_PRIMARY
+	button.BackgroundColor3 = color or NINJA_COLORS.ACCENT
+	button.BackgroundTransparency = 0
+    button.BorderSizePixel = 0
+    button.ZIndex = 12
+    button.AutoButtonColor = false
+	button.RichText = true
+	button.Text = text
+	button.FontFace = Font.new(DEFAULT_FONT_ASSET, Enum.FontWeight.Medium, Enum.FontStyle.Normal)
+	button.Parent = parent
 
-        local richText = buildRichTextForEmoji(text)
-        button.RichText = true
-        button.Text = richText
-        button.FontFace = Font.new(DEFAULT_FONT_ASSET, Enum.FontWeight.Medium, Enum.FontStyle.Normal)
+	-- Add corner rounding
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 10)
+	corner.Parent = button
 
-        -- Add corner rounding
-        local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0, 8)
-        corner.Parent = button
+	-- Add depth with gradient
+	local gradient = Instance.new("UIGradient")
+	gradient.Color = ColorSequence.new{
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 200, 220))
+	}
+	gradient.Rotation = 90
+	gradient.Transparency = NumberSequence.new{
+		NumberSequenceKeypoint.new(0, 0.7),
+		NumberSequenceKeypoint.new(1, 0.9)
+	}
+	gradient.Parent = button
+
+	-- Add stroke for definition
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Color3.fromRGB(255, 255, 255)
+	stroke.Thickness = 1
+	stroke.Transparency = 0.8
+	stroke.Parent = button
 
 	-- Add hover and click animations using UIScale for smooth transitions
 	local scale = Instance.new("UIScale")
@@ -343,10 +341,24 @@ local function createNinjaButton(parent, text, size, position, color, onClick)
 
 	button.MouseEnter:Connect(function()
 		tweenScale(ANIMATIONS.HOVER_SCALE, ANIMATIONS.SCALE_TIME)
+		-- Brighten on hover
+		TweenService:Create(button, 
+			TweenInfo.new(ANIMATIONS.SCALE_TIME, Enum.EasingStyle.Quad),
+			{BackgroundColor3 = Color3.fromRGB(
+				math.min(255, button.BackgroundColor3.R * 255 * 1.15),
+				math.min(255, button.BackgroundColor3.G * 255 * 1.15),
+				math.min(255, button.BackgroundColor3.B * 255 * 1.15)
+				)}
+		):Play()
 	end)
 
 	button.MouseLeave:Connect(function()
 		tweenScale(1, ANIMATIONS.SCALE_TIME)
+		-- Return to original color
+		TweenService:Create(button, 
+			TweenInfo.new(ANIMATIONS.SCALE_TIME, Enum.EasingStyle.Quad),
+			{BackgroundColor3 = color or NINJA_COLORS.ACCENT}
+		):Play()
 	end)
 
 	button.MouseButton1Down:Connect(function()
@@ -392,7 +404,7 @@ local function showNinjaConfirmation(message, onConfirm)
 	title.Position = UDim2.new(0, 10, 0, 10)
 	title.BackgroundTransparency = 1
 	title.Text = "⚠️ Shadow Council Confirmation"
-        title.Font = Enum.Font.GothamMedium
+	title.Font = Enum.Font.GothamMedium
 	title.TextScaled = true
 	title.TextColor3 = NINJA_COLORS.ACCENT
 	title.ZIndex = 302
@@ -426,7 +438,7 @@ local function showNinjaConfirmation(message, onConfirm)
 	buttonContainer.Size = UDim2.new(1, -20, 0, 0)
 	buttonContainer.Position = UDim2.new(0, 10, 0.68, 0)
 	buttonContainer.BackgroundTransparency = 1
-	buttonContainer.ZIndex = dialog.ZIndex + 1
+	buttonContainer.ZIndex = dialog.ZIndex + 18
 	buttonContainer.AutomaticSize = Enum.AutomaticSize.Y
 	buttonContainer.Parent = dialog
 
@@ -520,9 +532,9 @@ end
 local refreshSlotData
 
 local function updateSlotDisplays()
-        local highestUsed = math.min(getHighestUsedSlot(), #slotButtons)
-        local minimumVisibleSlots = math.min(#slotButtons, 3)
-        local visibleSlots = math.max(math.min(highestUsed + 1, #slotButtons), minimumVisibleSlots)
+	local highestUsed = math.min(getHighestUsedSlot(), #slotButtons)
+	local minimumVisibleSlots = math.min(#slotButtons, 3)
+	local visibleSlots = math.max(math.min(highestUsed + 1, #slotButtons), minimumVisibleSlots)
 
 	for slotIndex = 1, #slotButtons do
 		local slotData = personaCache.slots[slotIndex]
@@ -584,16 +596,16 @@ local function updateSlotDisplays()
 							string.format("🗑️ Remove the shadow warrior from %s?", getSlotDisplayName(slotIndex)),
 							function()
 								local result = invokePersonaService("clear", {slot = slotIndex})
-                                                                if result and result.ok then
-                                                                        if chosenSlot == slotIndex then
-                                                                                chosenSlot = nil
-                                                                        end
-                                                                        if refreshSlotData then
-                                                                                refreshSlotData(result)
-                                                                        end
-                                                                else
-                                                                        warn("🥷 Failed to clear slot:", result and result.err)
-                                                                end
+								if result and result.ok then
+									if chosenSlot == slotIndex then
+										chosenSlot = nil
+									end
+									if refreshSlotData then
+										refreshSlotData(result)
+									end
+								else
+									warn("🥷 Failed to clear slot:", result and result.err)
+								end
 							end
 						)
 					end)
@@ -621,10 +633,10 @@ local function updateSlotDisplays()
 end
 
 refreshSlotData = function(newData)
-        personaCache = sanitizePersonaData(newData)
-        ensureValidSelection()
-        updateSlotDisplays()
-        updateSelectedPersonaLabel()
+	personaCache = sanitizePersonaData(newData)
+	ensureValidSelection()
+	updateSlotDisplays()
+	updateSelectedPersonaLabel()
 end
 
 -- ═══════════════════════════════════════════════════════════════
@@ -786,7 +798,7 @@ local function createPersonaSlot(parent, slotIndex, size, position, anchorPoint)
 	levelLabel.Position = UDim2.new(0, 5, 0, 5)
 	levelLabel.BackgroundTransparency = 1
 	levelLabel.Text = "⭐ Level 1"
-        levelLabel.Font = Enum.Font.GothamMedium
+	levelLabel.Font = Enum.Font.GothamMedium
 	levelLabel.TextSize = 12
 	levelLabel.TextColor3 = NINJA_COLORS.ACCENT
 	levelLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -923,13 +935,13 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
 		Vector2.new(0.5, 0)
 	)
 	headerFrame.AutomaticSize = Enum.AutomaticSize.XY
-	headerFrame.BackgroundTransparency = .2
+	headerFrame.BackgroundTransparency = 0.05
 
 	local headerPadding = Instance.new("UIPadding")
-	headerPadding.PaddingTop = UDim.new(0, .02)
-	headerPadding.PaddingBottom = UDim.new(0, .02)
-	headerPadding.PaddingLeft = UDim.new(0, 8)
-	headerPadding.PaddingRight = UDim.new(0, 8)
+	headerPadding.PaddingTop = UDim.new(0, 15)
+	headerPadding.PaddingBottom = UDim.new(0, 15)
+	headerPadding.PaddingLeft = UDim.new(0, 20)
+	headerPadding.PaddingRight = UDim.new(0, 20)
 	headerPadding.Parent = headerFrame
 
 	local headerLayout = Instance.new("UIListLayout")
@@ -972,8 +984,7 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
 		UDim2.fromScale(0.5, 0.55),
 		Vector2.new(0.2, 0.2)
 	)
-	contentPanel.BackgroundTransparency = .8
-
+	contentPanel.BackgroundTransparency = 0.05
 	contentPanel.AnchorPoint = Vector2.new(0.5, 0)
 
 	local function updateContentPanelPosition()
@@ -988,13 +999,9 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
 	slotsContainer = Instance.new("Frame")
 	slotsContainer.Size = UDim2.new(1, -20, 0.8, 0)
 	slotsContainer.Position = UDim2.new(0, 10, 0, 10)
-	slotsContainer.BackgroundTransparency = .8
+	slotsContainer.BackgroundTransparency = 1
 	slotsContainer.ZIndex = 11
 	slotsContainer.Parent = contentPanel
-
-	local slotsCorner = Instance.new("UICorner")
-	slotsCorner.CornerRadius = UDim.new(0, 12)
-	slotsCorner.Parent = slotsContainer
 
 	-- Footer with dojo branding
 	local footerFrame = createStyledFrame(contentPanel, 
@@ -1002,11 +1009,11 @@ function NinjaCosmetics.init(config, rootInterface, bridgeInterface)
 		UDim2.fromScale(0.5, 0.9), 
 		Vector2.new(0.5, 0.5)
 	)
-	footerFrame.BackgroundTransparency = .2
+	footerFrame.BackgroundTransparency = 0.05
 
 	local starterDojoImage = Instance.new("ImageLabel")
 	starterDojoImage.Size = UDim2.fromScale(0.6, 0.8)
-	starterDojoImage.Position = UDim2.fromScale(0.5	, 0.5)
+	starterDojoImage.Position = UDim2.fromScale(0.5, 0.5)
 	starterDojoImage.AnchorPoint = Vector2.new(0.5, 0.5)
 	starterDojoImage.Image = "rbxassetid://137361385013636" -- Starter dojo image
 	starterDojoImage.BackgroundTransparency = 1
