@@ -628,23 +628,42 @@ function BootUI.start(config)
 	-- =====================
 	-- Camera helpers (world)
 	-- =====================
-	local introCamera = IntroCamera.new({
-		workspace = Workspace,
-		tweenService = TweenService,
-		runService = RunService,
-	})
+        local fallbackFocusPoint = Vector3.new(0, 6, 0)
+        local fallbackUpVector = Vector3.new(0, 1, 0)
+        local fallbackStartPosition = fallbackFocusPoint + Vector3.new(0, 7, -28)
+        local fallbackEndPosition = fallbackFocusPoint + Vector3.new(0, 5, -18)
+        local fallbackStartCFrame = CFrame.lookAt(fallbackStartPosition, fallbackFocusPoint, fallbackUpVector)
+        local fallbackEndCFrame = CFrame.lookAt(fallbackEndPosition, fallbackFocusPoint, fallbackUpVector)
+        local fallbackStartFOV = 55
+        local fallbackEndFOV = 60
+
+        local introCamera = IntroCamera.new({
+                workspace = Workspace,
+                tweenService = TweenService,
+                runService = RunService,
+                fallbackFocusPoint = fallbackFocusPoint,
+                fallbackUpVector = fallbackUpVector,
+                fallbackStartCFrame = fallbackStartCFrame,
+                fallbackEndCFrame = fallbackEndCFrame,
+                fallbackStartFOV = fallbackStartFOV,
+                fallbackEndFOV = fallbackEndFOV,
+        })
 	BootUI.introCamera = introCamera
 
-	local logoCamera = LogoIntroCamera.new(introCamera, {
-		workspace = Workspace,
-		tweenService = TweenService,
-		maxTargets = 10,
-		cycleInterval = 4.5,
-		transitionTime = 1.25,
-		defaultDistance = 20,
-		defaultHeight = 4,
-		defaultFOV = 40,
-	})
+        local logoCamera = LogoIntroCamera.new(introCamera, {
+                workspace = Workspace,
+                tweenService = TweenService,
+                maxTargets = 10,
+                cycleInterval = 4.5,
+                transitionTime = 1.25,
+                defaultDistance = 20,
+                defaultHeight = 4,
+                defaultFOV = 40,
+                fallbackCFrame = fallbackStartCFrame,
+                fallbackFOV = fallbackStartFOV,
+                fallbackFocusPoint = fallbackFocusPoint,
+                fallbackUp = fallbackUpVector,
+        })
 	BootUI.logoCamera = logoCamera
 	logoCamera:start()
 
