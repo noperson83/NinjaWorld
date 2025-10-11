@@ -191,30 +191,34 @@ function LogoIntroCamera:_initialize()
 end
 
 function LogoIntroCamera:_resolveLogoFolder()
-	local current = self._workspace
-	for _, name in ipairs(self._logoFolderPath) do
-		if not current then
-			return nil
-		end
+        local current = self._workspace
+        for _, name in ipairs(self._logoFolderPath) do
+                if not current then
+                        return nil
+                end
 
-		local child = current:FindFirstChild(name)
-		if not child then
-			local ok, result = pcall(function()
-				return current:WaitForChild(name, self._folderWaitTimeout)
-			end)
-			if ok then
-				child = result
-			end
-		end
+                local child = current:FindFirstChild(name)
+                if not child then
+                        local ok, result = pcall(function()
+                                return current:WaitForChild(name, self._folderWaitTimeout)
+                        end)
+                        if ok then
+                                child = result
+                        end
+                end
 
-		if not child then
-			return nil
-		end
+                if not child then
+                        child = current:FindFirstChild(name, true)
+                end
 
-		current = child
-	end
+                if not child then
+                        return nil
+                end
 
-	return current
+                current = child
+        end
+
+        return current
 end
 
 function LogoIntroCamera:_connectFolder(folder)
@@ -240,14 +244,15 @@ function LogoIntroCamera:_disconnect()
 end
 
 function LogoIntroCamera:_refreshTargets(forceImmediate)
-	local folder = self._logoFolder
-	if not folder or not folder.Parent then
-		self._targets = {}
-		return
-	end
+        local folder = self._logoFolder
+        if not folder or not folder.Parent then
+                self._targets = {}
+                self:_applyFocusProvider()
+                return
+        end
 
-	local targets = {}
-	for _, child in ipairs(folder:GetChildren()) do
+        local targets = {}
+        for _, child in ipairs(folder:GetChildren()) do
 		local part = self:_resolvePart(child)
 		if part then
 			table.insert(targets, part)
@@ -264,11 +269,13 @@ function LogoIntroCamera:_refreshTargets(forceImmediate)
 		end
 	end
 
-	self._targets = targets
+        self._targets = targets
 
-	if not self._running then
-		return
-	end
+        self:_applyFocusProvider()
+
+        if not self._running then
+                return
+        end
 
 	if not forceImmediate and self._currentTarget and self:_isValidTarget(self._currentTarget) then
 		return
@@ -466,7 +473,7 @@ function LogoIntroCamera:_applyFocusProvider()
                 return
         end
 
-        if not self._running or self._paused then
+        if not self._running or self._paused or #self._targets == 0 then
                 introCamera:setFocusProvider(nil)
                 return
         end
