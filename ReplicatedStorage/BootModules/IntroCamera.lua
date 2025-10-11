@@ -5,6 +5,13 @@ local Workspace = game:GetService("Workspace")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 
+local DEFAULT_FALLBACK_FOCUS = Vector3.new(0, 6, 0)
+local DEFAULT_FALLBACK_START_OFFSET = Vector3.new(0, 7, -28)
+local DEFAULT_FALLBACK_END_OFFSET = Vector3.new(0, 5, -18)
+local DEFAULT_FALLBACK_UP = Vector3.new(0, 1, 0)
+local DEFAULT_FALLBACK_START_FOV = 55
+local DEFAULT_FALLBACK_END_FOV = 60
+
 function IntroCamera.new(options)
         options = options or {}
 
@@ -28,11 +35,21 @@ function IntroCamera.new(options)
         self.startPart = nil
         self.endPart = nil
 
-	self._camera = options.camera
-	self._holdKey = nil
-	self._holdCameraConn = nil
-	self._holdDeadline = nil
-	self._focusProvider = nil
+        self._camera = options.camera
+        self._fallbackFocusPoint = options.fallbackFocusPoint
+        self._fallbackStartOffset = options.fallbackStartOffset
+        self._fallbackEndOffset = options.fallbackEndOffset
+        self._fallbackUpVector = options.fallbackUpVector
+        self._fallbackStartCFrame = options.fallbackStartCFrame
+        self._fallbackEndCFrame = options.fallbackEndCFrame
+        self._fallbackStartFOV = options.fallbackStartFOV
+        self._fallbackEndFOV = options.fallbackEndFOV
+        self._fallbackParts = nil
+
+        self._holdKey = nil
+        self._holdCameraConn = nil
+        self._holdDeadline = nil
+        self._focusProvider = nil
 
         self:_refreshCameraFolder()
         self:_refreshParts()
@@ -48,9 +65,11 @@ function IntroCamera:destroy()
         end
         self._connections = {}
 
-	self:_disconnectFolderListeners()
-	self._pendingReadyCallbacks = {}
-	self._focusProvider = nil
+        self:_disconnectFolderListeners()
+        self._pendingReadyCallbacks = {}
+        self._focusProvider = nil
+
+        self:_destroyFallbackParts()
 end
 
 function IntroCamera:getCurrentCamera()
@@ -337,6 +356,31 @@ function IntroCamera:_refreshParts()
         local newStart = self:_findPart(folder, self._startName)
         local newEnd = self:_findPart(folder, self._endName)
 
+        local startIsFallback = self:_isFallbackPart(newStart)
+        local endIsFallback = self:_isFallbackPart(newEnd)
+
+        if not newStart or startIsFallback then
+                local fallbackStart, fallbackEnd = self:_ensureFallbackParts()
+                if fallbackStart then
+                        newStart = fallbackStart
+                        startIsFallback = true
+                end
+                if (not newEnd or endIsFallback) and fallbackEnd then
+                        newEnd = fallbackEnd
+                        endIsFallback = true
+                end
+        elseif not newEnd or endIsFallback then
+                local _, fallbackEnd = self:_ensureFallbackParts()
+                if fallbackEnd then
+                        newEnd = fallbackEnd
+                        endIsFallback = true
+                end
+        end
+
+        if not startIsFallback and not endIsFallback then
+                self:_releaseFallbackPartsIfUnused(newStart, newEnd)
+        end
+
         local startChanged = newStart ~= self.startPart
         local endChanged = newEnd ~= self.endPart
 
@@ -351,6 +395,112 @@ function IntroCamera:_refreshParts()
         end
 
         return self.startPart, self.endPart
+end
+
+function IntroCamera:_ensureFallbackParts()
+        local startCamera = self:_getFallbackPart("start")
+        local endCamera = self:_getFallbackPart("end")
+        return startCamera, endCamera
+end
+
+function IntroCamera:_releaseFallbackPartsIfUnused(currentStart, currentEnd)
+        if not self._fallbackParts then
+                return
+        end
+
+        if self:_isFallbackPart(currentStart) or self:_isFallbackPart(currentEnd) then
+                return
+        end
+
+        self:_destroyFallbackParts()
+end
+
+function IntroCamera:_destroyFallbackParts()
+        if not self._fallbackParts then
+                return
+        end
+
+        for key, part in pairs(self._fallbackParts) do
+                if part then
+                        part:Destroy()
+                end
+                self._fallbackParts[key] = nil
+        end
+
+        self._fallbackParts = nil
+end
+
+function IntroCamera:_isFallbackPart(part)
+        if not part or not self._fallbackParts then
+                return false
+        end
+
+        for _, candidate in pairs(self._fallbackParts) do
+                if candidate == part then
+                        return true
+                end
+        end
+
+        return false
+end
+
+function IntroCamera:_getFallbackPart(which)
+        self._fallbackParts = self._fallbackParts or {}
+
+        local key = which == "end" and "end" or "start"
+        local existing = self._fallbackParts[key]
+
+        if not (existing and existing.Parent == nil and existing:IsA("Camera")) then
+                if existing then
+                        existing:Destroy()
+                end
+
+                existing = Instance.new("Camera")
+                existing.Name = string.format("%sFallback", key)
+                existing.Archivable = false
+                existing.Parent = nil
+                self._fallbackParts[key] = existing
+        end
+
+        existing.CFrame = self:_computeFallbackCFrame(key)
+        local fallbackFOV = self:_getFallbackFOV(key)
+        if fallbackFOV then
+                existing.FieldOfView = fallbackFOV
+        end
+
+        return existing
+end
+
+function IntroCamera:_computeFallbackCFrame(which)
+        if which == "start" and self._fallbackStartCFrame then
+                return self._fallbackStartCFrame
+        elseif which == "end" and self._fallbackEndCFrame then
+                return self._fallbackEndCFrame
+        end
+
+        local focus = self._fallbackFocusPoint or DEFAULT_FALLBACK_FOCUS
+        local up = self._fallbackUpVector or DEFAULT_FALLBACK_UP
+        local offset
+
+        if which == "start" then
+                offset = self._fallbackStartOffset or DEFAULT_FALLBACK_START_OFFSET
+        else
+                offset = self._fallbackEndOffset or DEFAULT_FALLBACK_END_OFFSET
+        end
+
+        return CFrame.lookAt(focus + offset, focus, up)
+end
+
+function IntroCamera:_getFallbackFOV(which)
+        if which == "start" then
+                return self._fallbackStartFOV or DEFAULT_FALLBACK_START_FOV
+        end
+
+        if which == "end" then
+                return self._fallbackEndFOV or DEFAULT_FALLBACK_END_FOV
+        end
+
+        return DEFAULT_FALLBACK_START_FOV
 end
 
 function IntroCamera:_reportCameraStatus(startChanged, endChanged)

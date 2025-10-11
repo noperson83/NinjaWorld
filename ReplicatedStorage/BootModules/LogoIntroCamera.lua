@@ -5,6 +5,8 @@ local Workspace = game:GetService("Workspace")
 local TweenService = game:GetService("TweenService")
 
 local DEFAULT_FOLDER_PATH = {"Camera", "ElemLogos"}
+local DEFAULT_FALLBACK_FOCUS = Vector3.new(0, 6, 0)
+local DEFAULT_FALLBACK_DIRECTION = Vector3.new(0, 0, -1)
 
 local function isNumber(value)
 	return typeof(value) == "number"
@@ -41,6 +43,15 @@ function LogoIntroCamera.new(introCamera, options)
         self._running = false
         self._paused = false
 
+        self._fallbackCFrame = options.fallbackCFrame
+        self._fallbackFOV = options.fallbackFOV or self._defaultFOV
+        self._fallbackFocusPoint = options.fallbackFocusPoint or DEFAULT_FALLBACK_FOCUS
+        self._fallbackDistance = options.fallbackDistance or self._defaultDistance
+        self._fallbackHeight = options.fallbackHeight or self._defaultHeight
+        self._fallbackAhead = options.fallbackAhead or 0
+        self._fallbackDirection = options.fallbackDirection or DEFAULT_FALLBACK_DIRECTION
+        self._fallbackUp = options.fallbackUp or Vector3.new(0, 1, 0)
+
         self._cframeValue = Instance.new("CFrameValue")
         self._fovValue = Instance.new("NumberValue")
         self._focusCallback = function()
@@ -58,16 +69,9 @@ function LogoIntroCamera.new(introCamera, options)
                 return cframeValue.Value
         end
 
-	local currentCamera = introCamera.getCurrentCamera and introCamera:getCurrentCamera()
-	if currentCamera then
-		self._cframeValue.Value = currentCamera.CFrame
-		self._fovValue.Value = currentCamera.FieldOfView
-	else
-		self._cframeValue.Value = CFrame.new()
-		self._fovValue.Value = self._defaultFOV
-	end
+        self:_applyFallbackDefaults()
 
-	return self
+        return self
 end
 
 function LogoIntroCamera:start()
@@ -233,18 +237,63 @@ function LogoIntroCamera:_connectFolder(folder)
 end
 
 function LogoIntroCamera:_disconnect()
-	for _, conn in ipairs(self._connections) do
-		conn:Disconnect()
-	end
-	self._connections = {}
+        for _, conn in ipairs(self._connections) do
+                conn:Disconnect()
+        end
+        self._connections = {}
+end
+
+function LogoIntroCamera:_applyFallbackDefaults()
+        local cframeValue = self._cframeValue
+        if cframeValue then
+                cframeValue.Value = self:_computeFallbackCFrame()
+        end
+
+        local fovValue = self._fovValue
+        if fovValue then
+                fovValue.Value = self._fallbackFOV
+        end
+end
+
+function LogoIntroCamera:_computeFallbackCFrame()
+        if self._fallbackCFrame then
+                return self._fallbackCFrame
+        end
+
+        local focus = self._fallbackFocusPoint or DEFAULT_FALLBACK_FOCUS
+        local direction = self._fallbackDirection or DEFAULT_FALLBACK_DIRECTION
+        if direction.Magnitude < 1e-4 then
+                direction = DEFAULT_FALLBACK_DIRECTION
+        else
+                direction = direction.Unit
+        end
+
+        local up = self._fallbackUp or Vector3.new(0, 1, 0)
+        local distance = self._fallbackDistance or self._defaultDistance
+        local height = self._fallbackHeight or self._defaultHeight
+        local ahead = self._fallbackAhead or 0
+
+        local origin = focus - direction * distance + up * height
+        local target = focus + direction * ahead
+
+        return CFrame.lookAt(origin, target, up)
+end
+
+function LogoIntroCamera:_useFallbackTarget()
+        self:_applyFallbackDefaults()
+        self._currentTarget = nil
+        if self._running then
+                self:_cancelCycle()
+        end
 end
 
 function LogoIntroCamera:_refreshTargets(forceImmediate)
-	local folder = self._logoFolder
-	if not folder or not folder.Parent then
-		self._targets = {}
-		return
-	end
+        local folder = self._logoFolder
+        if not folder or not folder.Parent then
+                self._targets = {}
+                self:_useFallbackTarget()
+                return
+        end
 
 	local targets = {}
 	for _, child in ipairs(folder:GetChildren()) do
@@ -264,19 +313,23 @@ function LogoIntroCamera:_refreshTargets(forceImmediate)
 		end
 	end
 
-	self._targets = targets
+        self._targets = targets
 
-	if not self._running then
-		return
-	end
+        if not self._running then
+                if #self._targets == 0 then
+                        self:_applyFallbackDefaults()
+                end
+                return
+        end
 
-	if not forceImmediate and self._currentTarget and self:_isValidTarget(self._currentTarget) then
-		return
-	end
+        if not forceImmediate and self._currentTarget and self:_isValidTarget(self._currentTarget) then
+                return
+        end
 
-	if #self._targets == 0 then
-		return
-	end
+        if #self._targets == 0 then
+                self:_useFallbackTarget()
+                return
+        end
 
 	self:_moveToTarget(self:_pickRandomTarget(self._currentTarget), forceImmediate)
 end
@@ -384,20 +437,22 @@ function LogoIntroCamera:_computeTargetFOV(part)
 end
 
 function LogoIntroCamera:_moveToTarget(targetPart, instant)
-	if not self._running then
-		return
-	end
+        if not self._running then
+                return
+        end
 
-	local part = self:_resolvePart(targetPart)
-	if not part or not self:_isValidTarget(part) then
-		self:_refreshTargets(true)
-		return
-	end
+        local part = self:_resolvePart(targetPart)
+        if not part or not self:_isValidTarget(part) then
+                self:_useFallbackTarget()
+                self:_refreshTargets(true)
+                return
+        end
 
-	local cameraCFrame = self:_computeTargetCFrame(part)
-	if not cameraCFrame then
-		return
-	end
+        local cameraCFrame = self:_computeTargetCFrame(part)
+        if not cameraCFrame then
+                self:_useFallbackTarget()
+                return
+        end
 
 	local cameraFOV = self:_computeTargetFOV(part)
 	local duration = instant and 0 or self._transitionTime
