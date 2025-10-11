@@ -316,8 +316,10 @@ local function createNinjaButton(parent, text, size, position, color, onClick)
         button.TextScaled = true
         button.TextColor3 = NINJA_COLORS.TEXT_PRIMARY
         button.BackgroundColor3 = color or NINJA_COLORS.ACCENT
+        button.BackgroundTransparency = 0
         button.BorderSizePixel = 0
         button.ZIndex = 12
+        button.AutoButtonColor = false
         button.Parent = parent
 
         local richText = buildRichTextForEmoji(text)
