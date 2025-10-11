@@ -8,7 +8,6 @@
 --         - Ninja: **prefer a full MODEL** at ServerStorage/HumanoidDescription(s)/Ninja (clone as character)
 --                  fallback to HumanoidDescription if present
 --         - Roblox: default LoadCharacter()
---   • After spawn: drops player on a spawn pad and faces them toward Cameras.endPos
 --   • Ensures the cloned Ninja has a working **Animate (LocalScript)** and an **Animator** so it isn't stiff
 
 local Players           = game:GetService("Players")
@@ -16,12 +15,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage     = game:GetService("ServerStorage")
 local Workspace         = game:GetService("Workspace")
 local StarterPlayer     = game:GetService("StarterPlayer")
-
-local CAMERA_FOLDER_NAME = "Cameras"
-local CAMERA_START_NAME = "startPos"
-local CAMERA_END_NAME = "endPos"
-
-local cachedCameraFolder
 
 -- 1) Do NOT auto-spawn. We will only spawn after the client says "Enter This Dojo".
 Players.CharacterAutoLoads = false
@@ -91,124 +84,6 @@ local function findSpawn()
         end
 
         return nil
-end
-
-local function findCameraPart(container, name)
-        if not container then
-                return nil
-        end
-
-        local direct = container:FindFirstChild(name)
-        if direct and (direct:IsA("BasePart") or direct:IsA("Camera")) then
-                return direct
-        end
-
-        local descendant = container:FindFirstChild(name, true)
-        if descendant and (descendant:IsA("BasePart") or descendant:IsA("Camera")) then
-                return descendant
-        end
-
-        return nil
-end
-
-local function cameraFolderHasParts(container)
-        if not container then
-                return false
-        end
-
-        if findCameraPart(container, CAMERA_START_NAME) then
-                return true
-        end
-
-        if findCameraPart(container, CAMERA_END_NAME) then
-                return true
-        end
-
-        return false
-end
-
-local function resolveCameraFolder()
-        if cachedCameraFolder then
-                if cachedCameraFolder.Parent and cameraFolderHasParts(cachedCameraFolder) then
-                        return cachedCameraFolder
-                end
-                cachedCameraFolder = nil
-        end
-
-        local function pickFolder()
-                local direct = Workspace:FindFirstChild(CAMERA_FOLDER_NAME)
-                if direct and cameraFolderHasParts(direct) then
-                        cachedCameraFolder = direct
-                        return direct
-                end
-
-                local fallback = direct
-                for _, descendant in ipairs(Workspace:GetDescendants()) do
-                        if descendant.Name == CAMERA_FOLDER_NAME then
-                                if cameraFolderHasParts(descendant) then
-                                        cachedCameraFolder = descendant
-                                        return descendant
-                                end
-                                if not fallback then
-                                        fallback = descendant
-                                end
-                        end
-                end
-
-                return fallback
-        end
-
-        local folder = pickFolder()
-        if folder then
-                cachedCameraFolder = folder
-                return folder
-        end
-
-        local deadline = os.clock() + 5
-        local found
-        local conn
-        conn = Workspace.DescendantAdded:Connect(function(inst)
-                if not inst then
-                        return
-                end
-
-                if inst.Name == CAMERA_FOLDER_NAME or inst.Name == CAMERA_START_NAME or inst.Name == CAMERA_END_NAME then
-                        local candidate = pickFolder()
-                        if candidate then
-                                cachedCameraFolder = candidate
-                                found = candidate
-                        end
-                end
-        end)
-
-        repeat
-                if found then
-                        break
-                end
-                task.wait(0.1)
-                local candidate = pickFolder()
-                if candidate then
-                        cachedCameraFolder = candidate
-                        found = candidate
-                        break
-                end
-        until os.clock() >= deadline
-
-        if conn then
-                conn:Disconnect()
-        end
-
-        return found
-end
-
-local function getEndFacing()
-        local folder = resolveCameraFolder()
-        local endPart = findCameraPart(folder, CAMERA_END_NAME) or findCameraPart(Workspace, CAMERA_END_NAME)
-        local targetPart = endPart or findCameraPart(folder, CAMERA_START_NAME) or findCameraPart(Workspace, CAMERA_START_NAME)
-        if targetPart and (targetPart:IsA("BasePart") or targetPart:IsA("Camera")) then
-                return -targetPart.CFrame.LookVector
-        end
-        return Vector3.new(0, 0, 1)
 end
 
 -- Optional: a HumanoidDescription for Ninja (for fallback if there's no model)
@@ -283,7 +158,10 @@ local function placeOnSpawn(char)
         local spawnPart = findSpawn()
         if hrp and spawnPart then
                 local pos = spawnPart.CFrame.Position + Vector3.new(0,3,0)
-                local faceDir = getEndFacing()
+                local faceDir = spawnPart.CFrame.LookVector
+                if faceDir.Magnitude < 0.001 then
+                        faceDir = Vector3.new(0, 0, -1)
+                end
                 hrp.CFrame = CFrame.lookAt(pos, pos + faceDir, Vector3.new(0,1,0))
                 if hum then hum:ChangeState(Enum.HumanoidStateType.GettingUp) end
         end
