@@ -1,4 +1,5 @@
 -- Enhanced Client Bootstrap Script
+local ReplicatedFirst = game:GetService("ReplicatedFirst")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Lighting = game:GetService("Lighting")
 local Workspace = game:GetService("Workspace")
@@ -68,6 +69,36 @@ local function findFirstSpawnPart(container)
         return nil
 end
 
+local INTRO_CAMERA_SEARCH_CONTAINERS = {
+        Workspace,
+        ReplicatedFirst,
+        ReplicatedStorage,
+        Lighting,
+}
+
+local function locateIntroCameraFolder()
+        -- Check direct child first for backwards compatibility
+        local folder = Workspace:FindFirstChild("IntroCameras")
+        if folder then
+                return folder
+        end
+
+        -- Some experiences keep the cameras in ReplicatedStorage (or other
+        -- containers) until the player loads into the dojo. To support that
+        -- workflow we walk a small set of replicated containers looking for
+        -- a descendant named "IntroCameras".
+        for _, container in ipairs(INTRO_CAMERA_SEARCH_CONTAINERS) do
+                local ok, result = pcall(function()
+                        return container:FindFirstChild("IntroCameras", true)
+                end)
+                if ok and result then
+                        return result
+                end
+        end
+
+        return nil
+end
+
 local function findFallbackCameraCFrame()
         local spawnFolder = Workspace:FindFirstChild("SpawnLocations")
         local spawnPart = findFirstSpawnPart(spawnFolder)
@@ -119,10 +150,27 @@ end
 function CameraController.setToStartPos()
         local targetCFrame
         local usingFallback = false
-        local cameraFolder = Workspace:WaitForChild("IntroCameras", CONFIG.CAMERA_ASSET_WAIT_TIME)
+        local cameraFolder
+        local startTime = os.clock()
+
+        repeat
+                cameraFolder = locateIntroCameraFolder()
+                if cameraFolder then
+                        break
+                end
+                task.wait(0.1)
+        until os.clock() - startTime >= CONFIG.CAMERA_ASSET_WAIT_TIME
 
         if cameraFolder then
-                local startPos = cameraFolder:WaitForChild("startPos", CONFIG.CAMERA_ASSET_WAIT_TIME)
+                local startPos
+
+                local ok = pcall(function()
+                        startPos = cameraFolder:FindFirstChild("startPos", true)
+                end)
+
+                if not ok then
+                        startPos = nil
+                end
 
                 if startPos and startPos:IsA("BasePart") then
                         targetCFrame = startPos.CFrame
@@ -135,7 +183,7 @@ function CameraController.setToStartPos()
                         usingFallback = true
                 end
         else
-                warn("⚠️ IntroCameras folder not found in Workspace, using fallback")
+                warn("⚠️ IntroCameras folder not found in replicated containers, using fallback")
                 usingFallback = true
         end
 
