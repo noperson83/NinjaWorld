@@ -4,6 +4,7 @@
 -- What it does:
 --   • Disables automatic spawning (CharacterAutoLoads=false) so NOTHING spawns before persona is chosen
 --   • Ensures ReplicatedStorage.EnterDojoRE is a RemoteEvent
+--   • Ensures ReplicatedStorage.MovementModeEvent exists so client speed sync never fails
 --   • On EnterDojoRE: spawns with the chosen persona
 --         - Ninja: **prefer a full MODEL** at ServerStorage/HumanoidDescription(s)/Ninja (clone as character)
 --                  fallback to HumanoidDescription if present
@@ -27,10 +28,27 @@ if EnterDojoRE and not EnterDojoRE:IsA("RemoteEvent") then
 	EnterDojoRE = nil
 end
 if not EnterDojoRE then
-	EnterDojoRE = Instance.new("RemoteEvent")
-	EnterDojoRE.Name = "EnterDojoRE"
-	EnterDojoRE.Parent = ReplicatedStorage
-	print("[Init] Created ReplicatedStorage.EnterDojoRE")
+        EnterDojoRE = Instance.new("RemoteEvent")
+        EnterDojoRE.Name = "EnterDojoRE"
+        EnterDojoRE.Parent = ReplicatedStorage
+        print("[Init] Created ReplicatedStorage.EnterDojoRE")
+end
+
+-- 2b) Ensure MovementModeEvent exists early so clients can sync their speed right away
+do
+        local movementModeEvent = ReplicatedStorage:FindFirstChild("MovementModeEvent")
+        if movementModeEvent and not movementModeEvent:IsA("RemoteEvent") then
+                warn("[Init] MovementModeEvent existed as " .. movementModeEvent.ClassName .. ", replacing with RemoteEvent")
+                movementModeEvent:Destroy()
+                movementModeEvent = nil
+        end
+
+        if not movementModeEvent then
+                movementModeEvent = Instance.new("RemoteEvent")
+                movementModeEvent.Name = "MovementModeEvent"
+                movementModeEvent.Parent = ReplicatedStorage
+                print("[Init] Created ReplicatedStorage.MovementModeEvent")
+        end
 end
 
 -- 3) Helpers to find spawn and a facing direction
