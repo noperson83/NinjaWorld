@@ -416,24 +416,42 @@ local function disconnectConnections(container)
 end
 
 local function setJumpButtonEnabled(enabled)
+        if not UserInputService.TouchEnabled then
+                -- "JumpButtonEnabled" is only registered on touch devices; avoid
+                -- hammering SetCore on desktop where CoreScripts never register it.
+                return
+        end
+
         if not game:IsLoaded() then
                 game.Loaded:Wait()
         end
 
-	local attempts = 0
-	local success = false
-	local lastError
+        local attempts = 0
+        local success = false
+        local lastError
 
-	repeat
-		attempts += 1
-		success, lastError = pcall(function()
-			StarterGui:SetCore("JumpButtonEnabled", enabled)
-		end)
-		if success then
-			break
-		end
-		task.wait(0.1 * attempts)
-	until success or attempts >= 5
+        repeat
+                attempts += 1
+
+                local registered = pcall(function()
+                        return StarterGui:GetCore("JumpButtonEnabled")
+                end)
+                if not registered then
+                        lastError = "JumpButtonEnabled not registered yet"
+                        task.wait(0.1 * attempts)
+                        continue
+                end
+
+                success, lastError = pcall(function()
+                        StarterGui:SetCore("JumpButtonEnabled", enabled)
+                end)
+
+                if success then
+                        break
+                end
+
+                task.wait(0.1 * attempts)
+        until success or attempts >= 5
 
         if not success and lastError then
                 warn("ActionUI failed to toggle JumpButtonEnabled:", lastError)
@@ -593,11 +611,19 @@ local function resolveMovementRemote()
                 return movementModeRemote
         end
 
-        local ok, remote = pcall(function()
-                return ReplicatedStorage:WaitForChild(MOVEMENT_REMOTE_NAME, 5)
-        end)
+        local remote = ReplicatedStorage:FindFirstChild(MOVEMENT_REMOTE_NAME)
 
-        if ok and remote then
+        if not remote then
+                local ok, waitedRemote = pcall(function()
+                        return ReplicatedStorage:WaitForChild(MOVEMENT_REMOTE_NAME, 10)
+                end)
+
+                if ok then
+                        remote = waitedRemote
+                end
+        end
+
+        if remote and remote:IsA("RemoteEvent") then
                 movementModeRemote = remote
         elseif not remoteMissingWarned then
                 warn("MovementModeEvent remote not found; movement speed sync disabled")
