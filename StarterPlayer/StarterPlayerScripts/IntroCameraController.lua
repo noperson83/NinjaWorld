@@ -102,6 +102,9 @@ local function unfreezeCharacter(character)
         humanoid.JumpHeight = 7
     end
     humanoid.AutoRotate = true
+    humanoid.PlatformStand = false
+    humanoid.Sit = false
+    humanoid:ChangeState(Enum.HumanoidStateType.Running)
 
     -- Unanchor all BaseParts in the character
     local unanchoredCount = 0
@@ -171,4 +174,3 @@ if ReleaseIntroEvent then
 else
     warn("[IntroCameraController] ReleaseIntro RemoteEvent not found!")
 end
-
