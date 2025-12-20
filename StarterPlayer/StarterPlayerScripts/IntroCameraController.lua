@@ -117,6 +117,9 @@ local function unfreezeCharacter(character)
         end
     end
 
+    humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+    humanoid:ChangeState(Enum.HumanoidStateType.Running)
+
     -- Restore controls
     ContextActionService:UnbindAction("FreezeMovement")
 end
