@@ -104,6 +104,7 @@ local function unfreezeCharacter(character)
     humanoid.AutoRotate = true
     humanoid.PlatformStand = false
     humanoid.Sit = false
+    humanoid:ChangeState(Enum.HumanoidStateType.Running)
 
     -- Unanchor all BaseParts in the character
     local unanchoredCount = 0
