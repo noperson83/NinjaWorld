@@ -167,6 +167,24 @@ local function robustSetCharacter(player, newCharacter)
 	-- 1. Parent to workspace
 	-- 2. Set CFrame before assignment
 	-- 3. Assign to player.Character
+	local function ensureCharacterCanMove(character)
+		-- Some template rigs are stored with anchored parts to display them in Studio.
+		-- Clear anchors and any immobilizing states so movement/jumps work after cloning.
+		for _, descendant in ipairs(character:GetDescendants()) do
+			if descendant:IsA("BasePart") then
+				descendant.Anchored = false
+			end
+		end
+
+		local humanoid = character:FindFirstChildOfClass("Humanoid")
+		if humanoid then
+			humanoid.PlatformStand = false
+			humanoid.Sit = false
+			humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+		end
+	end
+
+	ensureCharacterCanMove(newCharacter)
 	newCharacter.Parent = workspace
 	local hrp = newCharacter:FindFirstChild("HumanoidRootPart")
 	if hrp then
@@ -178,6 +196,7 @@ local function robustSetCharacter(player, newCharacter)
 		end
 		hrp.CFrame = spawnCFrame
 	end
+	ensureCharacterCanMove(newCharacter)
 	player.Character = newCharacter
 	-- Attach Animate script for movement animations
 	attachAnimateScript(newCharacter)
@@ -530,4 +549,3 @@ Players.PlayerAdded:Connect(function(player)
 end)
 
 return PersonaService
-
